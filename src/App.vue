@@ -17,7 +17,7 @@
         </div>
         
         <!-- 用户登录组件 -->
-        <UserProfile 
+        <HeaderUserProfile 
           :user="currentUser" 
           @login="openLoginModal" 
           @logout="handleLogout"
@@ -73,13 +73,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import ThemeProvider from './components/ThemeProvider.vue';
-import TabItem from './components/TabItem.vue';
-import UserProfile from './components/UserProfile.vue';
-import LoginModal from './components/LoginModal.vue';
-import RegisterModal from './components/RegisterModal.vue';
-import ForgotPasswordModal from './components/ForgotPasswordModal.vue';
-import UserMenu from './components/UserMenu.vue';
-import SettingsModal from './components/SettingsModal.vue';
+import TabItem from './components/tabs/TabItem.vue';
+import HeaderUserProfile from './components/header/HeaderUserProfile.vue';
+import LoginModal from './components/header/LoginModal.vue';
+import RegisterModal from './components/header/RegisterModal.vue';
+import ForgotPasswordModal from './components/header/ForgotPasswordModal.vue';
+import UserMenu from './components/header/UserMenu.vue';
+import SettingsModal from './components/header/SettingsModal.vue';
 import PlusIcon from './assets/icons/PlusIcon.vue';
 import './styles/transitions.scss';
 

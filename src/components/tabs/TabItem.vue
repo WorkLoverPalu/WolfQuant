@@ -22,7 +22,7 @@
   </template>
   
   <script setup lang="ts">
-  import CloseIcon from '../assets/icons/CloseIcon.vue';
+  import CloseIcon from '../../assets/icons/CloseIcon.vue';
   
   interface TabProps {
     id: string;

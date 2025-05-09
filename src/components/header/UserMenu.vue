@@ -94,13 +94,13 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import type { ThemeType } from '../services/theme-service';
-import SettingsIcon from '../assets/icons/SettingsIcon.vue';
-import LogoutIcon from '../assets/icons/LogoutIcon.vue';
-import PlusIcon from '../assets/icons/PlusIcon.vue';
-import WindowIcon from '../assets/icons/WindowIcon.vue';
-import ClipboardIcon from '../assets/icons/ClipboardIcon.vue';
-import ZoomIcon from '../assets/icons/ZoomIcon.vue';
+import type { ThemeType } from '../../services/theme-service';
+import SettingsIcon from '../../assets/icons/SettingsIcon.vue';
+import LogoutIcon from '../../assets/icons/LogoutIcon.vue';
+import PlusIcon from '../../assets/icons/PlusIcon.vue';
+import WindowIcon from '../../assets/icons/WindowIcon.vue';
+import ClipboardIcon from '../../assets/icons/ClipboardIcon.vue';
+import ZoomIcon from '../../assets/icons/ZoomIcon.vue';
 
 interface User {
   id: string;

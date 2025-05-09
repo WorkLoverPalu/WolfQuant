@@ -161,15 +161,15 @@
   
   <script setup lang="ts">
 import { ref, reactive, inject } from 'vue';
-import type { ThemeType } from '../services/theme-service';
-import GeneralIcon from '../assets/icons/GeneralIcon.vue';
-import TabsIcon from '../assets/icons/TabsIcon.vue';
-import MediaIcon from '../assets/icons/MediaIcon.vue';
-import AlertsIcon from '../assets/icons/AlertsIcon.vue';
-import ServicesIcon from '../assets/icons/ServicesIcon.vue';
-import NetworkIcon from '../assets/icons/NetworkIcon.vue';
-import AboutIcon from '../assets/icons/AboutIcon.vue';
-import VolumeIcon from '../assets/icons/VolumeIcon.vue';
+import type { ThemeType } from '../../services/theme-service';
+import GeneralIcon from '../../assets/icons/GeneralIcon.vue';
+import TabsIcon from '../../assets/icons/TabsIcon.vue';
+import MediaIcon from '../../assets/icons/MediaIcon.vue';
+import AlertsIcon from '../../assets/icons/AlertsIcon.vue';
+import ServicesIcon from '../../assets/icons/ServicesIcon.vue';
+import NetworkIcon from '../../assets/icons/NetworkIcon.vue';
+import AboutIcon from '../../assets/icons/AboutIcon.vue';
+import VolumeIcon from '../../assets/icons/VolumeIcon.vue';
 
 const activeSection = ref('general');
 
