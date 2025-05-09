@@ -16,13 +16,13 @@
         class="close-button"
         @click.stop="$emit('close')"
       >
-        <XIcon size="14" />
+        <CloseIcon />
       </button>
     </div>
   </template>
   
   <script setup lang="ts">
-  import { XIcon } from 'lucide-vue-next';
+  import CloseIcon from '../assets/icons/CloseIcon.vue';
   
   interface TabProps {
     id: string;

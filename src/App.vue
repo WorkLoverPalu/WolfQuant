@@ -1,160 +1,293 @@
-<script setup lang="ts">
-import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-
-const greetMsg = ref("");
-const name = ref("");
-
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
-}
-</script>
-
 <template>
-  <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="tabs-container">
+        <TabItem 
+          v-for="(tab, index) in tabs" 
+          :key="index" 
+          :tab="tab" 
+          :active="activeTabIndex === index"
+          @click="switchTab(index)"
+          @close="closeTab(index)"
+        />
+        <button class="new-tab-button" @click="addNewTab">
+          <PlusIcon />
+        </button>
+      </div>
+      
+      <!-- 用户登录组件 -->
+      <UserProfile 
+        :user="currentUser" 
+        @login="openLoginModal" 
+        @logout="handleLogout"
+        @open-menu="isUserMenuOpen = true"
+      />
+    </header>
+    <main class="app-content">
+      <component :is="activeTabComponent" v-bind="activeTabProps"></component>
+    </main>
 
-    <div class="row">
-      <a href="https://vitejs.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
-    </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
+    <!-- 登录模态框 -->
+    <LoginModal 
+      v-if="showLoginModal" 
+      @close="showLoginModal = false"
+      @login="handleLogin"
+      @forgot-password="openForgotPasswordModal"
+      @register="openRegisterModal"
+    />
 
-    <form class="row" @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
-  </main>
+    <!-- 注册模态框 -->
+    <RegisterModal 
+      v-if="showRegisterModal" 
+      @close="showRegisterModal = false"
+      @register="handleRegister"
+    />
+
+    <!-- 忘记密码模态框 -->
+    <ForgotPasswordModal 
+      v-if="showForgotPasswordModal" 
+      @close="showForgotPasswordModal = false"
+      @reset-password="handleResetPassword"
+    />
+
+    <!-- 用户菜单 -->
+    <UserMenu 
+      v-if="isUserMenuOpen && currentUser" 
+      :user="currentUser"
+      @close="isUserMenuOpen = false"
+      @logout="handleLogout"
+    />
+  </div>
 </template>
 
-<style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import TabItem from './components/TabItem.vue';
+import UserProfile from './components/UserProfile.vue';
+import LoginModal from './components/LoginModal.vue';
+import RegisterModal from './components/RegisterModal.vue';
+import ForgotPasswordModal from './components/ForgotPasswordModal.vue';
+import UserMenu from './components/UserMenu.vue';
+import PlusIcon from './assets/icons/PlusIcon.vue';
+
+interface Tab {
+  id: string;
+  title: string;
+  component: string;
+  props?: Record<string, any>;
+  closable: boolean;
 }
 
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  avatar?: string;
 }
 
-</style>
-<style>
+// 用户状态
+const currentUser = ref<User | null>(null);
+const showLoginModal = ref(false);
+const showRegisterModal = ref(false);
+const showForgotPasswordModal = ref(false);
+const isUserMenuOpen = ref(false);
+
+// 标签页状态
+const tabs = ref<Tab[]>([
+  { 
+    id: '1', 
+    title: 'BIOUSDT', 
+    component: 'TradingView', 
+    props: { symbol: 'BIOUSDT', price: '0.08221', change: '+16.1%' },
+    closable: true 
+  },
+  { 
+    id: '2', 
+    title: 'BIOUSDT', 
+    component: 'TradingView', 
+    props: { symbol: 'BIOUSDT', price: '0.08221', change: '+16.1%' },
+    closable: true 
+  },
+  { 
+    id: '3', 
+    title: 'New Tab', 
+    component: 'EmptyTab', 
+    closable: false 
+  }
+]);
+
+const activeTabIndex = ref(0);
+
+// 计算属性用于动态加载组件
+const activeTabComponent = computed(() => {
+  const componentName = tabs.value[activeTabIndex.value]?.component || 'EmptyTab';
+  return componentName;
+});
+
+const activeTabProps = computed(() => {
+  return tabs.value[activeTabIndex.value]?.props || {};
+});
+
+// 标签页操作
+const switchTab = (index: number) => {
+  activeTabIndex.value = index;
+};
+
+const closeTab = (index: number) => {
+  if (tabs.value[index].closable) {
+    tabs.value = tabs.value.filter((_, i) => i !== index);
+    // 如果关闭的是当前活动标签页，切换到第一个标签页
+    if (activeTabIndex.value === index) {
+      activeTabIndex.value = 0;
+    } else if (activeTabIndex.value > index) {
+      // 如果关闭的标签页在当前活动标签页之前，调整索引
+      activeTabIndex.value--;
+    }
+  }
+};
+
+const addNewTab = () => {
+  const newTabId = `tab-${Date.now()}`;
+  tabs.value.push({
+    id: newTabId,
+    title: 'New Tab',
+    component: 'EmptyTab',
+    closable: true
+  });
+  activeTabIndex.value = tabs.value.length - 1;
+};
+
+// 用户相关操作
+const openLoginModal = () => {
+  showLoginModal.value = true;
+  isUserMenuOpen.value = false;
+};
+
+const openRegisterModal = () => {
+  showLoginModal.value = false;
+  showRegisterModal.value = true;
+};
+
+const openForgotPasswordModal = () => {
+  showLoginModal.value = false;
+  showForgotPasswordModal.value = true;
+};
+
+const handleLogin = (username: string, password: string) => {
+  // 这里应该是实际的登录逻辑，目前使用模拟数据
+  // 实际项目中应该调用API进行身份验证
+  currentUser.value = {
+    id: '1',
+    username: username,
+    email: `${username}@example.com`,
+    avatar: username.charAt(0).toUpperCase()
+  };
+  showLoginModal.value = false;
+};
+
+const handleRegister = (email: string, password: string, username: string) => {
+  // 这里应该是实际的注册逻辑
+  // 实际项目中应该调用API进行注册
+  currentUser.value = {
+    id: Date.now().toString(),
+    username: username,
+    email: email,
+    avatar: username.charAt(0).toUpperCase()
+  };
+  showRegisterModal.value = false;
+};
+
+const handleResetPassword = (email: string) => {
+  // 这里应该是实际的重置密码逻辑
+  // 实际项目中应该调用API发送重置链接到用户邮箱
+  console.log(`重置密码链接已发送至: ${email}`);
+  showForgotPasswordModal.value = false;
+  // 可以显示一个成功消息
+};
+
+const handleLogout = () => {
+  currentUser.value = null;
+  isUserMenuOpen.value = false;
+  // 这里可以添加其他注销逻辑，例如清除本地存储的令牌等
+};
+</script>
+
+<style lang="scss">
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+  --bg-color: #121212;
+  --header-bg: #1a1a1a;
+  --tab-bg: #252525;
+  --tab-active-bg: #2a2a2a;
+  --tab-text: #a0a0a0;
+  --tab-active-text: #ffffff;
+  --border-color: #333333;
+  --avatar-bg: #4a4a4a;
+  --avatar-text: #ffffff;
+  --modal-bg: #1e1e1e;
+  --input-bg: #2c2c2c;
+  --button-primary: #2563eb;
+  --button-primary-hover: #3b82f6;
 }
 
-.container {
+* {
   margin: 0;
-  padding-top: 10vh;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--tab-active-text);
+}
+
+.app-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  text-align: center;
+  height: 100vh;
+  width: 100%;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
+.app-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 16px;
+  height: 40px;
+}
+
+.tabs-container {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+  }
+}
+
+.new-tab-button {
+  display: flex;
+  align-items: center;
   justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
+  background: transparent;
+  border: none;
+  color: var(--tab-text);
+  height: 100%;
+  padding: 0 8px;
   cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
+  
+  &:hover {
+    color: var(--tab-active-text);
   }
 }
 
+.app-content {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--bg-color);
+}
 </style>

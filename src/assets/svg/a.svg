@@ -1,0 +1,6 @@
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns= { xmlns } width = { width } height = { height } viewBox = { viewBox } fill = { fill } stroke = { stroke } strokeWidth = { strokeWidth } strokeLinecap = { strokeLinecap } strokeLinejoin = { strokeLinejoin } >
+<path d="M23 4v6h-6" > </path>
+< path d = "M1 20v-6h6" > </path>
+< path d = "M3.51 9a9 9 0 0 1 14.85-3.36L23 10" > </path>
+< path d = "M20.49 15a9 9 0 0 1-14.85 3.36L1 14" > </path>
+</svg>
