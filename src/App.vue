@@ -1,75 +1,78 @@
 <template>
-  <div class="app-container">
-    <header class="app-header">
-      <div class="tabs-container">
-        <TabItem 
-          v-for="(tab, index) in tabs" 
-          :key="index" 
-          :tab="tab" 
-          :active="activeTabIndex === index"
-          @click="switchTab(index)"
-          @close="closeTab(index)"
+  <ThemeProvider>
+    <div class="app-container">
+      <header class="app-header">
+        <div class="tabs-container">
+          <TabItem 
+            v-for="(tab, index) in tabs" 
+            :key="index" 
+            :tab="tab" 
+            :active="activeTabIndex === index"
+            @click="switchTab(index)"
+            @close="closeTab(index)"
+          />
+          <button class="new-tab-button" @click="addNewTab">
+            <PlusIcon />
+          </button>
+        </div>
+        
+        <!-- 用户登录组件 -->
+        <UserProfile 
+          :user="currentUser" 
+          @login="openLoginModal" 
+          @logout="handleLogout"
+          @open-menu="isUserMenuOpen = true"
         />
-        <button class="new-tab-button" @click="addNewTab">
-          <PlusIcon />
-        </button>
-      </div>
-      
-      <!-- 用户登录组件 -->
-      <UserProfile 
-        :user="currentUser" 
-        @login="openLoginModal" 
-        @logout="handleLogout"
-        @open-menu="isUserMenuOpen = true"
+      </header>
+      <main class="app-content">
+        <component :is="activeTabComponent" v-bind="activeTabProps"></component>
+      </main>
+
+      <!-- 登录模态框 -->
+      <LoginModal 
+        v-if="showLoginModal" 
+        @close="showLoginModal = false"
+        @login="handleLogin"
+        @forgot-password="openForgotPasswordModal"
+        @register="openRegisterModal"
       />
-    </header>
-    <main class="app-content">
-      <component :is="activeTabComponent" v-bind="activeTabProps"></component>
-    </main>
 
-    <!-- 登录模态框 -->
-    <LoginModal 
-      v-if="showLoginModal" 
-      @close="showLoginModal = false"
-      @login="handleLogin"
-      @forgot-password="openForgotPasswordModal"
-      @register="openRegisterModal"
-    />
+      <!-- 注册模态框 -->
+      <RegisterModal 
+        v-if="showRegisterModal" 
+        @close="showRegisterModal = false"
+        @register="handleRegister"
+      />
 
-    <!-- 注册模态框 -->
-    <RegisterModal 
-      v-if="showRegisterModal" 
-      @close="showRegisterModal = false"
-      @register="handleRegister"
-    />
+      <!-- 忘记密码模态框 -->
+      <ForgotPasswordModal 
+        v-if="showForgotPasswordModal" 
+        @close="showForgotPasswordModal = false"
+        @reset-password="handleResetPassword"
+      />
 
-    <!-- 忘记密码模态框 -->
-    <ForgotPasswordModal 
-      v-if="showForgotPasswordModal" 
-      @close="showForgotPasswordModal = false"
-      @reset-password="handleResetPassword"
-    />
-
-    <!-- 用户菜单 -->
-    <UserMenu 
-      v-if="isUserMenuOpen && currentUser" 
-      :user="currentUser"
-      @close="isUserMenuOpen = false"
-      @logout="handleLogout"
-      @open-settings="openSettingsModal"
-    />
-    
-    <!-- 设置弹窗 -->
-    <SettingsModal 
-      v-if="showSettingsModal"
-      @close="showSettingsModal = false"
-      @save="handleSaveSettings"
-    />
-  </div>
+      <!-- 用户菜单 -->
+      <UserMenu 
+        v-if="isUserMenuOpen && currentUser" 
+        :user="currentUser"
+        @close="isUserMenuOpen = false"
+        @logout="handleLogout"
+        @open-settings="openSettingsModal"
+      />
+      
+      <!-- 设置弹窗 -->
+      <SettingsModal 
+        v-if="showSettingsModal"
+        @close="showSettingsModal = false"
+        @save="handleSaveSettings"
+      />
+    </div>
+  </ThemeProvider>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import ThemeProvider from './components/ThemeProvider.vue';
 import TabItem from './components/TabItem.vue';
 import UserProfile from './components/UserProfile.vue';
 import LoginModal from './components/LoginModal.vue';
@@ -78,6 +81,7 @@ import ForgotPasswordModal from './components/ForgotPasswordModal.vue';
 import UserMenu from './components/UserMenu.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import PlusIcon from './assets/icons/PlusIcon.vue';
+import './styles/transitions.scss';
 
 interface Tab {
   id: string;
@@ -227,7 +231,6 @@ const handleSaveSettings = (settings: any) => {
   showSettingsModal.value = false;
 };
 </script>
-
 <style lang="scss">
 :root {
   --bg-color: #121212;
@@ -255,6 +258,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   background-color: var(--bg-color);
   color: var(--tab-active-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-container {

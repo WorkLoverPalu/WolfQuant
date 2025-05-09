@@ -2,6 +2,10 @@ import { createApp } from 'vue';
 import App from './App.vue';
 import EmptyTab from './components/EmptyTab.vue';
 import TradingView from './components/TradingView.vue';
+import { themeService } from './services/theme-service';
+
+// 初始化主题
+themeService.applyTheme(themeService.getThemePreference());
 
 const app = createApp(App);
 

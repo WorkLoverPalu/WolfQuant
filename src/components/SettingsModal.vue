@@ -40,32 +40,32 @@
               </div>
               
               <h3>主题</h3>
-              <div class="theme-options">
-                <button 
-                  class="theme-option" 
-                  :class="{ active: settings.theme === 'system' }"
-                  @click="settings.theme = 'system'"
-                >
-                  <div class="theme-preview system-theme"></div>
-                  <span>系统</span>
-                </button>
-                <button 
-                  class="theme-option" 
-                  :class="{ active: settings.theme === 'dark' }"
-                  @click="settings.theme = 'dark'"
-                >
-                  <div class="theme-preview dark-theme"></div>
-                  <span>暗色</span>
-                </button>
-                <button 
-                  class="theme-option" 
-                  :class="{ active: settings.theme === 'light' }"
-                  @click="settings.theme = 'light'"
-                >
-                  <div class="theme-preview light-theme"></div>
-                  <span>亮色</span>
-                </button>
-              </div>
+        <div class="theme-options">
+          <button 
+            class="theme-option" 
+            :class="{ active: themeContext.currentTheme === 'system' }"
+            @click="setTheme('system')"
+          >
+            <div class="theme-preview system-theme"></div>
+            <span>系统</span>
+          </button>
+          <button 
+            class="theme-option" 
+            :class="{ active: themeContext.currentTheme === 'dark' }"
+            @click="setTheme('dark')"
+          >
+            <div class="theme-preview dark-theme"></div>
+            <span>暗色</span>
+          </button>
+          <button 
+            class="theme-option" 
+            :class="{ active: themeContext.currentTheme === 'light' }"
+            @click="setTheme('light')"
+          >
+            <div class="theme-preview light-theme"></div>
+            <span>亮色</span>
+          </button>
+        </div>
               
               <h3>下载</h3>
               <div class="download-path">
@@ -160,42 +160,55 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, reactive } from 'vue';
-  import GeneralIcon from '../assets/icons/GeneralIcon.vue';
-  import TabsIcon from '../assets/icons/TabsIcon.vue';
-  import MediaIcon from '../assets/icons/MediaIcon.vue';
-  import AlertsIcon from '../assets/icons/AlertsIcon.vue';
-  import ServicesIcon from '../assets/icons/ServicesIcon.vue';
-  import NetworkIcon from '../assets/icons/NetworkIcon.vue';
-  import AboutIcon from '../assets/icons/AboutIcon.vue';
-  import VolumeIcon from '../assets/icons/VolumeIcon.vue';
-  
-  const activeSection = ref('general');
-  
-  const sections = [
-    { id: 'general', name: '一般', icon: GeneralIcon },
-    { id: 'tabs', name: '标签页', icon: TabsIcon },
-    { id: 'media', name: '视频和音频', icon: MediaIcon },
-    { id: 'alerts', name: '警报', icon: AlertsIcon },
-    { id: 'services', name: '服务', icon: ServicesIcon },
-    { id: 'network', name: '网络', icon: NetworkIcon },
-    { id: 'about', name: '关于', icon: AboutIcon },
-  ];
-  
-  const settings = reactive({
-    theme: 'dark',
-    autoFill: false,
-    crosshair: true,
-    askDownloadLocation: false,
-    systemNotifications: true,
-    volume: 75
-  });
-  
-  defineEmits<{
-    (e: 'close'): void;
-    (e: 'save', settings: any): void;
-  }>();
-  </script>
+import { ref, reactive, inject } from 'vue';
+import type { ThemeType } from '../services/theme-service';
+import GeneralIcon from '../assets/icons/GeneralIcon.vue';
+import TabsIcon from '../assets/icons/TabsIcon.vue';
+import MediaIcon from '../assets/icons/MediaIcon.vue';
+import AlertsIcon from '../assets/icons/AlertsIcon.vue';
+import ServicesIcon from '../assets/icons/ServicesIcon.vue';
+import NetworkIcon from '../assets/icons/NetworkIcon.vue';
+import AboutIcon from '../assets/icons/AboutIcon.vue';
+import VolumeIcon from '../assets/icons/VolumeIcon.vue';
+
+const activeSection = ref('general');
+
+const sections = [
+  { id: 'general', name: '一般', icon: GeneralIcon },
+  { id: 'tabs', name: '标签页', icon: TabsIcon },
+  { id: 'media', name: '视频和音频', icon: MediaIcon },
+  { id: 'alerts', name: '警报', icon: AlertsIcon },
+  { id: 'services', name: '服务', icon: ServicesIcon },
+  { id: 'network', name: '网络', icon: NetworkIcon },
+  { id: 'about', name: '关于', icon: AboutIcon },
+];
+
+// 注入主题上下文
+const themeContext = inject('theme', {
+  currentTheme: 'dark',
+  setTheme: (theme: ThemeType) => {}
+});
+
+// 设置主题
+const setTheme = (theme: ThemeType) => {
+  themeContext.setTheme(theme);
+  settings.theme = theme;
+};
+
+const settings = reactive({
+  theme: themeContext.currentTheme,
+  autoFill: false,
+  crosshair: true,
+  askDownloadLocation: false,
+  systemNotifications: true,
+  volume: 75
+});
+
+defineEmits<{
+  (e: 'close'): void;
+  (e: 'save', settings: any): void;
+}>();
+</script>
   
   <style lang="scss" scoped>
   .settings-modal-overlay {

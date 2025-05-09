@@ -1,0 +1,20 @@
+/* 主题切换过渡 */
+body,
+.app-header,
+.tabs-container,
+.tab-item,
+.user-profile,
+.app-content,
+.modal-overlay,
+.modal-container,
+.settings-modal,
+.user-menu,
+button,
+input,
+.theme-preview {
+  transition: 
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
