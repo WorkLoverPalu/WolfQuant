@@ -56,6 +56,14 @@
       :user="currentUser"
       @close="isUserMenuOpen = false"
       @logout="handleLogout"
+      @open-settings="openSettingsModal"
+    />
+    
+    <!-- 设置弹窗 -->
+    <SettingsModal 
+      v-if="showSettingsModal"
+      @close="showSettingsModal = false"
+      @save="handleSaveSettings"
     />
   </div>
 </template>
@@ -68,6 +76,7 @@ import LoginModal from './components/LoginModal.vue';
 import RegisterModal from './components/RegisterModal.vue';
 import ForgotPasswordModal from './components/ForgotPasswordModal.vue';
 import UserMenu from './components/UserMenu.vue';
+import SettingsModal from './components/SettingsModal.vue';
 import PlusIcon from './assets/icons/PlusIcon.vue';
 
 interface Tab {
@@ -91,20 +100,21 @@ const showLoginModal = ref(false);
 const showRegisterModal = ref(false);
 const showForgotPasswordModal = ref(false);
 const isUserMenuOpen = ref(false);
+const showSettingsModal = ref(false);
 
 // 标签页状态
 const tabs = ref<Tab[]>([
   { 
     id: '1', 
     title: 'BIOUSDT', 
-    component: 'TradingView', 
+    component: 'WolfQuant', 
     props: { symbol: 'BIOUSDT', price: '0.08221', change: '+16.1%' },
     closable: true 
   },
   { 
     id: '2', 
     title: 'BIOUSDT', 
-    component: 'TradingView', 
+    component: 'WolfQuant', 
     props: { symbol: 'BIOUSDT', price: '0.08221', change: '+16.1%' },
     closable: true 
   },
@@ -173,9 +183,13 @@ const openForgotPasswordModal = () => {
   showForgotPasswordModal.value = true;
 };
 
+const openSettingsModal = () => {
+  isUserMenuOpen.value = false;
+  showSettingsModal.value = true;
+};
+
 const handleLogin = (username: string, password: string) => {
   // 这里应该是实际的登录逻辑，目前使用模拟数据
-  // 实际项目中应该调用API进行身份验证
   currentUser.value = {
     id: '1',
     username: username,
@@ -187,7 +201,6 @@ const handleLogin = (username: string, password: string) => {
 
 const handleRegister = (email: string, password: string, username: string) => {
   // 这里应该是实际的注册逻辑
-  // 实际项目中应该调用API进行注册
   currentUser.value = {
     id: Date.now().toString(),
     username: username,
@@ -199,16 +212,19 @@ const handleRegister = (email: string, password: string, username: string) => {
 
 const handleResetPassword = (email: string) => {
   // 这里应该是实际的重置密码逻辑
-  // 实际项目中应该调用API发送重置链接到用户邮箱
   console.log(`重置密码链接已发送至: ${email}`);
   showForgotPasswordModal.value = false;
-  // 可以显示一个成功消息
 };
 
 const handleLogout = () => {
   currentUser.value = null;
   isUserMenuOpen.value = false;
-  // 这里可以添加其他注销逻辑，例如清除本地存储的令牌等
+};
+
+const handleSaveSettings = (settings: any) => {
+  // 这里处理保存设置的逻辑
+  console.log('保存设置:', settings);
+  showSettingsModal.value = false;
 };
 </script>
 
@@ -256,6 +272,7 @@ body {
   border-bottom: 1px solid var(--border-color);
   padding: 0 16px;
   height: 40px;
+  -webkit-app-region: drag; /* 整个头部可拖动 */
 }
 
 .tabs-container {
@@ -263,6 +280,8 @@ body {
   height: 100%;
   overflow-x: auto;
   scrollbar-width: none; /* Firefox */
+  flex: 1; /* 让标签容器占据剩余空间 */
+  -webkit-app-region: no-drag; /* 标签区域不可拖动 */
   
   &::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Edge */
@@ -279,10 +298,15 @@ body {
   height: 100%;
   padding: 0 8px;
   cursor: pointer;
+  -webkit-app-region: no-drag; /* 按钮不可拖动 */
   
   &:hover {
     color: var(--tab-active-text);
   }
+}
+
+.user-profile {
+  -webkit-app-region: no-drag; /* 用户资料区域不可拖动 */
 }
 
 .app-content {

@@ -8,7 +8,7 @@
         <div class="user-avatar" v-else>
           {{ user.username.charAt(0).toUpperCase() }}
         </div>
-        <span class="username">{{ user.username }}</span>
+        <!-- <span class="username">{{ user.username }}</span> -->
       </div>
       
       <!-- 未登录状态 -->
@@ -16,7 +16,7 @@
         <div class="user-icon">
           <UserIcon />
         </div>
-        <span class="login-text">登录</span>
+        <!-- <span class="login-text">登录</span> -->
       </div>
     </div>
   </template>
@@ -47,17 +47,17 @@
     display: flex;
     align-items: center;
     cursor: pointer;
+    padding: 8px;
   }
   
   .user-logged-in, .user-logged-out {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
-    border-radius: 4px;
+    gap: 4px;
     
     &:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+      opacity: 0.8;
     }
   }
   
@@ -73,15 +73,21 @@
     font-weight: bold;
   }
   
-  .username, .login-text {
-    font-size: 14px;
-    color: var(--tab-active-text);
-  }
-  
   .user-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--tab-text);
+    width: 24px;
+    height: 24px;
+  }
+  
+  .username, .login-text {
+    font-size: 12px;
+    color: var(--tab-active-text);
+  }
+  
+  .login-text {
+    color: #3b82f6;
   }
   </style>
