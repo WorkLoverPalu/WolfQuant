@@ -93,7 +93,7 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, reactive } from 'vue';
+  import { ref, reactive, onMounted } from 'vue';
   import UserProfileHeader from './profile/UserProfileHeader.vue';
   import UserStats from './profile/UserStats.vue';
   import ProfileTabs from './profile/ProfileTabs.vue';
@@ -108,28 +108,33 @@
   import UserFollowing from './profile/UserFollowing.vue';
   import MarketWatchlist from './market/MarketWatchlist.vue';
   
+  // 接收从父组件传递的用户数据
+  const props = defineProps({
+    userData: {
+      type: Object,
+      default: () => ({
+        username: 'flashdanacom',
+        avatar: 'F',
+        isOnline: true,
+        joinDate: '2024年11月22日加入',
+        email: 'user@example.com',
+        stats: {
+          followers: 0,
+          following: 1,
+          views: 0,
+          scripts: 0
+        },
+        views: [],
+        scripts: [],
+        followers: [],
+        following: []
+      })
+    }
+  });
+  
   // 当前激活的标签
   const activeTab = ref('settings');
   const activeSettingsTab = ref('general');
-  
-  // 用户数据
-  const userData = reactive({
-    username: 'flashdanacom',
-    avatar: 'F',
-    isOnline: true,
-    joinDate: '2024年11月22日加入',
-    email: 'user@example.com',
-    stats: {
-      followers: 0,
-      following: 1,
-      views: 0,
-      scripts: 0
-    },
-    views: [],
-    scripts: [],
-    followers: [],
-    following: []
-  });
   
   // 更新用户数据
   const updateUserData = (newData: any) => {
@@ -146,6 +151,14 @@
     console.log('密码已更新:', newPassword);
     // 实际应用中这里会调用API更新密码
   };
+  
+  // 创建本地响应式数据，初始化为props中的数据
+  const userData = reactive({...props.userData});
+  
+  // 当props变化时更新本地数据
+  onMounted(() => {
+    console.log('用户个人中心组件已加载', userData);
+  });
   </script>
   
   <style lang="scss" scoped>
