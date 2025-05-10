@@ -473,6 +473,53 @@
                       v-model="getPositionInput(item.symbol).amount"
                     />
                   </div>
+                  <div class="input-group">
+                    <label>定投类型</label>
+                    <select 
+                      class="position-input" 
+                      v-model="getPositionInput(item.symbol).investmentType"
+                    >
+                      <option value="daily">每日</option>
+                      <option value="weekly">每周</option>
+                      <option value="biweekly">每两周</option>
+                      <option value="monthly">每月</option>
+                    </select>
+                  </div>
+                  <div v-if="getPositionInput(item.symbol).investmentType === 'weekly'" class="input-group">
+                    <label>选择周几</label>
+                    <select 
+                      class="position-input" 
+                      v-model="getPositionInput(item.symbol).dayOfWeek"
+                    >
+                      <option value="1">周一</option>
+                      <option value="2">周二</option>
+                      <option value="3">周三</option>
+                      <option value="4">周四</option>
+                      <option value="5">周五</option>
+                      <option value="6">周六</option>
+                      <option value="7">周日</option>
+                    </select>
+                  </div>
+                  <div v-if="getPositionInput(item.symbol).investmentType === 'monthly'" class="input-group">
+                    <label>选择日期</label>
+                    <select 
+                      class="position-input" 
+                      v-model="getPositionInput(item.symbol).dayOfMonth"
+                    >
+                      <option v-for="day in 31" :key="day" :value="day">
+                        {{ day }}日
+                      </option>
+                    </select>
+                  </div>
+                  <div class="input-group">
+                    <label>定投金额</label>
+                    <input 
+                      type="number" 
+                      class="position-input" 
+                      placeholder="输入金额" 
+                      v-model="getPositionInput(item.symbol).amount"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
