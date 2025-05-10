@@ -121,7 +121,7 @@ const tabs = ref<Tab[]>([
     id: '3',
     title: 'New Tab',
     component: 'EmptyTab',
-    closable: false
+    closable: true
   }
 ]);
 
