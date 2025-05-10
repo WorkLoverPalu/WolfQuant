@@ -22,6 +22,9 @@
       <MarketFooter :show-account="true" :show-nav="true" :market-data="currentMarketData" :current-user="currentUser"
         @nav-click="handleFooterNavClick" @market-click="handleMarketClick" @open-tab="handleOpenTab" />
 
+      <!-- 右侧导航组件 -->
+      <SideNavigation :current-user="currentUser" @open-tab="handleOpenTab" />
+
       <!-- 登录模态框 -->
       <LoginModal v-if="showLoginModal" @close="showLoginModal = false" @login="handleLogin"
         @forgot-password="openForgotPasswordModal" @register="openRegisterModal" />
@@ -57,6 +60,7 @@ import PlusIcon from './assets/icons/PlusIcon.vue';
 import UserProfile from './components/UserProfile.vue';
 import MarketWatchlist from './components/MarketWatchlist.vue';
 import MarketFooter from './components/footer/MarketFooter.vue';
+import SideNavigation from './components/SideNavigation.vue';
 import './styles/transitions.scss';
 
 interface Tab {
@@ -301,7 +305,7 @@ const handleMarketClick = (market: MarketData) => {
   }
 };
 
-// 处理底部组件打开新标签页
+// 处理打开新标签页
 const handleOpenTab = (tabData: any) => {
   // 检查是否已经存在相同ID的标签
   const existingTabIndex = tabs.value.findIndex(tab => tab.id === tabData.id);
@@ -322,7 +326,6 @@ const handleOpenTab = (tabData: any) => {
   }
 };
 </script>
-
 
 <style lang="scss">
 :root {
