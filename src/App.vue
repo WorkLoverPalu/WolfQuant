@@ -18,6 +18,10 @@
         <component :is="activeTabComponent" v-bind="activeTabProps"></component>
       </main>
 
+      <!-- 底部行情组件 -->
+      <MarketFooter :show-account="true" :show-nav="true" :market-data="currentMarketData" :current-user="currentUser"
+        @nav-click="handleFooterNavClick" @market-click="handleMarketClick" @open-tab="handleOpenTab" />
+
       <!-- 登录模态框 -->
       <LoginModal v-if="showLoginModal" @close="showLoginModal = false" @login="handleLogin"
         @forgot-password="openForgotPasswordModal" @register="openRegisterModal" />
@@ -52,12 +56,13 @@ import SettingsModal from './components/header/SettingsModal.vue';
 import PlusIcon from './assets/icons/PlusIcon.vue';
 import UserProfile from './components/UserProfile.vue';
 import MarketWatchlist from './components/MarketWatchlist.vue';
+import MarketFooter from './components/footer/MarketFooter.vue';
 import './styles/transitions.scss';
 
 interface Tab {
   id: string;
   title: string;
-  component: string;
+  component: any;
   props?: Record<string, any>;
   closable: boolean;
 }
@@ -67,6 +72,21 @@ interface User {
   username: string;
   email: string;
   avatar?: string;
+}
+
+// 市场数据类型
+interface MarketData {
+  name: string;
+  symbol: string;
+  price: string;
+  change: string;
+  percentChange: string;
+  high: string;
+  low: string;
+  open: string;
+  prevClose: string;
+  volume: string;
+  updateTime: string;
 }
 
 // 用户状态
@@ -111,6 +131,21 @@ const activeTabComponent = computed(() => {
 
 const activeTabProps = computed(() => {
   return tabs.value[activeTabIndex.value]?.props || {};
+});
+
+// 当前市场数据
+const currentMarketData = ref<MarketData>({
+  name: '上证指数',
+  symbol: 'sh000001',
+  price: '3342.00',
+  change: '-10.00',
+  percentChange: '-0.30%',
+  high: '3351.22',
+  low: '3335.13',
+  open: '3350.41',
+  prevClose: '3352.00',
+  volume: '4648.62亿',
+  updateTime: '2025-05-09 15:30:39'
 });
 
 // 标签页操作
@@ -201,6 +236,7 @@ const handleSaveSettings = (settings: any) => {
   console.log('保存设置:', settings);
   showSettingsModal.value = false;
 };
+
 // 打开用户个人中心标签
 const openUserProfileTab = () => {
   console.log("open user")
@@ -228,7 +264,66 @@ const openUserProfileTab = () => {
   // 关闭用户菜单
   isUserMenuOpen.value = false;
 };
+
+// 底部行情组件相关操作
+const handleFooterNavClick = (index: number, item: any) => {
+  console.log(`底部导航点击: ${item.label || '未命名'} (索引: ${index})`);
+};
+
+const handleMarketClick = (market: MarketData) => {
+  console.log(`市场点击: ${market.name} (${market.symbol})`);
+
+  // 可以在这里打开市场详情标签页
+  const existingTabIndex = tabs.value.findIndex(tab =>
+    tab.props && tab.props.symbol === market.symbol
+  );
+
+  if (existingTabIndex !== -1) {
+    // 如果已存在，切换到该标签
+    activeTabIndex.value = existingTabIndex;
+  } else {
+    // 如果不存在，创建新标签
+    const newTabId = `tab-${Date.now()}`;
+    tabs.value.push({
+      id: newTabId,
+      title: market.name,
+      component: 'MarketDetail', // 假设有一个市场详情组件
+      closable: true,
+      props: {
+        symbol: market.symbol,
+        name: market.name,
+        price: market.price,
+        change: market.change,
+        percentChange: market.percentChange
+      }
+    });
+    activeTabIndex.value = tabs.value.length - 1;
+  }
+};
+
+// 处理底部组件打开新标签页
+const handleOpenTab = (tabData: any) => {
+  // 检查是否已经存在相同ID的标签
+  const existingTabIndex = tabs.value.findIndex(tab => tab.id === tabData.id);
+
+  if (existingTabIndex !== -1) {
+    // 如果已存在，切换到该标签
+    activeTabIndex.value = existingTabIndex;
+  } else {
+    // 如果不存在，创建新标签
+    tabs.value.push({
+      id: tabData.id || `tab-${Date.now()}`,
+      title: tabData.title || 'New Tab',
+      component: typeof tabData.component === 'string' ? tabData.component : markRaw(tabData.component),
+      closable: tabData.closable !== undefined ? tabData.closable : true,
+      props: tabData.props || {}
+    });
+    activeTabIndex.value = tabs.value.length - 1;
+  }
+};
 </script>
+
+
 <style lang="scss">
 :root {
   --bg-color: #121212;
@@ -322,5 +417,21 @@ body {
   flex: 1;
   overflow: auto;
   background-color: var(--bg-color);
+}
+
+
+/* 添加底部行情组件的样式调整 */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 48px;
+  /* 为底部组件留出空间 */
 }
 </style>
