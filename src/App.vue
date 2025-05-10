@@ -3,75 +3,44 @@
     <div class="app-container">
       <header class="app-header">
         <div class="tabs-container">
-          <TabItem 
-            v-for="(tab, index) in tabs" 
-            :key="index" 
-            :tab="tab" 
-            :active="activeTabIndex === index"
-            @click="switchTab(index)"
-            @close="closeTab(index)"
-          />
+          <TabItem v-for="(tab, index) in tabs" :key="index" :tab="tab" :active="activeTabIndex === index"
+            @click="switchTab(index)" @close="closeTab(index)" />
           <button class="new-tab-button" @click="addNewTab">
             <PlusIcon />
           </button>
         </div>
-        
+
         <!-- 用户登录组件 -->
-        <HeaderUserProfile 
-          :user="currentUser" 
-          @login="openLoginModal" 
-          @logout="handleLogout"
-          @open-menu="isUserMenuOpen = true"
-        />
+        <HeaderUserProfile :user="currentUser" @login="openLoginModal" @logout="handleLogout"
+          @open-menu="isUserMenuOpen = true" @open-profile="openUserProfileTab" />
       </header>
       <main class="app-content">
         <component :is="activeTabComponent" v-bind="activeTabProps"></component>
       </main>
 
       <!-- 登录模态框 -->
-      <LoginModal 
-        v-if="showLoginModal" 
-        @close="showLoginModal = false"
-        @login="handleLogin"
-        @forgot-password="openForgotPasswordModal"
-        @register="openRegisterModal"
-      />
+      <LoginModal v-if="showLoginModal" @close="showLoginModal = false" @login="handleLogin"
+        @forgot-password="openForgotPasswordModal" @register="openRegisterModal" />
 
       <!-- 注册模态框 -->
-      <RegisterModal 
-        v-if="showRegisterModal" 
-        @close="showRegisterModal = false"
-        @register="handleRegister"
-      />
+      <RegisterModal v-if="showRegisterModal" @close="showRegisterModal = false" @register="handleRegister" />
 
       <!-- 忘记密码模态框 -->
-      <ForgotPasswordModal 
-        v-if="showForgotPasswordModal" 
-        @close="showForgotPasswordModal = false"
-        @reset-password="handleResetPassword"
-      />
+      <ForgotPasswordModal v-if="showForgotPasswordModal" @close="showForgotPasswordModal = false"
+        @reset-password="handleResetPassword" />
 
       <!-- 用户菜单 -->
-      <UserMenu 
-        v-if="isUserMenuOpen && currentUser" 
-        :user="currentUser"
-        @close="isUserMenuOpen = false"
-        @logout="handleLogout"
-        @open-settings="openSettingsModal"
-      />
-      
+      <UserMenu v-if="isUserMenuOpen && currentUser" :user="currentUser" @close="isUserMenuOpen = false"
+        @logout="handleLogout" @open-settings="openSettingsModal" @open-profile="openUserProfileTab" />
+
       <!-- 设置弹窗 -->
-      <SettingsModal 
-        v-if="showSettingsModal"
-        @close="showSettingsModal = false"
-        @save="handleSaveSettings"
-      />
+      <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" @save="handleSaveSettings" />
     </div>
   </ThemeProvider>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed,markRaw, shallowRef} from 'vue';
 import ThemeProvider from './components/ThemeProvider.vue';
 import TabItem from './components/tabs/TabItem.vue';
 import HeaderUserProfile from './components/header/HeaderUserProfile.vue';
@@ -81,6 +50,7 @@ import ForgotPasswordModal from './components/header/ForgotPasswordModal.vue';
 import UserMenu from './components/header/UserMenu.vue';
 import SettingsModal from './components/header/SettingsModal.vue';
 import PlusIcon from './assets/icons/PlusIcon.vue';
+import UserProfile from './components/UserProfile.vue';
 import './styles/transitions.scss';
 
 interface Tab {
@@ -108,25 +78,25 @@ const showSettingsModal = ref(false);
 
 // 标签页状态
 const tabs = ref<Tab[]>([
-  { 
-    id: '1', 
-    title: 'BIOUSDT', 
-    component: 'WolfQuant', 
+  {
+    id: '1',
+    title: 'BIOUSDT',
+    component: 'WolfQuant',
     props: { symbol: 'BIOUSDT', price: '0.08221', change: '+16.1%' },
-    closable: true 
+    closable: true
   },
-  { 
-    id: '2', 
-    title: 'BIOUSDT', 
-    component: 'WolfQuant', 
+  {
+    id: '2',
+    title: 'BIOUSDT',
+    component: 'WolfQuant',
     props: { symbol: 'BIOUSDT', price: '0.08221', change: '+16.1%' },
-    closable: true 
+    closable: true
   },
-  { 
-    id: '3', 
-    title: 'New Tab', 
-    component: 'EmptyTab', 
-    closable: false 
+  {
+    id: '3',
+    title: 'New Tab',
+    component: 'EmptyTab',
+    closable: false
   }
 ]);
 
@@ -230,6 +200,33 @@ const handleSaveSettings = (settings: any) => {
   console.log('保存设置:', settings);
   showSettingsModal.value = false;
 };
+// 打开用户个人中心标签
+const openUserProfileTab = () => {
+  console.log("open user")
+  // 检查是否已经存在用户个人中心标签
+  const existingTabIndex = tabs.value.findIndex(tab => tab.title === '个人中心');
+
+  if (existingTabIndex !== -1) {
+    // 如果已存在，切换到该标签
+    activeTabIndex.value = existingTabIndex;
+  } else {
+    // 如果不存在，创建新标签
+    const newTabId = `tab-${Date.now()}`;
+    tabs.value.push({
+      id: newTabId,
+      title: '个人中心',
+      component: markRaw(UserProfile), // 使用markRaw避免Vue的响应式系统对组件的代理
+      closable: true,
+      props: {
+        userData: currentUser.value
+      }
+    });
+    activeTabIndex.value = tabs.value.length - 1;
+  }
+
+  // 关闭用户菜单
+  isUserMenuOpen.value = false;
+};
 </script>
 <style lang="scss">
 :root {
@@ -276,19 +273,24 @@ body {
   border-bottom: 1px solid var(--border-color);
   padding: 0 16px;
   height: 40px;
-  -webkit-app-region: drag; /* 整个头部可拖动 */
+  -webkit-app-region: drag;
+  /* 整个头部可拖动 */
 }
 
 .tabs-container {
   display: flex;
   height: 100%;
   overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-  flex: 1; /* 让标签容器占据剩余空间 */
-  -webkit-app-region: no-drag; /* 标签区域不可拖动 */
-  
+  scrollbar-width: none;
+  /* Firefox */
+  flex: 1;
+  /* 让标签容器占据剩余空间 */
+  -webkit-app-region: no-drag;
+  /* 标签区域不可拖动 */
+
   &::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Edge */
+    display: none;
+    /* Chrome, Safari, Edge */
   }
 }
 
@@ -302,15 +304,17 @@ body {
   height: 100%;
   padding: 0 8px;
   cursor: pointer;
-  -webkit-app-region: no-drag; /* 按钮不可拖动 */
-  
+  -webkit-app-region: no-drag;
+  /* 按钮不可拖动 */
+
   &:hover {
     color: var(--tab-active-text);
   }
 }
 
 .user-profile {
-  -webkit-app-region: no-drag; /* 用户资料区域不可拖动 */
+  -webkit-app-region: no-drag;
+  /* 用户资料区域不可拖动 */
 }
 
 .app-content {

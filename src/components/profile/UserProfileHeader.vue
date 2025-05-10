@@ -13,7 +13,7 @@
           <span class="online-status" v-if="isOnline">在线</span>
         </div>
         <div class="join-date">
-          <img src="@/assets/tradingview-logo.svg" alt="TradingView" class="tv-logo" />
+          <img src="/logo.svg" alt="TradingView" class="tv-logo" />
           <span>{{ joinDate }}</span>
         </div>
       </div>

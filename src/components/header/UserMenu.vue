@@ -1,7 +1,7 @@
 <template>
   <div class="user-menu-overlay" @click="$emit('close')">
     <div class="user-menu" @click.stop>
-      <div class="user-info">
+      <div class="user-info" @click="$emit('open-profile')">
         <div class="user-avatar">{{ userInitial }}</div>
         <div class="user-details">
           <div class="username">{{ user.username }}</div>
@@ -117,6 +117,7 @@ const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'logout'): void;
   (e: 'open-settings'): void;
+  (e: 'open-profile'): void;
 }>();
 
 // 注入主题上下文
@@ -163,6 +164,7 @@ const userInitial = computed(() => {
   display: flex;
   align-items: center;
   padding: 12px 16px;
+  cursor: pointer;
   
   .user-avatar {
     width: 40px;
