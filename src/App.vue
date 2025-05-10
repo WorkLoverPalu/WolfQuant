@@ -420,6 +420,7 @@ body {
   flex: 1;
   overflow: auto;
   background-color: var(--bg-color);
+  padding-right: 40px;
 }
 
 

@@ -89,7 +89,7 @@
   
   const props = withDefaults(defineProps<Props>(), {
     currentUser: null,
-    headerHeight: 48
+    headerHeight: 40
   });
   
   // 定义事件
