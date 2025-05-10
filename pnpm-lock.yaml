@@ -17,6 +17,9 @@ importers:
       lucide-vue-next:
         specifier: ^0.509.0
         version: 0.509.0(vue@3.5.13(typescript@5.6.3))
+      tauri:
+        specifier: link:@tauri-apps/api/tauri
+        version: link:@tauri-apps/api/tauri
       vue:
         specifier: ^3.5.13
         version: 3.5.13(typescript@5.6.3)

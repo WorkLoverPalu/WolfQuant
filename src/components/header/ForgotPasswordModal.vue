@@ -94,7 +94,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 
 const email = ref('');
 const token = ref('');

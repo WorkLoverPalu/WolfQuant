@@ -93,7 +93,6 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { invoke } from '@tauri-apps/api/tauri';
 import type { ThemeType } from '../../services/theme-service';
 import SettingsIcon from '../../assets/icons/SettingsIcon.vue';
 import LogoutIcon from '../../assets/icons/LogoutIcon.vue';
@@ -101,6 +100,22 @@ import PlusIcon from '../../assets/icons/PlusIcon.vue';
 import WindowIcon from '../../assets/icons/WindowIcon.vue';
 import ClipboardIcon from '../../assets/icons/ClipboardIcon.vue';
 import ZoomIcon from '../../assets/icons/ZoomIcon.vue';
+
+// Import Tauri API conditionally to avoid build errors
+let invoke: (cmd: string, args?: any) => Promise<any>;
+
+try {
+  // Dynamic import for Tauri API
+  const tauriModule = await import('@tauri-apps/api/core');
+  invoke = tauriModule.invoke;
+} catch (error) {
+  // Fallback for when Tauri API is not available (e.g., during development in browser)
+  console.warn('Tauri API not available, using mock implementation');
+  invoke = async (cmd: string, args?: any) => {
+    console.log(`Mock invoke: ${cmd}`, args);
+    return Promise.resolve();
+  };
+}
 
 interface User {
   id: string;
