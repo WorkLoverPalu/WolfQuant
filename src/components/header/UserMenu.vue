@@ -83,10 +83,9 @@
       
       <div class="menu-divider"></div>
       
-      <button class="menu-item" @click="$emit('close')">
+      <button class="menu-item logout-button" @click="handleLogout">
         <LogoutIcon />
         <span>退出 WolfQuant</span>
-        <span class="shortcut">⌘Q</span>
       </button>
     </div>
   </div>
@@ -94,6 +93,7 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue';
+import { invoke } from '@tauri-apps/api/tauri';
 import type { ThemeType } from '../../services/theme-service';
 import SettingsIcon from '../../assets/icons/SettingsIcon.vue';
 import LogoutIcon from '../../assets/icons/LogoutIcon.vue';
@@ -136,6 +136,26 @@ const setTheme = (theme: ThemeType) => {
 const userInitial = computed(() => {
   return props.user.avatar || props.user.username.charAt(0).toUpperCase();
 });
+
+// 处理退出登录
+const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem('auth_token');
+    
+    if (token) {
+      await invoke('logout', { token });
+      
+      // 清除本地存储的用户信息和令牌
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      
+      // 通知父组件退出登录
+      emit('logout');
+    }
+  } catch (err) {
+    console.error('Logout failed:', err);
+  }
+};
 </script>
 
 <style lang="scss" scoped>
@@ -263,6 +283,14 @@ const userInitial = computed(() => {
       font-size: 12px;
       color: var(--tab-text);
     }
+  }
+}
+
+.logout-button {
+  color: #ef4444;
+  
+  svg {
+    color: #ef4444;
   }
 }
 
