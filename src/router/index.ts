@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import UserProfile from '@/components/UserProfile.vue';
+import MarketWatchlist from '@/components/MarketWatchlist.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -11,11 +12,18 @@ const routes: Array<RouteRecordRaw> = [
     path: '/profile',
     name: 'profile',
     component: UserProfile,
-    component: UserProfile,
     meta: {
       requiresAuth: true // 可选：如果需要登录才能访问
     }
-  }
+  },
+  {
+    path: '/market-watchlist',
+    name: 'market-watchlist',
+    component: MarketWatchlist,
+    meta: {
+      requiresAuth: true // 可选：如果需要登录才能访问
+    }
+  },
 ];
 
 const router = createRouter({

@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed,markRaw, shallowRef} from 'vue';
+import { ref, computed, markRaw, shallowRef } from 'vue';
 import ThemeProvider from './components/ThemeProvider.vue';
 import TabItem from './components/tabs/TabItem.vue';
 import HeaderUserProfile from './components/header/HeaderUserProfile.vue';
@@ -51,6 +51,7 @@ import UserMenu from './components/header/UserMenu.vue';
 import SettingsModal from './components/header/SettingsModal.vue';
 import PlusIcon from './assets/icons/PlusIcon.vue';
 import UserProfile from './components/UserProfile.vue';
+import MarketWatchlist from './components/MarketWatchlist.vue';
 import './styles/transitions.scss';
 
 interface Tab {
@@ -79,10 +80,10 @@ const showSettingsModal = ref(false);
 // 标签页状态
 const tabs = ref<Tab[]>([
   {
-    id: '1',
-    title: 'BIOUSDT',
-    component: 'WolfQuant',
-    props: { symbol: 'BIOUSDT', price: '0.08221', change: '+16.1%' },
+    id: 'market-watchlist',
+    title: 'MarketWatchlist',
+    component: markRaw(MarketWatchlist),
+    props: {},
     closable: true
   },
   {
