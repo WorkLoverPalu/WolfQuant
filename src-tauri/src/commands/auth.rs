@@ -8,7 +8,7 @@ use crate::models::{
 use tauri::command;
 use log::{info, error};
 
-#[command]
+#[tauri::command]
 pub async fn register_command(request: RegisterRequest) -> Result<AuthResponse, ErrorResponse> {
     info!("Register request received for user: {}", request.username);
     
@@ -28,7 +28,7 @@ pub async fn register_command(request: RegisterRequest) -> Result<AuthResponse, 
     }
 }
 
-#[command]
+#[tauri::command]
 pub async fn login_command(request: LoginRequest) -> Result<AuthResponse, ErrorResponse> {
     info!("Login request received for: {}", request.username_or_email);
     
@@ -48,7 +48,7 @@ pub async fn login_command(request: LoginRequest) -> Result<AuthResponse, ErrorR
     }
 }
 
-#[command]
+#[tauri::command]
 pub async fn logout_command(request: LogoutRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Logout request received for user ID: {}", request.user_id);
     
@@ -66,7 +66,7 @@ pub async fn logout_command(request: LogoutRequest) -> Result<MessageResponse, E
     }
 }
 
-#[command]
+#[tauri::command]
 pub async fn forgot_password_command(request: ForgotPasswordRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Password reset request received for email: {}", request.email);
     
@@ -103,7 +103,7 @@ pub async fn forgot_password_command(request: ForgotPasswordRequest) -> Result<M
     }
 }
 
-#[command]
+#[tauri::command]
 pub async fn reset_password_command(request: ResetPasswordRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Password reset attempt with token");
     
@@ -121,7 +121,7 @@ pub async fn reset_password_command(request: ResetPasswordRequest) -> Result<Mes
     }
 }
 
-#[command]
+#[tauri::command]
 pub async fn verify_session_command(request: SessionRequest) -> Result<User, ErrorResponse> {
     match verify_session(&request.token) {
         Ok(user) => {
