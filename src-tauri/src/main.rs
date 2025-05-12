@@ -2,24 +2,35 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-// 在 main.rs 中添加
+//兼容适配
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 
-mod api;
-mod auth;
 mod config;
+mod commands;
 mod database;
 mod error;
 mod models;
+mod services;
 mod utils;
-// 导入api相关的crate
-use crate::api::auth::{
-    forgot_password_command, login_command, logout_command, register_command,
-    reset_password_command, verify_session_command,
+
+use commands::data::{
+    cmd_create_trade_alert,
+    cmd_get_asset_price_history,
+    cmd_get_portfolio_summary,
+    cmd_get_user_trade_alerts,
+    cmd_mark_alert_read,
+    //
+    cmd_update_asset_price,
+    cmd_update_asset_price_batch,
+    //登陆
+    forgot_password_command,
+    login_command,
+    logout_command,
+    register_command,
+    reset_password_command,
+    verify_session_command,
 };
-use crate::config::Config;
-use tauri::{command, State};
 
 fn main() {
     // 加载配置
@@ -39,19 +50,22 @@ fn main() {
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            //注册api有效性
-            register_command,
+            //登陆
+            forgot_password_command,
             login_command,
             logout_command,
-            forgot_password_command,
+            register_command,
             reset_password_command,
-            verify_session_command
+            verify_session_command,
+            //其他
+            cmd_update_asset_price,
+            cmd_update_asset_price_batch,
+            cmd_get_asset_price_history,
+            cmd_create_trade_alert,
+            cmd_mark_alert_read,
+            cmd_get_user_trade_alerts,
+            cmd_get_portfolio_summary,
         ])
-        .setup(|app| {
-            #[cfg(target_os = "macos")]
-            app.set_activation_policy(ActivationPolicy::Regular);
-            Ok(())
-        })
         .run(tauri::generate_context!())
-        .expect("Error while running tauri application");
+        .expect("error while running tauri application");
 }
