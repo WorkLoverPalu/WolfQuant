@@ -83,10 +83,10 @@
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
-const email = ref('');
-const username = ref('');
-const password = ref('');
-const confirmPassword = ref('');
+const email = ref('123@qq.com');
+const username = ref('natang');
+const password = ref('qwe123');
+const confirmPassword = ref('qwe123');
 const isLoading = ref(false);
 const error = ref('');
 const success = ref('');
@@ -119,7 +119,7 @@ const handleSubmit = async () => {
   success.value = '';
   
   try {
-    const response: any = await invoke('register', {
+    const response: any = await invoke('register_command', {
       request: {
         email: email.value,
         username: username.value,
@@ -140,6 +140,7 @@ const handleSubmit = async () => {
       emit('login');
     }, 3000);
   } catch (err: any) {
+    console.log("err",err)
     error.value = err.error || '注册失败，请稍后再试';
   } finally {
     isLoading.value = false;

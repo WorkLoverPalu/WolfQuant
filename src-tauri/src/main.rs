@@ -13,7 +13,7 @@ mod database;
 mod error;
 mod models;
 mod utils;
-
+// 导入api相关的crate
 use crate::api::auth::{
     forgot_password_command, login_command, logout_command, register_command,
     reset_password_command, verify_session_command,
@@ -39,6 +39,7 @@ fn main() {
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            //注册api有效性
             register_command,
             login_command,
             logout_command,
