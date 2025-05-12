@@ -14,6 +14,7 @@ mod models;
 mod services;
 mod utils;
 
+// 数据
 use commands::data::{
     cmd_create_trade_alert,
     cmd_get_asset_price_history,
@@ -23,7 +24,9 @@ use commands::data::{
     //
     cmd_update_asset_price,
     cmd_update_asset_price_batch,
-    //登陆
+};
+//登陆
+use commands::auth::{
     forgot_password_command,
     login_command,
     logout_command,
@@ -31,7 +34,7 @@ use commands::data::{
     reset_password_command,
     verify_session_command,
 };
-
+use crate::config::config::Config;
 fn main() {
     // 加载配置
     if let Err(e) = Config::load() {
