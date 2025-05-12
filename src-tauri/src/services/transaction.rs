@@ -2,7 +2,7 @@
  * 交易相关功能
  */
 use crate::database::get_db_connection;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use crate::models::Transaction;
 use chrono::Utc;
 use log::{error, info};

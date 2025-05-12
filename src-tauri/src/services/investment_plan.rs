@@ -2,7 +2,7 @@
  * 定投计划
  */
 use crate::database::get_db_connection;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use crate::models::InvestmentPlan;
 use chrono::{Datelike, Duration, NaiveDateTime, TimeZone, Utc, Weekday};
 use log::{error, info};

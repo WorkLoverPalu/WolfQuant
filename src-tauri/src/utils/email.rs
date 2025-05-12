@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use log::error;
 
 // 这里是一个简单的邮件发送实现，实际应用中可能需要使用第三方库

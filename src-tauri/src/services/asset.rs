@@ -2,7 +2,7 @@
  * 资产管理功能
  */
 use crate::database::get_db_connection;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use crate::models::{Asset, AssetType, UserGroup};
 use chrono::Utc;
 use log::{error, info};

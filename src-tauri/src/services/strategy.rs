@@ -2,7 +2,7 @@
  * 策略
  */
 use crate::database::get_db_connection;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use crate::models::{
     BacktestResult, InvestmentStrategy, PerformancePoint, StrategyApplication, Transaction,
 };

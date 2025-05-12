@@ -1,4 +1,4 @@
-use crate::error::ErrorResponse;
+use crate::error::auth::ErrorResponse;
 use crate::models::{
     InvestmentPlan, CreateInvestmentPlanRequest, UpdateInvestmentPlanRequest, 
     DeleteInvestmentPlanRequest, MessageResponse,

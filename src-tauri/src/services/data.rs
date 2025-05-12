@@ -2,7 +2,7 @@
  * 数据更新模块
  */
 use crate::database::get_db_connection;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use crate::models::{AssetSummary, PortfolioSummary, PriceHistory, TradeAlert};
 use chrono::{Duration, NaiveDate, Utc};
 use log::{error, info};

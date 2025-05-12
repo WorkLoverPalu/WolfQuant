@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::database::{execute_query, get_db_connection};
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use crate::models::{PasswordResetToken, User};
 use crate::utils::crypto::{generate_token, hash_password, verify_password};
 use chrono::{Duration, Utc};

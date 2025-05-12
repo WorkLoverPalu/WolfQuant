@@ -1,6 +1,6 @@
 use crate::services::auth::{create_password_reset_token, login_user, logout_user, register_user, reset_password, verify_session};
 use crate::config::Config;
-use crate::error::ErrorResponse;
+use crate::error::auth::ErrorResponse;
 use crate::models::{
     AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest,
     MessageResponse, RegisterRequest, ResetPasswordRequest, SessionRequest, User

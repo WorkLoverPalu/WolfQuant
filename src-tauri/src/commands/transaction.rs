@@ -1,4 +1,4 @@
-use crate::error::ErrorResponse;
+use crate::error::auth::ErrorResponse;
 use crate::models::{
     Transaction, CreateTransactionRequest, UpdateTransactionRequest, DeleteTransactionRequest,
     GetUserTransactionsRequest, MessageResponse,

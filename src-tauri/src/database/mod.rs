@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use log::{error, info};
 use rusqlite::{Connection, Result as SqlResult};
 use std::fs;
