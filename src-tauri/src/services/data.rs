@@ -1,37 +1,34 @@
-
 /**
  * 数据更新模块
  */
 use crate::database::get_db_connection;
 use crate::error::AuthError;
-use crate::models::{PriceHistory, TradeAlert, PortfolioSummary, AssetSummary};
+use crate::models::{AssetSummary, PortfolioSummary, PriceHistory, TradeAlert};
 use chrono::{Duration, NaiveDate, Utc};
 use log::{error, info};
 use rusqlite::params;
 use serde_json::Value;
 use std::collections::HashMap;
 
-pub fn update_asset_price(
-    asset_id: i64,
-    price: f64,
-    date: i64,
-) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+pub fn update_asset_price(asset_id: i64, price: f64, date: i64) -> Result<(), AuthError> {
+    let mut conn = get_db_connection()?;
     let now = Utc::now().timestamp();
-    
+
     // 更新资产当前价格
     conn.execute(
         "UPDATE assets SET current_price = ?1, last_updated = ?2, updated_at = ?3 WHERE id = ?4",
         params![price, now, now, asset_id],
     )?;
-    
+
     // 检查是否已存在该日期的价格记录
-    let price_exists: bool = conn.query_row(
-        "SELECT 1 FROM price_history WHERE asset_id = ?1 AND date = ?2",
-        params![asset_id, date],
-        |_| Ok(true),
-    ).unwrap_or(false);
-    
+    let price_exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM price_history WHERE asset_id = ?1 AND date = ?2",
+            params![asset_id, date],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+
     if price_exists {
         // 更新价格记录
         conn.execute(
@@ -46,36 +43,36 @@ pub fn update_asset_price(
             params![asset_id, date, price, now],
         )?;
     }
-    
+
     info!("Asset price updated: {} at {}", asset_id, date);
     Ok(())
 }
 
-pub fn update_asset_price_batch(
-    asset_prices: &[(i64, f64, i64)],
-) -> Result<usize, AuthError> {
-    let conn = get_db_connection()?;
+pub fn update_asset_price_batch(asset_prices: &[(i64, f64, i64)]) -> Result<usize, AuthError> {
+    let mut conn = get_db_connection()?;
     let now = Utc::now().timestamp();
-    
+
     // 开始事务
     let tx = conn.transaction()?;
-    
+
     let mut updated_count = 0;
-    
+
     for (asset_id, price, date) in asset_prices {
         // 更新资产当前价格
         tx.execute(
             "UPDATE assets SET current_price = ?1, last_updated = ?2, updated_at = ?3 WHERE id = ?4",
             params![price, now, now, asset_id],
         )?;
-        
+
         // 检查是否已存在该日期的价格记录
-        let price_exists: bool = tx.query_row(
-            "SELECT 1 FROM price_history WHERE asset_id = ?1 AND date = ?2",
-            params![asset_id, date],
-            |_| Ok(true),
-        ).unwrap_or(false);
-        
+        let price_exists: bool = tx
+            .query_row(
+                "SELECT 1 FROM price_history WHERE asset_id = ?1 AND date = ?2",
+                params![asset_id, date],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+
         if price_exists {
             // 更新价格记录
             tx.execute(
@@ -90,13 +87,13 @@ pub fn update_asset_price_batch(
                 params![asset_id, date, price, now],
             )?;
         }
-        
+
         updated_count += 1;
     }
-    
+
     // 提交事务
     tx.commit()?;
-    
+
     info!("Batch updated {} asset prices", updated_count);
     Ok(updated_count)
 }
@@ -106,9 +103,9 @@ pub fn get_asset_price_history(
     start_date: Option<i64>,
     end_date: Option<i64>,
 ) -> Result<Vec<PriceHistory>, AuthError> {
-    let conn = get_db_connection()?;
-    
-    let query = match (start_date, end_date) {
+    let mut conn = get_db_connection()?;
+
+    let mut query = match (start_date, end_date) {
         (Some(s_date), Some(e_date)) => {
             conn.prepare(
                 "SELECT id, asset_id, date, open_price, close_price, high_price, low_price, volume, created_at
@@ -142,10 +139,10 @@ pub fn get_asset_price_history(
             )?
         }
     };
-    
+
     let price_history = match (start_date, end_date) {
-        (Some(s_date), Some(e_date)) => {
-            query.query_map(params![asset_id, s_date, e_date], |row| {
+        (Some(s_date), Some(e_date)) => query
+            .query_map(params![asset_id, s_date, e_date], |row| {
                 Ok(PriceHistory {
                     id: row.get(0)?,
                     asset_id: row.get(1)?,
@@ -162,10 +159,9 @@ pub fn get_asset_price_history(
             .map_err(|e| {
                 error!("Failed to fetch asset price history: {}", e);
                 AuthError::DatabaseError(format!("获取资产价格历史失败: {}", e))
-            })?
-        },
-        (Some(s_date), None) => {
-            query.query_map(params![asset_id, s_date], |row| {
+            })?,
+        (Some(s_date), None) => query
+            .query_map(params![asset_id, s_date], |row| {
                 Ok(PriceHistory {
                     id: row.get(0)?,
                     asset_id: row.get(1)?,
@@ -182,10 +178,9 @@ pub fn get_asset_price_history(
             .map_err(|e| {
                 error!("Failed to fetch asset price history: {}", e);
                 AuthError::DatabaseError(format!("获取资产价格历史失败: {}", e))
-            })?
-        },
-        (None, Some(e_date)) => {
-            query.query_map(params![asset_id, e_date], |row| {
+            })?,
+        (None, Some(e_date)) => query
+            .query_map(params![asset_id, e_date], |row| {
                 Ok(PriceHistory {
                     id: row.get(0)?,
                     asset_id: row.get(1)?,
@@ -202,10 +197,9 @@ pub fn get_asset_price_history(
             .map_err(|e| {
                 error!("Failed to fetch asset price history: {}", e);
                 AuthError::DatabaseError(format!("获取资产价格历史失败: {}", e))
-            })?
-        },
-        (None, None) => {
-            query.query_map(params![asset_id], |row| {
+            })?,
+        (None, None) => query
+            .query_map(params![asset_id], |row| {
                 Ok(PriceHistory {
                     id: row.get(0)?,
                     asset_id: row.get(1)?,
@@ -222,10 +216,9 @@ pub fn get_asset_price_history(
             .map_err(|e| {
                 error!("Failed to fetch asset price history: {}", e);
                 AuthError::DatabaseError(format!("获取资产价格历史失败: {}", e))
-            })?
-        }
+            })?,
     };
-    
+
     Ok(price_history)
 }
 
@@ -238,31 +231,39 @@ pub fn create_trade_alert(
 ) -> Result<TradeAlert, AuthError> {
     let conn = get_db_connection()?;
     let now = Utc::now().timestamp();
-    
+
     // 检查资产是否存在且属于该用户
-    let asset_exists: bool = conn.query_row(
-        "SELECT 1 FROM assets WHERE id = ?1 AND user_id = ?2",
-        params![asset_id, user_id],
-        |_| Ok(true),
-    ).unwrap_or(false);
-    
+    let asset_exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM assets WHERE id = ?1 AND user_id = ?2",
+            params![asset_id, user_id],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+
     if !asset_exists {
-        return Err(AuthError::InvalidCredentials("资产不存在或无权限".to_string()));
+        return Err(AuthError::InvalidCredentials(
+            "资产不存在或无权限".to_string(),
+        ));
     }
-    
+
     // 如果指定了策略，检查策略是否存在且属于该用户
     if let Some(s_id) = strategy_id {
-        let strategy_exists: bool = conn.query_row(
-            "SELECT 1 FROM investment_strategies WHERE id = ?1 AND user_id = ?2",
-            params![s_id, user_id],
-            |_| Ok(true),
-        ).unwrap_or(false);
-        
+        let strategy_exists: bool = conn
+            .query_row(
+                "SELECT 1 FROM investment_strategies WHERE id = ?1 AND user_id = ?2",
+                params![s_id, user_id],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+
         if !strategy_exists {
-            return Err(AuthError::InvalidCredentials("策略不存在或无权限".to_string()));
+            return Err(AuthError::InvalidCredentials(
+                "策略不存在或无权限".to_string(),
+            ));
         }
     }
-    
+
     // 创建交易提醒
     conn.execute(
         "INSERT INTO trade_alerts (user_id, asset_id, strategy_id, alert_type, message, is_read, created_at)
@@ -277,32 +278,33 @@ pub fn create_trade_alert(
             now
         ],
     )?;
-    
+
     let alert_id = conn.last_insert_rowid();
-    
+
     // 获取资产信息
     let (asset_name, asset_code): (String, String) = conn.query_row(
         "SELECT name, code FROM assets WHERE id = ?1",
         params![asset_id],
         |row| Ok((row.get(0)?, row.get(1)?)),
     )?;
-    
+
     // 获取策略信息
     let strategy_name = if let Some(s_id) = strategy_id {
         conn.query_row(
             "SELECT name FROM investment_strategies WHERE id = ?1",
             params![s_id],
             |row| row.get(0),
-        ).ok()
+        )
+        .ok()
     } else {
         None
     };
-    
+
     let alert = TradeAlert {
         id: alert_id,
         user_id: user_id.to_string(),
         asset_id,
-        asset_name,
+        asset_name: asset_name.clone(),
         asset_code,
         strategy_id,
         strategy_name,
@@ -311,31 +313,38 @@ pub fn create_trade_alert(
         is_read: false,
         created_at: now,
     };
-    
-    info!("Trade alert created: {} for asset: {}", alert_type, asset_name);
+
+    info!(
+        "Trade alert created: {} for asset: {}",
+        alert_type, asset_name
+    );
     Ok(alert)
 }
 
 pub fn mark_alert_read(id: i64, user_id: &str) -> Result<(), AuthError> {
     let conn = get_db_connection()?;
-    
+
     // 检查提醒是否存在且属于该用户
-    let alert_exists: bool = conn.query_row(
-        "SELECT 1 FROM trade_alerts WHERE id = ?1 AND user_id = ?2",
-        params![id, user_id],
-        |_| Ok(true),
-    ).unwrap_or(false);
-    
+    let alert_exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM trade_alerts WHERE id = ?1 AND user_id = ?2",
+            params![id, user_id],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+
     if !alert_exists {
-        return Err(AuthError::InvalidCredentials("交易提醒不存在或无权限".to_string()));
+        return Err(AuthError::InvalidCredentials(
+            "交易提醒不存在或无权限".to_string(),
+        ));
     }
-    
+
     // 标记为已读
     conn.execute(
         "UPDATE trade_alerts SET is_read = 1 WHERE id = ?1",
         params![id],
     )?;
-    
+
     info!("Trade alert marked as read: {} for user: {}", id, user_id);
     Ok(())
 }
@@ -346,59 +355,51 @@ pub fn get_user_trade_alerts(
     limit: Option<i64>,
 ) -> Result<Vec<TradeAlert>, AuthError> {
     let conn = get_db_connection()?;
-    
-    let query = match (is_read, limit) {
-        (Some(read), Some(lim)) => {
-            conn.prepare(
-                "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
+
+    let mut query = match (is_read, limit) {
+        (Some(read), Some(lim)) => conn.prepare(
+            "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
                         s.name, a.alert_type, a.message, a.is_read, a.created_at
                  FROM trade_alerts a
                  JOIN assets ast ON a.asset_id = ast.id
                  LEFT JOIN investment_strategies s ON a.strategy_id = s.id
                  WHERE a.user_id = ?1 AND a.is_read = ?2
                  ORDER BY a.created_at DESC
-                 LIMIT ?3"
-            )?
-        },
-        (Some(read), None) => {
-            conn.prepare(
-                "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
+                 LIMIT ?3",
+        )?,
+        (Some(read), None) => conn.prepare(
+            "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
                         s.name, a.alert_type, a.message, a.is_read, a.created_at
                  FROM trade_alerts a
                  JOIN assets ast ON a.asset_id = ast.id
                  LEFT JOIN investment_strategies s ON a.strategy_id = s.id
                  WHERE a.user_id = ?1 AND a.is_read = ?2
-                 ORDER BY a.created_at DESC"
-            )?
-        },
-        (None, Some(lim)) => {
-            conn.prepare(
-                "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
+                 ORDER BY a.created_at DESC",
+        )?,
+        (None, Some(lim)) => conn.prepare(
+            "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
                         s.name, a.alert_type, a.message, a.is_read, a.created_at
                  FROM trade_alerts a
                  JOIN assets ast ON a.asset_id = ast.id
                  LEFT JOIN investment_strategies s ON a.strategy_id = s.id
                  WHERE a.user_id = ?1
                  ORDER BY a.created_at DESC
-                 LIMIT ?2"
-            )?
-        },
-        (None, None) => {
-            conn.prepare(
-                "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
+                 LIMIT ?2",
+        )?,
+        (None, None) => conn.prepare(
+            "SELECT a.id, a.user_id, a.asset_id, ast.name, ast.code, a.strategy_id, 
                         s.name, a.alert_type, a.message, a.is_read, a.created_at
                  FROM trade_alerts a
                  JOIN assets ast ON a.asset_id = ast.id
                  LEFT JOIN investment_strategies s ON a.strategy_id = s.id
                  WHERE a.user_id = ?1
-                 ORDER BY a.created_at DESC"
-            )?
-        }
+                 ORDER BY a.created_at DESC",
+        )?,
     };
-    
+
     let alerts = match (is_read, limit) {
-        (Some(read), Some(lim)) => {
-            query.query_map(params![user_id, read, lim], |row| {
+        (Some(read), Some(lim)) => query
+            .query_map(params![user_id, read, lim], |row| {
                 Ok(TradeAlert {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -417,10 +418,9 @@ pub fn get_user_trade_alerts(
             .map_err(|e| {
                 error!("Failed to fetch user trade alerts: {}", e);
                 AuthError::DatabaseError(format!("获取用户交易提醒失败: {}", e))
-            })?
-        },
-        (Some(read), None) => {
-            query.query_map(params![user_id, read], |row| {
+            })?,
+        (Some(read), None) => query
+            .query_map(params![user_id, read], |row| {
                 Ok(TradeAlert {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -439,10 +439,9 @@ pub fn get_user_trade_alerts(
             .map_err(|e| {
                 error!("Failed to fetch user trade alerts: {}", e);
                 AuthError::DatabaseError(format!("获取用户交易提醒失败: {}", e))
-            })?
-        },
-        (None, Some(lim)) => {
-            query.query_map(params![user_id, lim], |row| {
+            })?,
+        (None, Some(lim)) => query
+            .query_map(params![user_id, lim], |row| {
                 Ok(TradeAlert {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -461,10 +460,9 @@ pub fn get_user_trade_alerts(
             .map_err(|e| {
                 error!("Failed to fetch user trade alerts: {}", e);
                 AuthError::DatabaseError(format!("获取用户交易提醒失败: {}", e))
-            })?
-        },
-        (None, None) => {
-            query.query_map(params![user_id], |row| {
+            })?,
+        (None, None) => query
+            .query_map(params![user_id], |row| {
                 Ok(TradeAlert {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
@@ -483,16 +481,15 @@ pub fn get_user_trade_alerts(
             .map_err(|e| {
                 error!("Failed to fetch user trade alerts: {}", e);
                 AuthError::DatabaseError(format!("获取用户交易提醒失败: {}", e))
-            })?
-        }
+            })?,
     };
-    
+
     Ok(alerts)
 }
 
 pub fn get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, AuthError> {
     let conn = get_db_connection()?;
-    
+
     // 获取用户所有资产
     let mut stmt = conn.prepare(
         "SELECT a.id, a.asset_type_id, t.name, a.current_price,
@@ -504,83 +501,106 @@ pub fn get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, AuthErro
          JOIN asset_types t ON a.asset_type_id = t.id
          WHERE a.user_id = ?1"
     )?;
-    
-    let assets = stmt.query_map(params![user_id], |row| {
-        Ok((
-            row.get::<_, i64>(0)?,
-            row.get::<_, i64>(1)?,
-            row.get::<_, String>(2)?,
-            row.get::<_, Option<f64>>(3)?,
-            row.get::<_, Option<f64>>(4)?,
-            row.get::<_, Option<f64>>(5)?,
-        ))
-    })?
-    .collect::<Result<Vec<_>, _>>()
-    .map_err(|e| {
-        error!("Failed to fetch user assets: {}", e);
-        AuthError::DatabaseError(format!("获取用户资产失败: {}", e))
-    })?;
-    
+
+    let assets = stmt
+        .query_map(params![user_id], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<f64>>(3)?,
+                row.get::<_, Option<f64>>(4)?,
+                row.get::<_, Option<f64>>(5)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| {
+            error!("Failed to fetch user assets: {}", e);
+            AuthError::DatabaseError(format!("获取用户资产失败: {}", e))
+        })?;
+
     // 按资产类型分组计算
     let mut asset_summaries = Vec::new();
     let mut asset_type_map: HashMap<String, (f64, f64, f64, f64)> = HashMap::new();
-    
+
     let yesterday = (Utc::now() - Duration::days(1)).timestamp();
-    
+
     let mut total_value = 0.0;
     let mut total_cost = 0.0;
     let mut total_daily_profit = 0.0;
-    
+
     for (asset_id, _, asset_type, current_price, total_amount, total_cost_asset) in assets {
-        if let (Some(price), Some(amount), Some(cost)) = (current_price, total_amount, total_cost_asset) {
+        if let (Some(price), Some(amount), Some(cost)) =
+            (current_price, total_amount, total_cost_asset)
+        {
             if amount <= 0.0 {
                 continue; // 跳过没有持仓的资产
             }
-            
+
             let current_value = price * amount;
             let profit = current_value - cost;
-            let profit_percent = if cost > 0.0 { profit / cost * 100.0 } else { 0.0 };
-            
+            let profit_percent = if cost > 0.0 {
+                profit / cost * 100.0
+            } else {
+                0.0
+            };
+
             // 获取昨日价格
-            let yesterday_price: Option<f64> = conn.query_row(
-                "SELECT close_price FROM price_history 
+            let yesterday_price: Option<f64> = conn
+                .query_row(
+                    "SELECT close_price FROM price_history 
                  WHERE asset_id = ?1 AND date <= ?2 
                  ORDER BY date DESC LIMIT 1",
-                params![asset_id, yesterday],
-                |row| row.get(0),
-            ).ok();
-            
+                    params![asset_id, yesterday],
+                    |row| row.get(0),
+                )
+                .ok();
+
             let daily_profit = if let Some(prev_price) = yesterday_price {
                 (price - prev_price) * amount
             } else {
                 0.0
             };
-            
+
             let daily_profit_percent = if let Some(prev_price) = yesterday_price {
-                if prev_price > 0.0 { (price - prev_price) / prev_price * 100.0 } else { 0.0 }
+                if prev_price > 0.0 {
+                    (price - prev_price) / prev_price * 100.0
+                } else {
+                    0.0
+                }
             } else {
                 0.0
             };
-            
+
             // 更新资产类型统计
-            let entry = asset_type_map.entry(asset_type.clone()).or_insert((0.0, 0.0, 0.0, 0.0));
+            let entry = asset_type_map
+                .entry(asset_type.clone())
+                .or_insert((0.0, 0.0, 0.0, 0.0));
             entry.0 += current_value;
             entry.1 += cost;
             entry.2 += profit;
             entry.3 += daily_profit;
-            
+
             // 更新总计
             total_value += current_value;
             total_cost += cost;
             total_daily_profit += daily_profit;
         }
     }
-    
+
     // 生成资产类型摘要
     for (asset_type, (value, cost, profit, daily_profit)) in asset_type_map {
-        let profit_percent = if cost > 0.0 { profit / cost * 100.0 } else { 0.0 };
-        let daily_profit_percent = if value - daily_profit > 0.0 { daily_profit / (value - daily_profit) * 100.0 } else { 0.0 };
-        
+        let profit_percent = if cost > 0.0 {
+            profit / cost * 100.0
+        } else {
+            0.0
+        };
+        let daily_profit_percent = if value - daily_profit > 0.0 {
+            daily_profit / (value - daily_profit) * 100.0
+        } else {
+            0.0
+        };
+
         asset_summaries.push(AssetSummary {
             asset_type,
             total_value: value,
@@ -591,16 +611,20 @@ pub fn get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, AuthErro
             daily_profit_percent,
         });
     }
-    
+
     // 计算总体摘要
     let total_profit = total_value - total_cost;
-    let total_profit_percent = if total_cost > 0.0 { total_profit / total_cost * 100.0 } else { 0.0 };
-    let daily_profit_percent = if total_value - total_daily_profit > 0.0 { 
-        total_daily_profit / (total_value - total_daily_profit) * 100.0 
-    } else { 
-        0.0 
+    let total_profit_percent = if total_cost > 0.0 {
+        total_profit / total_cost * 100.0
+    } else {
+        0.0
     };
-    
+    let daily_profit_percent = if total_value - total_daily_profit > 0.0 {
+        total_daily_profit / (total_value - total_daily_profit) * 100.0
+    } else {
+        0.0
+    };
+
     let summary = PortfolioSummary {
         total_value,
         total_cost,
@@ -610,6 +634,6 @@ pub fn get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, AuthErro
         daily_profit_percent,
         asset_summaries,
     };
-    
+
     Ok(summary)
 }

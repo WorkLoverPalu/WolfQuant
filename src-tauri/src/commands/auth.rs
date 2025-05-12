@@ -1,4 +1,4 @@
-use crate::auth::{create_password_reset_token, login_user, logout_user, register_user, reset_password, verify_session};
+use crate::services::auth::{create_password_reset_token, login_user, logout_user, register_user, reset_password, verify_session};
 use crate::config::Config;
 use crate::error::ErrorResponse;
 use crate::models::{
@@ -9,7 +9,7 @@ use tauri::command;
 use log::{info, error};
 
 #[tauri::command]
-pub async fn register_command(request: RegisterRequest) -> Result<AuthResponse, ErrorResponse> {
+pub async fn auth_register_command(request: RegisterRequest) -> Result<AuthResponse, ErrorResponse> {
     info!("Register request received for user: {}", request.username);
     
     match register_user(&request.username, &request.email, &request.password) {
@@ -29,7 +29,7 @@ pub async fn register_command(request: RegisterRequest) -> Result<AuthResponse, 
 }
 
 #[tauri::command]
-pub async fn login_command(request: LoginRequest) -> Result<AuthResponse, ErrorResponse> {
+pub async fn auth_login_command(request: LoginRequest) -> Result<AuthResponse, ErrorResponse> {
     info!("Login request received for: {}", request.username_or_email);
     
     match login_user(&request.username_or_email, &request.password) {
@@ -49,7 +49,7 @@ pub async fn login_command(request: LoginRequest) -> Result<AuthResponse, ErrorR
 }
 
 #[tauri::command]
-pub async fn logout_command(request: LogoutRequest) -> Result<MessageResponse, ErrorResponse> {
+pub async fn auth_logout_command(request: LogoutRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Logout request received for user ID: {}", request.user_id);
     
     match logout_user(&request.user_id, &request.token) {
@@ -67,7 +67,7 @@ pub async fn logout_command(request: LogoutRequest) -> Result<MessageResponse, E
 }
 
 #[tauri::command]
-pub async fn forgot_password_command(request: ForgotPasswordRequest) -> Result<MessageResponse, ErrorResponse> {
+pub async fn auth_forgot_password_command(request: ForgotPasswordRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Password reset request received for email: {}", request.email);
     
     let config = Config::get();
@@ -104,7 +104,7 @@ pub async fn forgot_password_command(request: ForgotPasswordRequest) -> Result<M
 }
 
 #[tauri::command]
-pub async fn reset_password_command(request: ResetPasswordRequest) -> Result<MessageResponse, ErrorResponse> {
+pub async fn auth_reset_password_command(request: ResetPasswordRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Password reset attempt with token");
     
     match reset_password(&request.token, &request.new_password) {
@@ -122,7 +122,7 @@ pub async fn reset_password_command(request: ResetPasswordRequest) -> Result<Mes
 }
 
 #[tauri::command]
-pub async fn verify_session_command(request: SessionRequest) -> Result<User, ErrorResponse> {
+pub async fn auth_verify_session_command(request: SessionRequest) -> Result<User, ErrorResponse> {
     match verify_session(&request.token) {
         Ok(user) => {
             info!("Session verified for user: {}", user.username);

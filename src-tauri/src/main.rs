@@ -6,8 +6,8 @@
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 
-mod config;
 mod commands;
+mod config;
 mod database;
 mod error;
 mod models;
@@ -16,25 +16,21 @@ mod utils;
 
 // 数据
 use commands::data::{
-    cmd_create_trade_alert,
-    cmd_get_asset_price_history,
-    cmd_get_portfolio_summary,
-    cmd_get_user_trade_alerts,
-    cmd_mark_alert_read,
+    data_create_trade_alert,
+    data_get_asset_price_history,
+    data_get_portfolio_summary,
+    data_get_user_trade_alerts,
+    data_mark_alert_read,
     //
-    cmd_update_asset_price,
-    cmd_update_asset_price_batch,
+    data_update_asset_price,
+    data_update_asset_price_batch,
 };
 //登陆
+use crate::config::Config;
 use commands::auth::{
-    forgot_password_command,
-    login_command,
-    logout_command,
-    register_command,
-    reset_password_command,
-    verify_session_command,
+    auth_forgot_password_command, auth_login_command, auth_logout_command, auth_register_command,
+    auth_reset_password_command, auth_verify_session_command,
 };
-use crate::config::config::Config;
 fn main() {
     // 加载配置
     if let Err(e) = Config::load() {
@@ -54,20 +50,20 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             //登陆
-            forgot_password_command,
-            login_command,
-            logout_command,
-            register_command,
-            reset_password_command,
-            verify_session_command,
+            auth_forgot_password_command,
+            auth_login_command,
+            auth_logout_command,
+            auth_register_command,
+            auth_reset_password_command,
+            auth_verify_session_command,
             //其他
-            cmd_update_asset_price,
-            cmd_update_asset_price_batch,
-            cmd_get_asset_price_history,
-            cmd_create_trade_alert,
-            cmd_mark_alert_read,
-            cmd_get_user_trade_alerts,
-            cmd_get_portfolio_summary,
+            data_update_asset_price,
+            data_update_asset_price_batch,
+            data_get_asset_price_history,
+            data_create_trade_alert,
+            data_mark_alert_read,
+            data_get_user_trade_alerts,
+            data_get_portfolio_summary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
