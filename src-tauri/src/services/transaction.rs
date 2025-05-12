@@ -87,7 +87,7 @@ pub fn create_transaction(
         id: transaction_id,
         user_id: user_id.to_string(),
         asset_id,
-        asset_name,
+        asset_name:asset_name.clone(),
         asset_code,
         transaction_type: transaction_type.to_string(),
         amount,
@@ -272,21 +272,21 @@ pub fn get_user_transactions(
     
     // 构建查询条件
     let mut conditions = vec!["t.user_id = ?1".to_string()];
-    let mut params: Vec<&dyn rusqlite::ToSql> = vec![&user_id];
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(user_id)];
     
     if let Some(a_id) = asset_id {
         conditions.push("t.asset_id = ?".to_string());
-        params.push(&a_id);
+        params.push(Box::new(a_id));
     }
     
     if let Some(s_date) = start_date {
         conditions.push("t.transaction_date >= ?".to_string());
-        params.push(&s_date);
+        params.push(Box::new(s_date));
     }
     
     if let Some(e_date) = end_date {
         conditions.push("t.transaction_date <= ?".to_string());
-        params.push(&e_date);
+        params.push(Box::new(e_date));
     }
     
     let condition_str = conditions.join(" AND ");

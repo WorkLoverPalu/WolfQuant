@@ -203,7 +203,7 @@ pub fn delete_user_group(id: i64, user_id: &str) -> Result<(), AuthError> {
 pub fn get_user_groups(user_id: &str, asset_type_id: Option<i64>) -> Result<Vec<UserGroup>, AuthError> {
     let conn = get_db_connection()?;
     
-    let query = match asset_type_id {
+    let mut query = match asset_type_id {
         Some(type_id) => {
             conn.prepare(
                 "SELECT g.id, g.user_id, g.name, g.asset_type_id, t.name, g.description, g.created_at, g.updated_at
@@ -492,7 +492,7 @@ pub fn update_asset(
 }
 
 pub fn delete_asset(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let mut conn = get_db_connection()?;
     
     // 检查资产是否存在且属于该用户
     let asset_exists: bool = conn.query_row(
@@ -561,15 +561,20 @@ pub fn get_user_assets(
     // 构建查询条件
     let mut conditions = vec!["a.user_id = ?1".to_string()];
     let mut params: Vec<&dyn rusqlite::ToSql> = vec![&user_id];
+    let mut boxed_params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     
     if let Some(type_id) = asset_type_id {
         conditions.push("a.asset_type_id = ?".to_string());
-        params.push(&type_id);
+        let type_id_box = Box::new(type_id);
+        boxed_params.push(type_id_box);
+        params.push(boxed_params.last().unwrap().as_ref());
     }
     
     if let Some(g_id) = group_id {
         conditions.push("a.group_id = ?".to_string());
-        params.push(&g_id);
+        let g_id_box = Box::new(g_id);
+        boxed_params.push(g_id_box);
+        params.push(boxed_params.last().unwrap().as_ref());
     }
     
     let condition_str = conditions.join(" AND ");
