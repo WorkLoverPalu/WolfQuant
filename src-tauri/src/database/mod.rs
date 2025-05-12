@@ -1,14 +1,14 @@
 use crate::config::Config;
 use crate::error::AuthError;
+use log::{error, info};
 use rusqlite::{Connection, Result as SqlResult};
 use std::fs;
 use std::path::Path;
-use log::{info, error};
 
 pub fn get_db_connection() -> Result<Connection, AuthError> {
     let config = Config::get();
     let db_path = Path::new(&config.database.path);
-    
+
     // 确保目录存在
     if let Some(parent) = db_path.parent() {
         if !parent.exists() {
@@ -18,7 +18,7 @@ pub fn get_db_connection() -> Result<Connection, AuthError> {
             })?;
         }
     }
-    
+
     Connection::open(db_path).map_err(|e| {
         error!("Failed to open database connection: {}", e);
         AuthError::DatabaseError(format!("无法连接数据库: {}", e))
@@ -27,55 +27,58 @@ pub fn get_db_connection() -> Result<Connection, AuthError> {
 
 pub fn init_database() -> Result<(), AuthError> {
     let conn = get_db_connection()?;
-    
+
     // 创建用户表
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY NOT NULL,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
+        "CREATE TABLE IF NOT EXISTS sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            expires_at INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )",
         [],
-    ).map_err(|e| {
+    )
+    .map_err(|e| {
         error!("Failed to create users table: {}", e);
         AuthError::DatabaseError(format!("创建用户表失败: {}", e))
     })?;
-    
+
     // 创建会话表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
             token TEXT UNIQUE NOT NULL,
             expires_at INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )",
         [],
-    ).map_err(|e| {
+    )
+    .map_err(|e| {
         error!("Failed to create sessions table: {}", e);
         AuthError::DatabaseError(format!("创建会话表失败: {}", e))
     })?;
-    
+
     // 创建密码重置令牌表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
             token TEXT UNIQUE NOT NULL,
             expires_at INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )",
         [],
-    ).map_err(|e| {
+    )
+    .map_err(|e| {
         error!("Failed to create password_reset_tokens table: {}", e);
         AuthError::DatabaseError(format!("创建密码重置令牌表失败: {}", e))
     })?;
-    
+
     info!("Database initialized successfully");
     Ok(())
 }

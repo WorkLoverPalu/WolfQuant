@@ -78,7 +78,7 @@ pub fn register_user(username: &str, email: &str, password: &str) -> Result<User
 
 pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, String), AuthError> {
     let conn = get_db_connection()?;
-    
+    println!("login_user: ");
     // 查找用户
     let result = conn.query_row(
         "SELECT id, username, email, password_hash, created_at, updated_at FROM users 
