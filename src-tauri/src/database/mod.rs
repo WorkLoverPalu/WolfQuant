@@ -30,13 +30,13 @@ pub fn init_database() -> Result<(), AuthError> {
 
     // 创建用户表
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS sessions (
+        "CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            expires_at INTEGER NOT NULL,
+            username TEXT UNIQUE NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
             created_at INTEGER NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            updated_at INTEGER NOT NULL
         )",
         [],
     )
