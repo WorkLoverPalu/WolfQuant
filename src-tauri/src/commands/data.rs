@@ -1,22 +1,23 @@
 use crate::error::ErrorResponse;
 use crate::models::{
-    PriceHistory, TradeAlert, PortfolioSummary, GetAssetPriceHistoryRequest,
-    MarkAlertReadRequest, MessageResponse,
+    GetAssetPriceHistoryRequest, MarkAlertReadRequest, MessageResponse, PortfolioSummary,
+    PriceHistory, TradeAlert,
 };
 use crate::services::data::{
-    update_asset_price, update_asset_price_batch, get_asset_price_history,
-    create_trade_alert, mark_alert_read, get_user_trade_alerts, get_portfolio_summary,
+    create_trade_alert, get_asset_price_history, get_portfolio_summary, get_user_trade_alerts,
+    mark_alert_read, update_asset_price, update_asset_price_batch,
 };
 use serde_json::Value;
 
 #[tauri::command]
 pub async fn data_update_asset_price(
-    symbol: String,
+    asset_id: i64,
     price: f64,
+    date: i64,
 ) -> Result<MessageResponse, ErrorResponse> {
-    match update_asset_price(&symbol, price).await {
+    match update_asset_price(asset_id, price, date) {
         Ok(_) => Ok(MessageResponse {
-            message: format!("Price for {} updated successfully", symbol),
+            message: format!("Price for {} updated successfully", asset_id),
         }),
         Err(e) => Err(ErrorResponse::from(e)),
     }
@@ -24,9 +25,9 @@ pub async fn data_update_asset_price(
 
 #[tauri::command]
 pub async fn data_update_asset_price_batch(
-    prices: Vec<(String, f64)>,
+    prices: Vec<(i64, f64, i64)>,
 ) -> Result<MessageResponse, ErrorResponse> {
-    match update_asset_price_batch(prices).await {
+    match update_asset_price_batch(&prices) {
         Ok(_) => Ok(MessageResponse {
             message: "Batch price update completed successfully".to_string(),
         }),
@@ -38,7 +39,7 @@ pub async fn data_update_asset_price_batch(
 pub async fn data_get_asset_price_history(
     request: GetAssetPriceHistoryRequest,
 ) -> Result<Vec<PriceHistory>, ErrorResponse> {
-    match get_asset_price_history(&request.symbol, &request.timeframe, request.limit).await {
+    match get_asset_price_history(request.asset_id, request.start_date, request.end_date) {
         Ok(history) => Ok(history),
         Err(e) => Err(ErrorResponse::from(e)),
     }
@@ -46,13 +47,13 @@ pub async fn data_get_asset_price_history(
 
 #[tauri::command]
 pub async fn data_create_trade_alert(
-    symbol: String,
-    alert_type: String,
-    price_target: f64,
-    message: String,
-    user_id: i32,
+    user_id: &str,
+    asset_id: i64,
+    strategy_id: Option<i64>,
+    alert_type: &str,
+    message: &str,
 ) -> Result<TradeAlert, ErrorResponse> {
-    match create_trade_alert(&symbol, &alert_type, price_target, &message, user_id).await {
+    match create_trade_alert(user_id, asset_id, strategy_id, alert_type, message) {
         Ok(alert) => Ok(alert),
         Err(e) => Err(ErrorResponse::from(e)),
     }
@@ -62,7 +63,7 @@ pub async fn data_create_trade_alert(
 pub async fn data_mark_alert_read(
     request: MarkAlertReadRequest,
 ) -> Result<MessageResponse, ErrorResponse> {
-    match mark_alert_read(request.alert_id).await {
+    match mark_alert_read(request.id, &request.user_id) {
         Ok(_) => Ok(MessageResponse {
             message: "Alert marked as read".to_string(),
         }),
@@ -72,20 +73,19 @@ pub async fn data_mark_alert_read(
 
 #[tauri::command]
 pub async fn data_get_user_trade_alerts(
-    user_id: i32,
-    include_read: bool,
+    user_id: &str,
+    is_read: Option<bool>,
+    limit: Option<i64>,
 ) -> Result<Vec<TradeAlert>, ErrorResponse> {
-    match get_user_trade_alerts(user_id, include_read).await {
+    match get_user_trade_alerts(user_id, is_read, limit) {
         Ok(alerts) => Ok(alerts),
         Err(e) => Err(ErrorResponse::from(e)),
     }
 }
 
 #[tauri::command]
-pub async fn data_get_portfolio_summary(
-    user_id: i32,
-) -> Result<PortfolioSummary, ErrorResponse> {
-    match get_portfolio_summary(user_id).await {
+pub async fn data_get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, ErrorResponse> {
+    match get_portfolio_summary(user_id) {
         Ok(summary) => Ok(summary),
         Err(e) => Err(ErrorResponse::from(e)),
     }
