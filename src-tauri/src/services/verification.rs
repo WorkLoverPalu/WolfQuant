@@ -1,7 +1,6 @@
 use crate::config::Config;
-use crate::database::get_db_connection;
-use crate::error::AuthError;
-use crate::models::EmailVerificationCode;
+use crate::database::get_connection_from_pool;
+use crate::error::auth::AuthError;
 use crate::utils::crypto::generate_verification_code;
 use crate::utils::email::send_verification_code_email;
 use chrono::{Duration, Utc};
@@ -10,7 +9,7 @@ use rusqlite::params;
 
 // 生成并发送验证码
 pub fn generate_and_send_verification_code(email: &str, purpose: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     let config = Config::get();
     // 验证用途
@@ -22,7 +21,7 @@ pub fn generate_and_send_verification_code(email: &str, purpose: &str) -> Result
     let code = generate_verification_code();
     
     // 设置过期时间（10分钟）
-    let expires_at = (Utc::now() + Duration::minutes(config.auth.emial_code_valid_duration)).timestamp();
+    let expires_at = (Utc::now() + Duration::minutes(config.auth.emial_code_valid_duration as i64)).timestamp();
     
     // 检查是否已存在该邮箱和用途的验证码
     let code_exists: bool = conn.query_row(
@@ -57,7 +56,7 @@ pub fn generate_and_send_verification_code(email: &str, purpose: &str) -> Result
 
 // 验证验证码
 pub fn verify_code(email: &str, code: &str, purpose: &str) -> Result<bool, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     
     // 查找验证码

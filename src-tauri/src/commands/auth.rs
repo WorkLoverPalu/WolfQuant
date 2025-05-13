@@ -1,12 +1,12 @@
 use crate::config::Config;
 use crate::error::auth::ErrorResponse;
 use crate::models::{
-    AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest, MessageResponse,
+    AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest,SendVerificationCodeRequest, MessageResponse,
     RegisterRequest, ResetPasswordRequest, SessionRequest, User,
 };
 use crate::services::auth::{
-    create_password_reset_token, login_user, logout_user, register_user, reset_password,
-    reset_password_with_code, verify_session,
+    login_user, logout_user, register_user, reset_password, reset_password_with_code,
+    verify_session,
 };
 use crate::services::verification::generate_and_send_verification_code;
 use log::{error, info};
@@ -30,7 +30,7 @@ pub async fn auth_register_command(
             Ok(AuthResponse {
                 user,
                 message: "注册成功".to_string(),
-                token: Some(None),
+                token: None,
             })
         }
         Err(err) => {

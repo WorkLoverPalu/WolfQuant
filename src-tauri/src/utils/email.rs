@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::error::AuthError;
+use crate::error::auth::AuthError;
 use log::error;
 
 // 发送密码重置邮件

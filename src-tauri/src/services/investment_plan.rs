@@ -1,7 +1,7 @@
 /**
  * 定投计划
  */
-use crate::database::get_db_connection;
+use crate::database::get_connection_from_pool;
 use crate::error::auth::AuthError;
 use crate::models::InvestmentPlan;
 use chrono::{Datelike, Duration, NaiveDateTime, TimeZone, Utc, Weekday};
@@ -17,7 +17,7 @@ pub fn create_investment_plan(
     day_of_month: Option<i64>,
     amount: f64,
 ) -> Result<InvestmentPlan, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 验证频率
@@ -155,7 +155,7 @@ pub fn update_investment_plan(
     amount: f64,
     is_active: bool,
 ) -> Result<InvestmentPlan, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 验证频率
@@ -285,7 +285,7 @@ pub fn update_investment_plan(
 }
 
 pub fn delete_investment_plan(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 检查定投计划是否存在且属于该用户
     let plan_exists: bool = conn
@@ -313,7 +313,7 @@ pub fn get_user_investment_plans(
     user_id: &str,
     asset_id: Option<i64>,
 ) -> Result<Vec<InvestmentPlan>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     let mut query = if let Some(a_id) = asset_id {
         conn.prepare(
@@ -395,7 +395,7 @@ pub fn get_user_investment_plans(
 }
 
 pub fn execute_due_investment_plans() -> Result<usize, AuthError> {
-    let mut conn = get_db_connection()?;
+    let mut conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 获取所有到期的定投计划

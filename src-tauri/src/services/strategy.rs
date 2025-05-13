@@ -1,7 +1,7 @@
 /**
  * 策略
  */
-use crate::database::get_db_connection;
+use crate::database::get_connection_from_pool;
 use crate::error::auth::AuthError;
 use crate::models::{
     BacktestResult, InvestmentStrategy, PerformancePoint, StrategyApplication, Transaction,
@@ -18,7 +18,7 @@ pub fn create_investment_strategy(
     strategy_type: &str,
     parameters: &str,
 ) -> Result<InvestmentStrategy, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 验证策略类型
@@ -90,7 +90,7 @@ pub fn update_investment_strategy(
     description: Option<&str>,
     parameters: &str,
 ) -> Result<InvestmentStrategy, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 检查策略是否存在且属于该用户
@@ -149,7 +149,7 @@ pub fn update_investment_strategy(
 }
 
 pub fn delete_investment_strategy(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let mut conn = get_db_connection()?;
+    let mut conn = get_connection_from_pool()?;
 
     // 检查策略是否存在且属于该用户
     let strategy_exists: bool = conn
@@ -195,7 +195,7 @@ pub fn delete_investment_strategy(id: i64, user_id: &str) -> Result<(), AuthErro
 }
 
 pub fn get_user_investment_strategies(user_id: &str) -> Result<Vec<InvestmentStrategy>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     let mut stmt = conn.prepare(
         "SELECT id, user_id, name, description, strategy_type, parameters, created_at, updated_at
@@ -231,7 +231,7 @@ pub fn apply_strategy(
     strategy_id: i64,
     asset_id: i64,
 ) -> Result<StrategyApplication, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 检查策略是否存在且属于该用户
@@ -328,7 +328,7 @@ pub fn apply_strategy(
 }
 
 pub fn remove_strategy_application(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 检查应用是否存在且属于该用户
     let application_exists: bool = conn
@@ -359,7 +359,7 @@ pub fn get_user_strategy_applications(
     user_id: &str,
     asset_id: Option<i64>,
 ) -> Result<Vec<StrategyApplication>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     let mut query = if let Some(a_id) = asset_id {
         conn.prepare(
@@ -437,7 +437,7 @@ pub fn backtest_strategy(
     start_date: i64,
     end_date: i64,
 ) -> Result<BacktestResult, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 检查策略是否存在且属于该用户
     let (strategy_type, parameters): (String, String) = conn.query_row(

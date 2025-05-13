@@ -1,7 +1,7 @@
 /**
  * 交易相关功能
  */
-use crate::database::get_db_connection;
+use crate::database::get_connection_from_pool;
 use crate::error::auth::AuthError;
 use crate::models::Transaction;
 use chrono::Utc;
@@ -17,7 +17,7 @@ pub fn create_transaction(
     transaction_date: i64,
     notes: Option<&str>,
 ) -> Result<Transaction, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     
     // 验证交易类型
@@ -133,7 +133,7 @@ pub fn update_transaction(
     transaction_date: i64,
     notes: Option<&str>,
 ) -> Result<Transaction, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     // 验证交易类型
     if transaction_type != "BUY" && transaction_type != "SELL" {
@@ -239,7 +239,7 @@ pub fn update_transaction(
 }
 
 pub fn delete_transaction(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     // 检查交易记录是否存在且属于该用户
     let transaction_exists: bool = conn.query_row(
@@ -268,7 +268,7 @@ pub fn get_user_transactions(
     start_date: Option<i64>,
     end_date: Option<i64>,
 ) -> Result<Vec<Transaction>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     // 构建查询条件
     let mut conditions = vec!["t.user_id = ?1".to_string()];

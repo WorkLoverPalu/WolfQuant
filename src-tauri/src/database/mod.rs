@@ -36,12 +36,12 @@ lazy_static! {
 }
 
 /// 获取数据库连接
-pub fn get_db_connection() -> Result<Connection, AuthError> {
-    CONNECTION_POOL.get().map_err(|e| {
-        error!("Failed to get database connection from pool: {}", e);
-        AuthError::DatabaseError(format!("无法获取数据库连接: {}", e))
-    })
-}
+// pub fn get_db_connection() -> Result<Connection, AuthError> {
+//     CONNECTION_POOL.get().map_err(|e| {
+//         error!("Failed to get database connection from pool: {}", e);
+//         AuthError::DatabaseError(format!("无法获取数据库连接: {}", e))
+//     })
+// }
 
 /// 获取数据库连接(从连接池)
 pub fn get_connection_from_pool(
@@ -55,7 +55,7 @@ pub fn get_connection_from_pool(
 /// 初始化数据库(带事务和迁移)
 pub fn init_database() -> Result<(), AuthError> {
     let config = Config::get();
-    let conn = get_db_connection()?;
+    let mut conn = get_connection_from_pool()?;
 
     // 启用外键约束
     conn.pragma_update(None, "foreign_keys", &1)?;
@@ -89,7 +89,7 @@ pub fn init_database() -> Result<(), AuthError> {
         info!("Database initialized successfully");
     } else if version < config.database.version {
         // 执行迁移
-        migrate_database(&conn, version)?;
+        migrate_database(&mut conn, version)?;
         info!(
             "Database migrated from version {} to {}",
             version, config.database.version
@@ -128,7 +128,7 @@ fn set_database_version(conn: &Connection, version: u32) -> Result<(), AuthError
 
     conn.execute(
         "INSERT OR REPLACE INTO db_version (version, updated_at) VALUES (?, ?)",
-        [version, now],
+        [version, now as u32],
     )
     .map_err(|e| {
         error!("Failed to set database version: {}", e);
@@ -340,7 +340,7 @@ fn initialize_data(tx: &Transaction) -> Result<(), AuthError> {
 }
 
 /// 数据库迁移
-fn migrate_database(conn: &Connection, current_version: u32) -> Result<(), AuthError> {
+fn migrate_database(conn: &mut Connection, current_version: u32) -> Result<(), AuthError> {
     let config = Config::get();
     let tx = conn.transaction()?;
 
@@ -369,11 +369,11 @@ pub fn execute_query(query: &str, params: &[&dyn rusqlite::ToSql]) -> Result<(),
 
 /// 执行批量查询(在事务中)
 pub fn execute_batch_queries(queries: &[(&str, &[&dyn rusqlite::ToSql])]) -> Result<(), AuthError> {
-    let conn = get_connection_from_pool()?;
+    let mut conn = get_connection_from_pool()?;
     let tx = conn.transaction()?;
 
     for (query, params) in queries {
-        tx.execute(query, params)?;
+        tx.execute(query, *params)?;
     }
 
     tx.commit()?;

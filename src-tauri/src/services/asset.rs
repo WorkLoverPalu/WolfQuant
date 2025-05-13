@@ -1,7 +1,7 @@
 /**
  * 资产管理功能
  */
-use crate::database::get_db_connection;
+use crate::database::get_connection_from_pool;
 use crate::error::auth::AuthError;
 use crate::models::{Asset, AssetType, UserGroup};
 use chrono::Utc;
@@ -9,7 +9,7 @@ use log::{error, info};
 use rusqlite::{params, Connection};
 
 pub fn get_asset_types() -> Result<Vec<AssetType>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     let mut stmt = conn.prepare(
         "SELECT id, name, description FROM asset_types ORDER BY id"
@@ -37,7 +37,7 @@ pub fn create_user_group(
     asset_type_id: i64,
     description: Option<&str>,
 ) -> Result<UserGroup, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     
     // 检查资产类型是否存在
@@ -106,7 +106,7 @@ pub fn update_user_group(
     name: &str,
     description: Option<&str>,
 ) -> Result<UserGroup, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     
     // 检查分组是否存在且属于该用户
@@ -171,7 +171,7 @@ pub fn update_user_group(
 }
 
 pub fn delete_user_group(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     // 检查分组是否存在且属于该用户
     let group_exists: bool = conn.query_row(
@@ -201,7 +201,7 @@ pub fn delete_user_group(id: i64, user_id: &str) -> Result<(), AuthError> {
 }
 
 pub fn get_user_groups(user_id: &str, asset_type_id: Option<i64>) -> Result<Vec<UserGroup>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     let mut query = match asset_type_id {
         Some(type_id) => {
@@ -276,7 +276,7 @@ pub fn create_asset(
     name: &str,
     current_price: Option<f64>,
 ) -> Result<Asset, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     
     // 检查资产类型是否存在
@@ -385,7 +385,7 @@ pub fn update_asset(
     name: &str,
     current_price: Option<f64>,
 ) -> Result<Asset, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     
     // 检查资产是否存在且属于该用户
@@ -492,7 +492,7 @@ pub fn update_asset(
 }
 
 pub fn delete_asset(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let mut conn = get_db_connection()?;
+    let mut conn = get_connection_from_pool()?;
     
     // 检查资产是否存在且属于该用户
     let asset_exists: bool = conn.query_row(
@@ -556,26 +556,26 @@ pub fn get_user_assets(
     asset_type_id: Option<i64>,
     group_id: Option<i64>,
 ) -> Result<Vec<Asset>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     // 构建查询条件
     let mut conditions = vec!["a.user_id = ?1".to_string()];
-    let mut params: Vec<&dyn rusqlite::ToSql> = vec![&user_id];
     let mut boxed_params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     
     if let Some(type_id) = asset_type_id {
         conditions.push("a.asset_type_id = ?".to_string());
         let type_id_box = Box::new(type_id);
         boxed_params.push(type_id_box);
-        params.push(boxed_params.last().unwrap().as_ref());
     }
     
     if let Some(g_id) = group_id {
         conditions.push("a.group_id = ?".to_string());
         let g_id_box = Box::new(g_id);
         boxed_params.push(g_id_box);
-        params.push(boxed_params.last().unwrap().as_ref());
     }
+    
+    let mut params: Vec<&dyn rusqlite::ToSql> = vec![&user_id];
+    params.extend(boxed_params.iter().map(|b| b.as_ref()));
     
     let condition_str = conditions.join(" AND ");
     

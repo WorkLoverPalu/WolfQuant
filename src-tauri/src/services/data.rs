@@ -1,7 +1,7 @@
 /**
  * 数据更新模块
  */
-use crate::database::get_db_connection;
+use crate::database::get_connection_from_pool;
 use crate::error::auth::AuthError;
 use crate::models::{AssetSummary, PortfolioSummary, PriceHistory, TradeAlert};
 use chrono::{Duration, NaiveDate, Utc};
@@ -11,7 +11,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 pub fn update_asset_price(asset_id: i64, price: f64, date: i64) -> Result<(), AuthError> {
-    let mut conn = get_db_connection()?;
+    let mut conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 更新资产当前价格
@@ -49,7 +49,7 @@ pub fn update_asset_price(asset_id: i64, price: f64, date: i64) -> Result<(), Au
 }
 
 pub fn update_asset_price_batch(asset_prices: &[(i64, f64, i64)]) -> Result<usize, AuthError> {
-    let mut conn = get_db_connection()?;
+    let mut conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 开始事务
@@ -103,7 +103,7 @@ pub fn get_asset_price_history(
     start_date: Option<i64>,
     end_date: Option<i64>,
 ) -> Result<Vec<PriceHistory>, AuthError> {
-    let mut conn = get_db_connection()?;
+    let mut conn = get_connection_from_pool()?;
 
     let mut query = match (start_date, end_date) {
         (Some(s_date), Some(e_date)) => {
@@ -229,7 +229,7 @@ pub fn create_trade_alert(
     alert_type: &str,
     message: &str,
 ) -> Result<TradeAlert, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
 
     // 检查资产是否存在且属于该用户
@@ -322,7 +322,7 @@ pub fn create_trade_alert(
 }
 
 pub fn mark_alert_read(id: i64, user_id: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 检查提醒是否存在且属于该用户
     let alert_exists: bool = conn
@@ -354,7 +354,7 @@ pub fn get_user_trade_alerts(
     is_read: Option<bool>,
     limit: Option<i64>,
 ) -> Result<Vec<TradeAlert>, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     let mut query = match (is_read, limit) {
         (Some(read), Some(lim)) => conn.prepare(
@@ -488,7 +488,7 @@ pub fn get_user_trade_alerts(
 }
 
 pub fn get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 获取用户所有资产
     let mut stmt = conn.prepare(

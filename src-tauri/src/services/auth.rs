@@ -1,5 +1,6 @@
+
 use crate::config::Config;
-use crate::database::{execute_query, get_connection_from_pool,get_connection_from_pool};
+use crate::database::{execute_query, get_connection_from_pool};
 use crate::error::auth::AuthError;
 use crate::models::{PasswordResetToken, User};
 use crate::services::verification::verify_code;
@@ -204,7 +205,7 @@ pub fn reset_password_with_code(email: &str, verification_code: &str, new_passwo
     // 验证邮箱验证码
     verify_code(email, verification_code, "reset_password")?;
     
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
     
     // 检查邮箱是否存在
     let user_id: String = conn.query_row(
