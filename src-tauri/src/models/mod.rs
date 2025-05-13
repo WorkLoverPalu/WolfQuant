@@ -17,13 +17,14 @@ pub struct RegisterRequest {
     pub email: String,
     pub password: String,
 }
-
+// 登陆
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginRequest {
     pub username_or_email: String,
     pub password: String,
 }
 
+// 退出登陆
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LogoutRequest {
     pub user_id: String,

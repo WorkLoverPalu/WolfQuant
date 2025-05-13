@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::database::{execute_query, get_db_connection};
+use crate::database::{execute_query, get_connection_from_pool,get_connection_from_pool};
 use crate::error::auth::AuthError;
 use crate::models::{PasswordResetToken, User};
 use crate::utils::crypto::{generate_token, hash_password, verify_password};
@@ -17,8 +17,8 @@ pub fn register_user(username: &str, email: &str, password: &str) -> Result<User
             config.auth.min_password_length
         )));
     }
-
-    let conn = get_db_connection()?;
+    //从连接池获取数据库实例
+    let conn = get_connection_from_pool()?;
 
     // 检查用户名是否已存在
     let username_exists: bool = conn
@@ -81,8 +81,8 @@ pub fn register_user(username: &str, email: &str, password: &str) -> Result<User
 }
 
 pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, String), AuthError> {
-    let conn = get_db_connection()?;
-    println!("login_user: ");
+    let conn = get_connection_from_pool()?;
+    println!("login_user: {}",username_or_email);
     // 查找用户
     let result = conn.query_row(
         "SELECT id, username, email, password_hash, created_at, updated_at FROM users 
@@ -135,7 +135,7 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
 }
 
 pub fn logout_user(user_id: &str, token: &str) -> Result<(), AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 删除会话
     let rows_affected = conn.execute(
@@ -152,7 +152,7 @@ pub fn logout_user(user_id: &str, token: &str) -> Result<(), AuthError> {
 }
 
 pub fn verify_session(token: &str) -> Result<User, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 查找会话
     let result = conn.query_row(
@@ -182,7 +182,7 @@ pub fn verify_session(token: &str) -> Result<User, AuthError> {
 }
 
 pub fn create_password_reset_token(email: &str) -> Result<PasswordResetToken, AuthError> {
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 检查邮箱是否存在
     let user_id: String = conn
@@ -236,7 +236,7 @@ pub fn reset_password(token: &str, new_password: &str) -> Result<(), AuthError> 
         )));
     }
 
-    let conn = get_db_connection()?;
+    let conn = get_connection_from_pool()?;
 
     // 查找令牌
     let user_id: String = conn

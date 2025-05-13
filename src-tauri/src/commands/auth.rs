@@ -10,6 +10,7 @@ use log::{info, error};
 
 #[tauri::command]
 pub async fn auth_register_command(request: RegisterRequest) -> Result<AuthResponse, ErrorResponse> {
+    //info! 宏会通过引用接收参数
     info!("Register request received for user: {}", request.username);
     
     match register_user(&request.username, &request.email, &request.password) {
@@ -18,7 +19,7 @@ pub async fn auth_register_command(request: RegisterRequest) -> Result<AuthRespo
             Ok(AuthResponse {
                 user,
                 message: "注册成功".to_string(),
-                token: None,
+                token: Some(None),
             })
         },
         Err(err) => {
