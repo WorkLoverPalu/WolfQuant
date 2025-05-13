@@ -26,7 +26,7 @@
       <SideNavigation :current-user="currentUser" @open-tab="handleOpenTab" />
 
       <!-- 登录模态框 -->
-      <LoginModal v-if="showLoginModal" @close="showLoginModal = false" @login="handleLogin"
+      <LoginModal v-if="showLoginModal" @close="showLoginModal = false" @login-success="handleLogin"
         @forgot-password="openForgotPasswordModal" @register="openRegisterModal" />
 
       <!-- 注册模态框 -->
@@ -47,7 +47,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw, shallowRef } from 'vue';
+import { ref, computed, markRaw, shallowRef,onMounted } from 'vue';
+import { User, Tab, MarketData } from "./types/index.ts";
 import ThemeProvider from './components/ThemeProvider.vue';
 import TabItem from './components/tabs/TabItem.vue';
 import HeaderUserProfile from './components/header/HeaderUserProfile.vue';
@@ -63,35 +64,11 @@ import MarketFooter from './components/footer/MarketFooter.vue';
 import SideNavigation from './components/SideNavigation.vue';
 import './styles/transitions.scss';
 
-interface Tab {
-  id: string;
-  title: string;
-  component: any;
-  props?: Record<string, any>;
-  closable: boolean;
-}
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  avatar?: string;
-}
 
-// 市场数据类型
-interface MarketData {
-  name: string;
-  symbol: string;
-  price: string;
-  change: string;
-  percentChange: string;
-  high: string;
-  low: string;
-  open: string;
-  prevClose: string;
-  volume: string;
-  updateTime: string;
-}
+
+
+
 
 // 用户状态
 const currentUser = ref<User | null>(null);
@@ -204,13 +181,13 @@ const openSettingsModal = () => {
   showSettingsModal.value = true;
 };
 
-const handleLogin = (username: string, password: string) => {
+const handleLogin = (user: User, password: string) => {
   // 这里应该是实际的登录逻辑，目前使用模拟数据
   currentUser.value = {
-    id: '1',
-    username: username,
-    email: `${username}@example.com`,
-    avatar: username.charAt(0).toUpperCase()
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    avatar: user.username.charAt(0).toUpperCase()
   };
   showLoginModal.value = false;
 };
@@ -327,6 +304,17 @@ const handleOpenTab = (tabData: any) => {
     activeTabIndex.value = tabs.value.length - 1;
   }
 };
+// 页面加载时处理 localStorage 中的用户数据
+onMounted(() => {
+  const savedUser = localStorage.getItem('user');
+  if (savedUser) {
+    try {
+      currentUser.value = JSON.parse(savedUser);
+    } catch (error) {
+      console.error('Failed to parse saved user data:', error);
+    }
+  }
+});
 </script>
 
 <style lang="scss">

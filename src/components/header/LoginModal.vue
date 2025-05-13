@@ -5,35 +5,23 @@
         <h2>登录</h2>
         <button class="close-button" @click="$emit('close')">×</button>
       </div>
-      
+
       <div class="modal-body">
         <div v-if="error" class="error-message">{{ error }}</div>
-        
+
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
             <label for="username">用户名或邮箱</label>
-            <input 
-              type="text" 
-              id="username" 
-              v-model="username" 
-              placeholder="请输入用户名或邮箱"
-              required
-              :disabled="isLoading"
-            />
+            <input type="text" id="username" v-model="username" placeholder="请输入用户名或邮箱" required
+              :disabled="isLoading" />
           </div>
-          
+
           <div class="form-group">
             <label for="password">密码</label>
-            <input 
-              type="password" 
-              id="password" 
-              v-model="password" 
-              placeholder="请输入密码"
-              required
-              :disabled="isLoading"
-            />
+            <input type="password" id="password" v-model="password" placeholder="请输入密码" required
+              :disabled="isLoading" />
           </div>
-          
+
           <div class="form-actions">
             <button type="submit" class="primary-button" :disabled="isLoading">
               {{ isLoading ? '登录中...' : '登录' }}
@@ -41,7 +29,7 @@
           </div>
         </form>
       </div>
-      
+
       <div class="modal-footer">
         <button class="text-button" @click="$emit('forgot-password')">
           忘记密码？
@@ -58,6 +46,7 @@
 import { ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 
+
 const username = ref('');
 const password = ref('');
 const isLoading = ref(false);
@@ -72,10 +61,10 @@ const emit = defineEmits<{
 
 const handleSubmit = async () => {
   if (!username.value || !password.value) return;
-  
+
   isLoading.value = true;
   error.value = '';
-  
+
   try {
     const response: any = await invoke('auth_login_command', {
       request: {
@@ -83,14 +72,22 @@ const handleSubmit = async () => {
         password: password.value
       }
     });
-    
+
+    console.log("response", response)
+
     // 存储用户信息和令牌
     localStorage.setItem('auth_token', response.token);
     localStorage.setItem('user', JSON.stringify(response.user));
-    
+
     // 通知父组件登录成功
-    emit('login-success', response.user, response.token);
-    
+    const user = {
+      id: response.user.id,
+      username: response.user.username,
+      email: response.user.email,
+      avatar: response.user.username.charAt(0).toUpperCase(),
+    };
+    emit('login-success', user, response.token);
+
     // 清空表单
     username.value = '';
     password.value = '';
@@ -131,20 +128,20 @@ const handleSubmit = async () => {
   align-items: center;
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
-  
+
   h2 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
   }
-  
+
   .close-button {
     background: transparent;
     border: none;
     color: var(--tab-text);
     font-size: 24px;
     cursor: pointer;
-    
+
     &:hover {
       color: var(--tab-active-text);
     }
@@ -153,7 +150,7 @@ const handleSubmit = async () => {
 
 .modal-body {
   padding: 16px;
-  
+
   .error-message {
     margin-bottom: 16px;
     padding: 10px;
@@ -162,17 +159,17 @@ const handleSubmit = async () => {
     border-radius: 4px;
     font-size: 14px;
   }
-  
+
   .form-group {
     margin-bottom: 16px;
-    
+
     label {
       display: block;
       margin-bottom: 8px;
       font-size: 14px;
       color: var(--tab-text);
     }
-    
+
     input {
       width: 100%;
       padding: 10px 12px;
@@ -181,26 +178,26 @@ const handleSubmit = async () => {
       background-color: var(--input-bg);
       color: var(--tab-active-text);
       font-size: 14px;
-      
+
       &:focus {
         outline: none;
         border-color: var(--button-primary);
       }
-      
+
       &::placeholder {
         color: var(--tab-text);
       }
-      
+
       &:disabled {
         opacity: 0.7;
         cursor: not-allowed;
       }
     }
   }
-  
+
   .form-actions {
     margin-top: 24px;
-    
+
     .primary-button {
       width: 100%;
       padding: 10px;
@@ -211,11 +208,11 @@ const handleSubmit = async () => {
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
-      
+
       &:hover:not(:disabled) {
         background-color: var(--button-primary-hover);
       }
-      
+
       &:disabled {
         opacity: 0.7;
         cursor: not-allowed;
@@ -229,14 +226,14 @@ const handleSubmit = async () => {
   justify-content: space-between;
   padding: 16px;
   border-top: 1px solid var(--border-color);
-  
+
   .text-button {
     background: transparent;
     border: none;
     color: var(--button-primary);
     font-size: 14px;
     cursor: pointer;
-    
+
     &:hover {
       text-decoration: underline;
     }

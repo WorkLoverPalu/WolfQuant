@@ -1,4 +1,3 @@
-
 use crate::config::Config;
 use crate::database::{execute_query, get_connection_from_pool};
 use crate::error::auth::AuthError;
@@ -9,7 +8,12 @@ use chrono::{Duration, Utc};
 use log::{debug, error, info};
 use rusqlite::{params, Connection, Result as SqlResult};
 
-pub fn register_user(username: &str, email: &str, password: &str,verification_code: &str) -> Result<User, AuthError> {
+pub fn register_user(
+    username: &str,
+    email: &str,
+    password: &str,
+    verification_code: &str,
+) -> Result<User, AuthError> {
     let config = Config::get();
 
     // 验证密码长度
@@ -21,7 +25,6 @@ pub fn register_user(username: &str, email: &str, password: &str,verification_co
     }
     // 验证邮箱验证码
     verify_code(email, verification_code, "register")?;
-
 
     //从连接池获取数据库实例
     let conn = get_connection_from_pool()?;
@@ -92,7 +95,7 @@ pub fn register_user(username: &str, email: &str, password: &str,verification_co
 
 pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, String), AuthError> {
     let conn = get_connection_from_pool()?;
-    println!("login_user: {}",username_or_email);
+    println!("login_user: {}", username_or_email);
     // 查找用户
     let result = conn.query_row(
         "SELECT id, username, email, password_hash,email_verified, created_at, updated_at FROM users 
@@ -104,7 +107,7 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
                     id: row.get(0)?,
                     username: row.get(1)?,
                     email: row.get(2)?,
-                    email_verified: row.get(3)?,
+                    email_verified: row.get(4)?,
                     created_at: row.get(4)?,
                     updated_at: row.get(5)?,
                 },
@@ -193,52 +196,53 @@ pub fn verify_session(token: &str) -> Result<User, AuthError> {
     }
 }
 
-pub fn reset_password_with_code(email: &str, verification_code: &str, new_password: &str) -> Result<(), AuthError> {
+pub fn reset_password_with_code(
+    email: &str,
+    verification_code: &str,
+    new_password: &str,
+) -> Result<(), AuthError> {
     let config = Config::get();
-    
+
     // 验证密码长度
     if new_password.len() < config.auth.min_password_length as usize {
         return Err(AuthError::InvalidPassword(format!(
-            "密码长度不能少于{}个字符", 
+            "密码长度不能少于{}个字符",
             config.auth.min_password_length
         )));
     }
-    
+
     // 验证邮箱验证码
     verify_code(email, verification_code, "reset_password")?;
-    
+
     let conn = get_connection_from_pool()?;
-    
+
     // 检查邮箱是否存在
-    let user_id: String = conn.query_row(
-        "SELECT id FROM users WHERE email = ?1",
-        params![email],
-        |row| row.get(0),
-    ).map_err(|_| AuthError::UserNotFound("该邮箱未注册".to_string()))?;
-    
+    let user_id: String = conn
+        .query_row(
+            "SELECT id FROM users WHERE email = ?1",
+            params![email],
+            |row| row.get(0),
+        )
+        .map_err(|_| AuthError::UserNotFound("该邮箱未注册".to_string()))?;
+
     // 哈希新密码
     let hashed_password = hash_password(new_password)?;
-    
+
     // 更新密码
     conn.execute(
         "UPDATE users SET password_hash = ?1, updated_at = ?2 WHERE id = ?3",
-        params![
-            hashed_password,
-            Utc::now().timestamp(),
-            user_id
-        ],
+        params![hashed_password, Utc::now().timestamp(), user_id],
     )?;
-    
+
     // 删除所有会话，强制用户重新登录
-    conn.execute(
-        "DELETE FROM sessions WHERE user_id = ?1",
-        params![user_id],
-    )?;
-    
-    info!("Password reset successful with verification code for user ID: {}", user_id);
+    conn.execute("DELETE FROM sessions WHERE user_id = ?1", params![user_id])?;
+
+    info!(
+        "Password reset successful with verification code for user ID: {}",
+        user_id
+    );
     Ok(())
 }
-
 
 pub fn reset_password(token: &str, new_password: &str) -> Result<(), AuthError> {
     let config = Config::get();

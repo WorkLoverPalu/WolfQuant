@@ -94,12 +94,8 @@ import ZoomIcon from '../../assets/icons/ZoomIcon.vue';
 
 import { invoke } from '@tauri-apps/api/core';
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  avatar?: string;
-}
+import { User } from "../../types/index.ts";
+
 
 const props = defineProps<{
   user: User;
