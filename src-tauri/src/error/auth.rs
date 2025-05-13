@@ -34,7 +34,6 @@ impl fmt::Display for AuthError {
 // 表明 AuthError 是一个标准的错误类型
 impl std::error::Error for AuthError {}
 
-
 // 实现 From trait，允许从 rusqlite::Error 自动转换为 AuthError
 // 所有数据库错误都会被包装为 AuthError::DatabaseError
 impl From<rusqlite::Error> for AuthError {
@@ -53,17 +52,17 @@ pub struct ErrorResponse {
 impl From<AuthError> for ErrorResponse {
     fn from(err: AuthError) -> Self {
         let (message, status) = match err {
-            AuthError::UserExists(msg) => (msg, 409),
-            AuthError::UserNotFound(msg) => (msg, 404),
-            AuthError::InvalidCredentials(msg) => (msg, 401),
-            AuthError::InvalidPassword(msg) => (msg, 400),
+            AuthError::UserExists(msg) => (msg, 409),   //用户已存在
+            AuthError::UserNotFound(msg) => (msg, 404), //用户不存在
+            AuthError::InvalidCredentials(msg) => (msg, 401), //认证失败
+            AuthError::InvalidPassword(msg) => (msg, 400), //无效密码
             AuthError::InvalidToken(msg) => (msg, 401),
             AuthError::InvalidSession(msg) => (msg, 401),
-            AuthError::DatabaseError(msg) => (msg, 500),
+            AuthError::DatabaseError(msg) => (msg, 500), //服务器错误
             AuthError::CryptoError(msg) => (msg, 500),
             AuthError::InternalError(msg) => (msg, 500),
         };
-        
+
         ErrorResponse {
             error: message,
             status,
