@@ -29,7 +29,7 @@ use commands::data::{
 use crate::config::Config;
 use commands::auth::{
     auth_forgot_password_command, auth_login_command, auth_logout_command, auth_register_command,
-    auth_reset_password_command, auth_verify_session_command,
+    auth_reset_password_command, auth_verify_session_command,auth_send_verification_code_command,
 };
 fn main() {
     // 加载配置
@@ -56,6 +56,7 @@ fn main() {
             auth_register_command,
             auth_reset_password_command,
             auth_verify_session_command,
+            auth_send_verification_code_command,
             //其他
             data_update_asset_price,
             data_update_asset_price_batch,

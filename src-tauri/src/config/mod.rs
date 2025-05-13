@@ -30,6 +30,8 @@ pub struct AuthConfig {
     pub min_password_length: u8,
     pub password_reset_token_expiry_minutes: u32,
     pub session_timeout_days: u32,
+    pub emial_code_valid_duration: u32,
+
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -63,6 +65,7 @@ impl Default for Config {
                 min_password_length: 6,
                 password_reset_token_expiry_minutes: 30,
                 session_timeout_days: 30,
+                emial_code_valid_duration:10,//邮箱验证码有效时间(分钟)
             },
             logging: LoggingConfig {
                 enabled: true,

@@ -31,3 +31,11 @@ pub fn generate_token() -> String {
         .map(char::from)
         .collect()
 }
+
+
+// 生成6位数字验证码
+pub fn generate_verification_code() -> String {
+    let mut rng = rand::thread_rng();
+    let code: u32 = rng.gen_range(100000..=999999);
+    code.to_string()
+}

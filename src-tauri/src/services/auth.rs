@@ -2,12 +2,13 @@ use crate::config::Config;
 use crate::database::{execute_query, get_connection_from_pool,get_connection_from_pool};
 use crate::error::auth::AuthError;
 use crate::models::{PasswordResetToken, User};
+use crate::services::verification::verify_code;
 use crate::utils::crypto::{generate_token, hash_password, verify_password};
 use chrono::{Duration, Utc};
 use log::{debug, error, info};
 use rusqlite::{params, Connection, Result as SqlResult};
 
-pub fn register_user(username: &str, email: &str, password: &str) -> Result<User, AuthError> {
+pub fn register_user(username: &str, email: &str, password: &str,verification_code: &str) -> Result<User, AuthError> {
     let config = Config::get();
 
     // 验证密码长度
@@ -17,6 +18,10 @@ pub fn register_user(username: &str, email: &str, password: &str) -> Result<User
             config.auth.min_password_length
         )));
     }
+    // 验证邮箱验证码
+    verify_code(email, verification_code, "register")?;
+
+
     //从连接池获取数据库实例
     let conn = get_connection_from_pool()?;
 
@@ -56,6 +61,7 @@ pub fn register_user(username: &str, email: &str, password: &str) -> Result<User
             username,
             email,
             hashed_password,
+            true, // 通过验证码注册，邮箱已验证
             Utc::now().timestamp(),
             Utc::now().timestamp()
         ],
@@ -63,13 +69,14 @@ pub fn register_user(username: &str, email: &str, password: &str) -> Result<User
 
     // 获取新创建的用户
     let user = conn.query_row(
-        "SELECT id, username, email, created_at, updated_at FROM users WHERE username = ?1",
+        "SELECT id, username, email,email_verified, created_at, updated_at FROM users WHERE username = ?1",
         params![username],
         |row| {
             Ok(User {
                 id: row.get(0)?,
                 username: row.get(1)?,
                 email: row.get(2)?,
+                email_verified: row.get(3)?,
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
             })
@@ -85,7 +92,7 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
     println!("login_user: {}",username_or_email);
     // 查找用户
     let result = conn.query_row(
-        "SELECT id, username, email, password_hash, created_at, updated_at FROM users 
+        "SELECT id, username, email, password_hash,email_verified, created_at, updated_at FROM users 
          WHERE username = ?1 OR email = ?1",
         params![username_or_email],
         |row| {
@@ -94,6 +101,7 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
                     id: row.get(0)?,
                     username: row.get(1)?,
                     email: row.get(2)?,
+                    email_verified: row.get(4)?,
                     created_at: row.get(4)?,
                     updated_at: row.get(5)?,
                 },
@@ -156,7 +164,7 @@ pub fn verify_session(token: &str) -> Result<User, AuthError> {
 
     // 查找会话
     let result = conn.query_row(
-        "SELECT u.id, u.username, u.email, u.created_at, u.updated_at 
+        "SELECT u.id, u.username, u.email,u.email_verified, u.created_at, u.updated_at 
          FROM sessions s
          JOIN users u ON s.user_id = u.id
          WHERE s.token = ?1 AND s.expires_at > ?2",
@@ -166,6 +174,7 @@ pub fn verify_session(token: &str) -> Result<User, AuthError> {
                 id: row.get(0)?,
                 username: row.get(1)?,
                 email: row.get(2)?,
+                email_verified: row.get(3)?,
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
             })
@@ -181,49 +190,52 @@ pub fn verify_session(token: &str) -> Result<User, AuthError> {
     }
 }
 
-pub fn create_password_reset_token(email: &str) -> Result<PasswordResetToken, AuthError> {
-    let conn = get_connection_from_pool()?;
-
-    // 检查邮箱是否存在
-    let user_id: String = conn
-        .query_row(
-            "SELECT id FROM users WHERE email = ?1",
-            params![email],
-            |row| row.get(0),
-        )
-        .map_err(|_| AuthError::UserNotFound("该邮箱未注册".to_string()))?;
-
-    // 生成令牌
-    let token = generate_token();
+pub fn reset_password_with_code(email: &str, verification_code: &str, new_password: &str) -> Result<(), AuthError> {
     let config = Config::get();
-    let expiry =
-        Utc::now() + Duration::minutes(config.auth.password_reset_token_expiry_minutes as i64);
-
-    // 删除该用户之前的重置令牌
+    
+    // 验证密码长度
+    if new_password.len() < config.auth.min_password_length as usize {
+        return Err(AuthError::InvalidPassword(format!(
+            "密码长度不能少于{}个字符", 
+            config.auth.min_password_length
+        )));
+    }
+    
+    // 验证邮箱验证码
+    verify_code(email, verification_code, "reset_password")?;
+    
+    let conn = get_db_connection()?;
+    
+    // 检查邮箱是否存在
+    let user_id: String = conn.query_row(
+        "SELECT id FROM users WHERE email = ?1",
+        params![email],
+        |row| row.get(0),
+    ).map_err(|_| AuthError::UserNotFound("该邮箱未注册".to_string()))?;
+    
+    // 哈希新密码
+    let hashed_password = hash_password(new_password)?;
+    
+    // 更新密码
     conn.execute(
-        "DELETE FROM password_reset_tokens WHERE user_id = ?1",
-        params![user_id],
-    )?;
-
-    // 存储新令牌
-    conn.execute(
-        "INSERT INTO password_reset_tokens (user_id, token, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
+        "UPDATE users SET password_hash = ?1, updated_at = ?2 WHERE id = ?3",
         params![
-            user_id,
-            &token,
-            expiry.timestamp(),
-            Utc::now().timestamp()
+            hashed_password,
+            Utc::now().timestamp(),
+            user_id
         ],
     )?;
-
-    info!("Password reset token created for user ID: {}", user_id);
-    Ok(PasswordResetToken {
-        user_id,
-        token,
-        expires_at: expiry.timestamp(),
-        created_at: Utc::now().timestamp(),
-    })
+    
+    // 删除所有会话，强制用户重新登录
+    conn.execute(
+        "DELETE FROM sessions WHERE user_id = ?1",
+        params![user_id],
+    )?;
+    
+    info!("Password reset successful with verification code for user ID: {}", user_id);
+    Ok(())
 }
+
 
 pub fn reset_password(token: &str, new_password: &str) -> Result<(), AuthError> {
     let config = Config::get();

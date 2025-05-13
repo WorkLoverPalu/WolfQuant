@@ -6,6 +6,7 @@ pub struct User {
     pub id: String,
     pub username: String,
     pub email: String,
+    pub email_verified: bool,
     pub created_at: i64,
     pub updated_at: i64,
 }
@@ -16,6 +17,7 @@ pub struct RegisterRequest {
     pub username: String,
     pub email: String,
     pub password: String,
+    pub verification_code: String,
 }
 // 登陆
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,8 +39,16 @@ pub struct SessionRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SendVerificationCodeRequest {
+    pub email: String,
+    pub purpose: String, // "register" 或 "reset_password"
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ForgotPasswordRequest {
     pub email: String,
+    pub verification_code: String,
+    pub new_password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
