@@ -5,80 +5,51 @@
         <h2>重置密码</h2>
         <button class="close-button" @click="$emit('close')">×</button>
       </div>
-      
+
       <div class="modal-body">
         <div v-if="error" class="error-message">{{ error }}</div>
         <div v-if="success" class="success-message">{{ success }}</div>
-        
+
         <form @submit.prevent="handleSubmit" v-if="!showResetForm">
           <div class="form-group">
             <label for="email">邮箱</label>
             <div class="input-with-button">
-              <input 
-                type="email" 
-                id="email" 
-                v-model="email" 
-                placeholder="请输入注册邮箱"
-                required
-                :disabled="isLoading || isCodeSent"
-              />
-              <button 
-                type="button" 
-                class="send-code-button"
-                @click="sendVerificationCode"
-                :disabled="!email || isLoading || countdown > 0"
-              >
+              <input type="email" id="email" v-model="email" placeholder="请输入注册邮箱" required
+                :disabled="isLoading || isCodeSent" />
+              <button type="button" class="send-code-button" @click="sendVerificationCode"
+                :disabled="!email || isLoading || countdown > 0">
                 {{ countdown > 0 ? `${countdown}s后重试` : '获取验证码' }}
               </button>
             </div>
           </div>
-          
+
           <div class="form-group">
             <label for="verificationCode">验证码</label>
-            <input 
-              type="text" 
-              id="verificationCode" 
-              v-model="verificationCode" 
-              placeholder="请输入验证码"
-              required
-              :disabled="isLoading"
-            />
+            <input type="text" id="verificationCode" v-model="verificationCode" placeholder="请输入验证码" required
+              :disabled="isLoading" />
           </div>
-          
+
           <div class="form-actions">
             <button type="submit" class="primary-button" :disabled="!email || !verificationCode || isLoading">
               {{ isLoading ? '验证中...' : '验证邮箱' }}
             </button>
           </div>
         </form>
-        
+
         <form v-if="showResetForm" @submit.prevent="handleResetPassword">
           <div class="form-group">
             <label for="newPassword">新密码</label>
-            <input 
-              type="password" 
-              id="newPassword" 
-              v-model="newPassword" 
-              placeholder="请输入新密码"
-              required
-              minlength="6"
-              :disabled="isResetting"
-            />
+            <input type="password" id="newPassword" v-model="newPassword" placeholder="请输入新密码" required minlength="6"
+              :disabled="isResetting" />
           </div>
-          
+
           <div class="form-group">
             <label for="confirmNewPassword">确认新密码</label>
-            <input 
-              type="password" 
-              id="confirmNewPassword" 
-              v-model="confirmNewPassword" 
-              placeholder="请再次输入新密码"
-              required
-              :disabled="isResetting"
-            />
+            <input type="password" id="confirmNewPassword" v-model="confirmNewPassword" placeholder="请再次输入新密码" required
+              :disabled="isResetting" />
             <p v-if="passwordError" class="field-error">{{ passwordError }}</p>
           </div>
-          
+
           <div class="form-actions">
             <button type="submit" class="primary-button" :disabled="!isResetFormValid || isResetting">
               {{ isResetting ? '重置中...' : '重置密码' }}
@@ -86,7 +57,7 @@
           </div>
         </form>
       </div>
-      
+
       <div class="modal-footer">
         <button class="text-button" @click="$emit('login')">
           返回登录
@@ -121,9 +92,9 @@ const passwordError = computed(() => {
 });
 
 const isResetFormValid = computed(() => {
-  return newPassword.value && 
-         confirmNewPassword.value && 
-         newPassword.value === confirmNewPassword.value;
+  return newPassword.value &&
+    confirmNewPassword.value &&
+    newPassword.value === confirmNewPassword.value;
 });
 
 const emit = defineEmits<{
@@ -144,16 +115,18 @@ const startCountdown = () => {
 
 const sendVerificationCode = async () => {
   if (!email.value) return;
-  
+
   isLoading.value = true;
   error.value = '';
-  
+
   try {
     await invoke('auth_send_verification_code_command', {
-      email: email.value,
-      purpose: 'reset_password' // 指定验证码用途
+      request: {
+        email: email.value,
+        purpose: 'reset_password' // 指定验证码用途 
+      }
     });
-    
+
     isCodeSent.value = true;
     startCountdown();
     success.value = '验证码已发送，请查收邮箱';
@@ -166,16 +139,16 @@ const sendVerificationCode = async () => {
 
 const handleSubmit = async () => {
   if (!email.value || !verificationCode.value) return;
-  
+
   isLoading.value = true;
   error.value = '';
-  
+
   try {
     await invoke('verify_reset_password_code', {
       email: email.value,
       code: verificationCode.value
     });
-    
+
     showResetForm.value = true;
     success.value = '验证码正确，请设置新密码';
   } catch (err: any) {
@@ -187,10 +160,10 @@ const handleSubmit = async () => {
 
 const handleResetPassword = async () => {
   if (!isResetFormValid.value) return;
-  
+
   isResetting.value = true;
   error.value = '';
-  
+
   try {
     const response: any = await invoke('reset_password_command', {
       request: {
@@ -199,9 +172,9 @@ const handleResetPassword = async () => {
         new_password: newPassword.value
       }
     });
-    
+
     success.value = response.message;
-    
+
     // 3秒后自动切换到登录页面
     setTimeout(() => {
       emit('login');

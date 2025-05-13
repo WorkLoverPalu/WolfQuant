@@ -78,6 +78,7 @@ pub async fn auth_logout_command(request: LogoutRequest) -> Result<MessageRespon
     }
 }
 #[command]
+//// purpose:reset_password||register
 pub async fn auth_send_verification_code_command(
     request: SendVerificationCodeRequest,
 ) -> Result<MessageResponse, ErrorResponse> {

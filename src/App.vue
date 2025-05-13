@@ -183,6 +183,8 @@ const addNewTab = () => {
 
 // 用户相关操作
 const openLoginModal = () => {
+  showForgotPasswordModal.value = false;
+  showRegisterModal.value = false;
   showLoginModal.value = true;
   isUserMenuOpen.value = false;
 };

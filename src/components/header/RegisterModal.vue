@@ -121,13 +121,18 @@ const sendVerificationCode = async () => {
 
   try {
     await invoke('auth_send_verification_code_command', {
-      email: email.value
+      request:
+      {
+        email: email.value,
+        purpose: "register"
+      }
     });
 
     isCodeSent.value = true;
     startCountdown();
   } catch (err: any) {
-    error.value = err.error || '验证码发送失败，请稍后再试';
+    console.log("err", err)
+    error.value = err || '验证码发送失败，请稍后再试';
   } finally {
     isLoading.value = false;
   }
