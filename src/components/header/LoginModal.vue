@@ -77,9 +77,9 @@ const handleSubmit = async () => {
   error.value = '';
   
   try {
-    const response: any = await invoke('login', {
+    const response: any = await invoke('auth_login_command', {
       request: {
-        username: username.value,
+        username_or_email: username.value,
         password: password.value
       }
     });

@@ -64,7 +64,7 @@ pub async fn auth_login_command(request: LoginRequest) -> Result<AuthResponse, E
 pub async fn auth_logout_command(request: LogoutRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Logout request received for user ID: {}", request.user_id);
 
-    match logout_user(&request.user_id, &request.token) {
+    match logout_user(request.user_id, &request.token) {
         Ok(_) => {
             info!("User logged out successfully: {}", request.user_id);
             Ok(MessageResponse {

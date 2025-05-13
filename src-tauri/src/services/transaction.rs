@@ -9,7 +9,7 @@ use log::{error, info};
 use rusqlite::params;
 
 pub fn create_transaction(
-    user_id: &str,
+    user_id: i64,
     asset_id: i64,
     transaction_type: &str,
     amount: f64,
@@ -85,7 +85,7 @@ pub fn create_transaction(
     
     let transaction = Transaction {
         id: transaction_id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         asset_id,
         asset_name:asset_name.clone(),
         asset_code,
@@ -126,7 +126,7 @@ pub fn create_transaction(
 
 pub fn update_transaction(
     id: i64,
-    user_id: &str,
+    user_id: i64,
     transaction_type: &str,
     amount: f64,
     price: f64,
@@ -206,7 +206,7 @@ pub fn update_transaction(
     
     let transaction = Transaction {
         id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         asset_id,
         asset_name,
         asset_code,
@@ -238,7 +238,7 @@ pub fn update_transaction(
     Ok(transaction)
 }
 
-pub fn delete_transaction(id: i64, user_id: &str) -> Result<(), AuthError> {
+pub fn delete_transaction(id: i64, user_id: i64) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
     
     // 检查交易记录是否存在且属于该用户
@@ -263,7 +263,7 @@ pub fn delete_transaction(id: i64, user_id: &str) -> Result<(), AuthError> {
 }
 
 pub fn get_user_transactions(
-    user_id: &str,
+    user_id: i64,
     asset_id: Option<i64>,
     start_date: Option<i64>,
     end_date: Option<i64>,

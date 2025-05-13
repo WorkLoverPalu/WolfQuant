@@ -9,7 +9,7 @@ use log::{error, info};
 use rusqlite::params;
 
 pub fn create_investment_plan(
-    user_id: &str,
+    user_id: i64,
     asset_id: i64,
     name: &str,
     frequency: &str,
@@ -122,7 +122,7 @@ pub fn create_investment_plan(
 
     let plan = InvestmentPlan {
         id: plan_id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         asset_id,
         asset_name: asset_name.clone(),
         asset_code,
@@ -147,7 +147,7 @@ pub fn create_investment_plan(
 
 pub fn update_investment_plan(
     id: i64,
-    user_id: &str,
+    user_id: i64,
     name: &str,
     frequency: &str,
     day_of_week: Option<i64>,
@@ -264,7 +264,7 @@ pub fn update_investment_plan(
 
     let plan = InvestmentPlan {
         id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         asset_id,
         asset_name,
         asset_code,
@@ -284,7 +284,7 @@ pub fn update_investment_plan(
     Ok(plan)
 }
 
-pub fn delete_investment_plan(id: i64, user_id: &str) -> Result<(), AuthError> {
+pub fn delete_investment_plan(id: i64, user_id: i64) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
 
     // 检查定投计划是否存在且属于该用户
@@ -310,7 +310,7 @@ pub fn delete_investment_plan(id: i64, user_id: &str) -> Result<(), AuthError> {
 }
 
 pub fn get_user_investment_plans(
-    user_id: &str,
+    user_id: i64,
     asset_id: Option<i64>,
 ) -> Result<Vec<InvestmentPlan>, AuthError> {
     let conn = get_connection_from_pool()?;

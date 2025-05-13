@@ -51,6 +51,7 @@ pub struct DatabaseConfig {
     pub backup_path: String,
     pub max_size:u32,
     pub version:u32,
+    pub schema_dir:String,
 }
 
 impl Default for Config {
@@ -81,6 +82,7 @@ impl Default for Config {
                 backup_path: "data/backups".to_string(),
                 max_size:10,//连接池的最大连接数量
                 version:1,//当前数据库版本
+                schema_dir:"data/schemas".to_string(),
             },
         }
     }

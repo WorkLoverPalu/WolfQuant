@@ -14,22 +14,27 @@ pub fn generate_and_send_verification_code(email: &str, purpose: &str) -> Result
     let config = Config::get();
     // 验证用途
     if purpose != "register" && purpose != "reset_password" {
-        return Err(AuthError::InvalidCredentials("无效的验证码用途".to_string()));
+        return Err(AuthError::InvalidCredentials(
+            "无效的验证码用途".to_string(),
+        ));
     }
-    
+
     // 生成6位数字验证码
     let code = generate_verification_code();
-    
+
     // 设置过期时间（10分钟）
-    let expires_at = (Utc::now() + Duration::minutes(config.auth.emial_code_valid_duration as i64)).timestamp();
-    
+    let expires_at =
+        (Utc::now() + Duration::minutes(config.auth.emial_code_valid_duration as i64)).timestamp();
+
     // 检查是否已存在该邮箱和用途的验证码
-    let code_exists: bool = conn.query_row(
-        "SELECT 1 FROM email_verification_codes WHERE email = ?1 AND purpose = ?2",
-        params![email, purpose],
-        |_| Ok(true),
-    ).unwrap_or(false);
-    
+    let code_exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM email_verification_codes WHERE email = ?1 AND purpose = ?2",
+            params![email, purpose],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+
     if code_exists {
         // 更新现有验证码
         conn.execute(
@@ -46,11 +51,14 @@ pub fn generate_and_send_verification_code(email: &str, purpose: &str) -> Result
             params![email, code, purpose, expires_at, now],
         )?;
     }
-    
+
     // 发送验证码邮件
     send_verification_code_email(email, &code, purpose)?;
-    
-    info!("Verification code sent to: {} for purpose: {}", email, purpose);
+
+    info!(
+        "Verification code sent to: {} code {} for purpose: {}",
+        email, code, purpose
+    );
     Ok(())
 }
 
@@ -58,41 +66,39 @@ pub fn generate_and_send_verification_code(email: &str, purpose: &str) -> Result
 pub fn verify_code(email: &str, code: &str, purpose: &str) -> Result<bool, AuthError> {
     let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
-    
+
     // 查找验证码
     let result = conn.query_row(
         "SELECT code, expires_at FROM email_verification_codes 
          WHERE email = ?1 AND purpose = ?2",
         params![email, purpose],
-        |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i64>(1)?,
-            ))
-        },
+        |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?)),
     );
-    
+
     match result {
         Ok((stored_code, expires_at)) => {
             // 检查是否过期
             if expires_at < now {
                 return Err(AuthError::InvalidToken("验证码已过期".to_string()));
             }
-            
+
             // 检查验证码是否匹配
             if stored_code != code {
                 return Err(AuthError::InvalidCredentials("验证码不正确".to_string()));
             }
-            
+
             // 验证成功后删除验证码
             conn.execute(
                 "DELETE FROM email_verification_codes WHERE email = ?1 AND purpose = ?2",
                 params![email, purpose],
             )?;
-            
-            info!("Verification code verified for: {} purpose: {}", email, purpose);
+
+            info!(
+                "Verification code verified for: {} purpose: {}",
+                email, purpose
+            );
             Ok(true)
-        },
+        }
         Err(_) => Err(AuthError::InvalidToken("验证码不存在".to_string())),
     }
 }

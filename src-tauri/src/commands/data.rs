@@ -47,7 +47,7 @@ pub async fn data_get_asset_price_history(
 
 #[tauri::command]
 pub async fn data_create_trade_alert(
-    user_id: &str,
+    user_id: i64,
     asset_id: i64,
     strategy_id: Option<i64>,
     alert_type: &str,
@@ -63,7 +63,7 @@ pub async fn data_create_trade_alert(
 pub async fn data_mark_alert_read(
     request: MarkAlertReadRequest,
 ) -> Result<MessageResponse, ErrorResponse> {
-    match mark_alert_read(request.id, &request.user_id) {
+    match mark_alert_read(request.id, request.user_id) {
         Ok(_) => Ok(MessageResponse {
             message: "Alert marked as read".to_string(),
         }),
@@ -73,7 +73,7 @@ pub async fn data_mark_alert_read(
 
 #[tauri::command]
 pub async fn data_get_user_trade_alerts(
-    user_id: &str,
+    user_id: i64,
     is_read: Option<bool>,
     limit: Option<i64>,
 ) -> Result<Vec<TradeAlert>, ErrorResponse> {
@@ -84,7 +84,7 @@ pub async fn data_get_user_trade_alerts(
 }
 
 #[tauri::command]
-pub async fn data_get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, ErrorResponse> {
+pub async fn data_get_portfolio_summary(user_id: i64) -> Result<PortfolioSummary, ErrorResponse> {
     match get_portfolio_summary(user_id) {
         Ok(summary) => Ok(summary),
         Err(e) => Err(ErrorResponse::from(e)),

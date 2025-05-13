@@ -146,10 +146,10 @@ const handleSubmit = async () => {
   success.value = '';
 
   try {
-    const response: any = await invoke('register_command', {
+    const response: any = await invoke('auth_register_command', {
       request: {
         email: email.value,
-        code: verificationCode.value,
+        verification_code: verificationCode.value,
         username: username.value,
         password: password.value
       }
@@ -164,6 +164,7 @@ const handleSubmit = async () => {
     password.value = '';
     confirmPassword.value = '';
     isCodeSent.value = false;
+    isCodeSent.value=false;
 
     // 3秒后自动切换到登录页面
     setTimeout(() => {

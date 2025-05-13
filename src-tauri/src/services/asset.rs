@@ -32,7 +32,7 @@ pub fn get_asset_types() -> Result<Vec<AssetType>, AuthError> {
 }
 
 pub fn create_user_group(
-    user_id: &str,
+    user_id: i64,
     name: &str,
     asset_type_id: i64,
     description: Option<&str>,
@@ -87,7 +87,7 @@ pub fn create_user_group(
     
     let group = UserGroup {
         id: group_id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         name: name.to_string(),
         asset_type_id,
         asset_type_name,
@@ -102,7 +102,7 @@ pub fn create_user_group(
 
 pub fn update_user_group(
     id: i64,
-    user_id: &str,
+    user_id: i64,
     name: &str,
     description: Option<&str>,
 ) -> Result<UserGroup, AuthError> {
@@ -153,7 +153,7 @@ pub fn update_user_group(
     
     let group = UserGroup {
         id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         name: name.to_string(),
         asset_type_id,
         asset_type_name,
@@ -170,7 +170,7 @@ pub fn update_user_group(
     Ok(group)
 }
 
-pub fn delete_user_group(id: i64, user_id: &str) -> Result<(), AuthError> {
+pub fn delete_user_group(id: i64, user_id: i64) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
     
     // 检查分组是否存在且属于该用户
@@ -200,7 +200,7 @@ pub fn delete_user_group(id: i64, user_id: &str) -> Result<(), AuthError> {
     Ok(())
 }
 
-pub fn get_user_groups(user_id: &str, asset_type_id: Option<i64>) -> Result<Vec<UserGroup>, AuthError> {
+pub fn get_user_groups(user_id: i64, asset_type_id: Option<i64>) -> Result<Vec<UserGroup>, AuthError> {
     let conn = get_connection_from_pool()?;
     
     let mut query = match asset_type_id {
@@ -269,7 +269,7 @@ pub fn get_user_groups(user_id: &str, asset_type_id: Option<i64>) -> Result<Vec<
 }
 
 pub fn create_asset(
-    user_id: &str,
+    user_id: i64,
     group_id: Option<i64>,
     asset_type_id: i64,
     code: &str,
@@ -355,7 +355,7 @@ pub fn create_asset(
     
     let asset = Asset {
         id: asset_id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         group_id,
         group_name,
         asset_type_id,
@@ -380,7 +380,7 @@ pub fn create_asset(
 
 pub fn update_asset(
     id: i64,
-    user_id: &str,
+    user_id: i64,
     group_id: Option<i64>,
     name: &str,
     current_price: Option<f64>,
@@ -468,7 +468,7 @@ pub fn update_asset(
     
     let asset = Asset {
         id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         group_id,
         group_name,
         asset_type_id,
@@ -491,7 +491,7 @@ pub fn update_asset(
     Ok(asset)
 }
 
-pub fn delete_asset(id: i64, user_id: &str) -> Result<(), AuthError> {
+pub fn delete_asset(id: i64, user_id: i64) -> Result<(), AuthError> {
     let mut conn = get_connection_from_pool()?;
     
     // 检查资产是否存在且属于该用户
@@ -552,7 +552,7 @@ pub fn delete_asset(id: i64, user_id: &str) -> Result<(), AuthError> {
 }
 
 pub fn get_user_assets(
-    user_id: &str,
+    user_id: i64,
     asset_type_id: Option<i64>,
     group_id: Option<i64>,
 ) -> Result<Vec<Asset>, AuthError> {

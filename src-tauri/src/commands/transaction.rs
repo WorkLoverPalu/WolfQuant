@@ -14,7 +14,7 @@ pub async fn create_transaction_command(request: CreateTransactionRequest) -> Re
     info!("Create transaction request received for user: {}", request.user_id);
     
     match create_transaction(
-        &request.user_id,
+        request.user_id,
         request.asset_id,
         &request.transaction_type,
         request.amount,
@@ -39,7 +39,7 @@ pub async fn update_transaction_command(request: UpdateTransactionRequest) -> Re
     
     match update_transaction(
         request.id,
-        &request.user_id,
+        request.user_id,
         &request.transaction_type,
         request.amount,
         request.price,
@@ -61,7 +61,7 @@ pub async fn update_transaction_command(request: UpdateTransactionRequest) -> Re
 pub async fn delete_transaction_command(request: DeleteTransactionRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete transaction request received for transaction: {}", request.id);
     
-    match delete_transaction(request.id, &request.user_id) {
+    match delete_transaction(request.id, request.user_id) {
         Ok(_) => {
             info!("Transaction deleted successfully: {}", request.id);
             Ok(MessageResponse {
@@ -79,7 +79,7 @@ pub async fn delete_transaction_command(request: DeleteTransactionRequest) -> Re
 pub async fn get_user_transactions_command(request: GetUserTransactionsRequest) -> Result<Vec<Transaction>, ErrorResponse> {
     info!("Get user transactions request received for user: {}", request.user_id);
     
-    match get_user_transactions(&request.user_id, request.asset_id, request.start_date, request.end_date) {
+    match get_user_transactions(request.user_id, request.asset_id, request.start_date, request.end_date) {
         Ok(transactions) => {
             info!("Retrieved {} transactions for user: {}", transactions.len(), request.user_id);
             Ok(transactions)

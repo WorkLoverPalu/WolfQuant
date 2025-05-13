@@ -223,7 +223,7 @@ pub fn get_asset_price_history(
 }
 
 pub fn create_trade_alert(
-    user_id: &str,
+    user_id: i64,
     asset_id: i64,
     strategy_id: Option<i64>,
     alert_type: &str,
@@ -302,7 +302,7 @@ pub fn create_trade_alert(
 
     let alert = TradeAlert {
         id: alert_id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         asset_id,
         asset_name: asset_name.clone(),
         asset_code,
@@ -321,7 +321,7 @@ pub fn create_trade_alert(
     Ok(alert)
 }
 
-pub fn mark_alert_read(id: i64, user_id: &str) -> Result<(), AuthError> {
+pub fn mark_alert_read(id: i64, user_id: i64) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
 
     // 检查提醒是否存在且属于该用户
@@ -350,7 +350,7 @@ pub fn mark_alert_read(id: i64, user_id: &str) -> Result<(), AuthError> {
 }
 
 pub fn get_user_trade_alerts(
-    user_id: &str,
+    user_id: i64,
     is_read: Option<bool>,
     limit: Option<i64>,
 ) -> Result<Vec<TradeAlert>, AuthError> {
@@ -487,7 +487,7 @@ pub fn get_user_trade_alerts(
     Ok(alerts)
 }
 
-pub fn get_portfolio_summary(user_id: &str) -> Result<PortfolioSummary, AuthError> {
+pub fn get_portfolio_summary(user_id: i64) -> Result<PortfolioSummary, AuthError> {
     let conn = get_connection_from_pool()?;
 
     // 获取用户所有资产

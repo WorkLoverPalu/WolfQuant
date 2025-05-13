@@ -57,16 +57,18 @@ pub fn register_user(username: &str, email: &str, password: &str,verification_co
 
     // 创建用户
     conn.execute(
-        "INSERT INTO users (username, email, password_hash, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+        "INSERT INTO users (username, email, password_hash, email_verified, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![
             username,
             email,
             hashed_password,
-            true, // 通过验证码注册，邮箱已验证
+            1, // email_verified
             Utc::now().timestamp(),
             Utc::now().timestamp()
         ],
     )?;
+
+    info!("INSERT INTO users");
 
     // 获取新创建的用户
     let user = conn.query_row(
@@ -78,8 +80,8 @@ pub fn register_user(username: &str, email: &str, password: &str,verification_co
                 username: row.get(1)?,
                 email: row.get(2)?,
                 email_verified: row.get(3)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
             })
         },
     )?;
@@ -102,7 +104,7 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
                     id: row.get(0)?,
                     username: row.get(1)?,
                     email: row.get(2)?,
-                    email_verified: row.get(4)?,
+                    email_verified: row.get(3)?,
                     created_at: row.get(4)?,
                     updated_at: row.get(5)?,
                 },
@@ -143,7 +145,7 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
     }
 }
 
-pub fn logout_user(user_id: &str, token: &str) -> Result<(), AuthError> {
+pub fn logout_user(user_id: i64, token: &str) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
 
     // 删除会话
@@ -176,8 +178,8 @@ pub fn verify_session(token: &str) -> Result<User, AuthError> {
                 username: row.get(1)?,
                 email: row.get(2)?,
                 email_verified: row.get(3)?,
-                created_at: row.get(3)?,
-                updated_at: row.get(4)?,
+                created_at: row.get(4)?,
+                updated_at: row.get(5)?,
             })
         },
     );

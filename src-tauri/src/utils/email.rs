@@ -70,11 +70,6 @@ pub fn send_verification_code_email(
 ) -> Result<(), AuthError> {
     let config = Config::get();
 
-    // 如果未启用邮箱验证，则跳过发送
-    if !config.auth.enable_email_verification {
-        return Ok(());
-    }
-
     let purpose_text = match purpose {
         "register" => "注册账号",
         "reset_password" => "重置密码",
@@ -86,6 +81,11 @@ pub fn send_verification_code_email(
         println!("发送验证码邮件到 {}", email);
         println!("验证码: {}", code);
         println!("用途: {}", purpose_text);
+        return Ok(());
+    }
+
+    // 如果未启用邮箱验证，则跳过发送
+    if !config.auth.enable_email_verification {
         return Ok(());
     }
 

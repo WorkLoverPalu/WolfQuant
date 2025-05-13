@@ -30,7 +30,7 @@ pub async fn create_group_command(request: CreateGroupRequest) -> Result<UserGro
     info!("Create group request received for user: {}", request.user_id);
     
     match create_user_group(
-        &request.user_id,
+        request.user_id,
         &request.name,
         request.asset_type_id,
         request.description.as_deref(),
@@ -52,7 +52,7 @@ pub async fn update_group_command(request: UpdateGroupRequest) -> Result<UserGro
     
     match update_user_group(
         request.id,
-        &request.user_id,
+        request.user_id,
         &request.name,
         request.description.as_deref(),
     ) {
@@ -71,7 +71,7 @@ pub async fn update_group_command(request: UpdateGroupRequest) -> Result<UserGro
 pub async fn delete_group_command(request: DeleteGroupRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete group request received for group: {}", request.id);
     
-    match delete_user_group(request.id, &request.user_id) {
+    match delete_user_group(request.id, request.user_id) {
         Ok(_) => {
             info!("Group deleted successfully: {}", request.id);
             Ok(MessageResponse {
@@ -87,12 +87,12 @@ pub async fn delete_group_command(request: DeleteGroupRequest) -> Result<Message
 
 #[command]
 pub async fn get_user_groups_command(
-    user_id: String,
+    user_id: i64,
     asset_type_id: Option<i64>,
 ) -> Result<Vec<UserGroup>, ErrorResponse> {
     info!("Get user groups request received for user: {}", user_id);
     
-    match get_user_groups(&user_id, asset_type_id) {
+    match get_user_groups(user_id, asset_type_id) {
         Ok(groups) => {
             info!("Retrieved {} groups for user: {}", groups.len(), user_id);
             Ok(groups)
@@ -109,7 +109,7 @@ pub async fn create_asset_command(request: CreateAssetRequest) -> Result<Asset, 
     info!("Create asset request received for user: {}", request.user_id);
     
     match create_asset(
-        &request.user_id,
+        request.user_id,
         request.group_id,
         request.asset_type_id,
         &request.code,
@@ -133,7 +133,7 @@ pub async fn update_asset_command(request: UpdateAssetRequest) -> Result<Asset, 
     
     match update_asset(
         request.id,
-        &request.user_id,
+        request.user_id,
         request.group_id,
         &request.name,
         request.current_price,
@@ -153,7 +153,7 @@ pub async fn update_asset_command(request: UpdateAssetRequest) -> Result<Asset, 
 pub async fn delete_asset_command(request: DeleteAssetRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete asset request received for asset: {}", request.id);
     
-    match delete_asset(request.id, &request.user_id) {
+    match delete_asset(request.id, request.user_id) {
         Ok(_) => {
             info!("Asset deleted successfully: {}", request.id);
             Ok(MessageResponse {
@@ -171,7 +171,7 @@ pub async fn delete_asset_command(request: DeleteAssetRequest) -> Result<Message
 pub async fn get_user_assets_command(request: GetUserAssetsRequest) -> Result<Vec<Asset>, ErrorResponse> {
     info!("Get user assets request received for user: {}", request.user_id);
     
-    match get_user_assets(&request.user_id, request.asset_type_id, request.group_id) {
+    match get_user_assets(request.user_id, request.asset_type_id, request.group_id) {
         Ok(assets) => {
             info!("Retrieved {} assets for user: {}", assets.len(), request.user_id);
             Ok(assets)

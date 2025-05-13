@@ -17,7 +17,7 @@ pub async fn create_investment_strategy_command(request: CreateInvestmentStrateg
     info!("Create investment strategy request received for user: {}", request.user_id);
     
     match create_investment_strategy(
-        &request.user_id,
+        request.user_id,
         &request.name,
         request.description.as_deref(),
         &request.strategy_type,
@@ -40,7 +40,7 @@ pub async fn update_investment_strategy_command(request: UpdateInvestmentStrateg
     
     match update_investment_strategy(
         request.id,
-        &request.user_id,
+        request.user_id,
         &request.name,
         request.description.as_deref(),
         &request.parameters,
@@ -60,7 +60,7 @@ pub async fn update_investment_strategy_command(request: UpdateInvestmentStrateg
 pub async fn delete_investment_strategy_command(request: DeleteInvestmentStrategyRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete investment strategy request received for strategy: {}", request.id);
     
-    match delete_investment_strategy(request.id, &request.user_id) {
+    match delete_investment_strategy(request.id, request.user_id) {
         Ok(_) => {
             info!("Investment strategy deleted successfully: {}", request.id);
             Ok(MessageResponse {
@@ -75,10 +75,10 @@ pub async fn delete_investment_strategy_command(request: DeleteInvestmentStrateg
 }
 
 #[command]
-pub async fn get_user_investment_strategies_command(user_id: String) -> Result<Vec<InvestmentStrategy>, ErrorResponse> {
+pub async fn get_user_investment_strategies_command(user_id: i64) -> Result<Vec<InvestmentStrategy>, ErrorResponse> {
     info!("Get user investment strategies request received for user: {}", user_id);
     
-    match get_user_investment_strategies(&user_id) {
+    match get_user_investment_strategies(user_id) {
         Ok(strategies) => {
             info!("Retrieved {} investment strategies for user: {}", strategies.len(), user_id);
             Ok(strategies)
@@ -95,7 +95,7 @@ pub async fn apply_strategy_command(request: ApplyStrategyRequest) -> Result<Str
     info!("Apply strategy request received for user: {}", request.user_id);
     
     match apply_strategy(
-        &request.user_id,
+        request.user_id,
         request.strategy_id,
         request.asset_id,
     ) {
@@ -114,7 +114,7 @@ pub async fn apply_strategy_command(request: ApplyStrategyRequest) -> Result<Str
 pub async fn remove_strategy_application_command(request: RemoveStrategyApplicationRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Remove strategy application request received for application: {}", request.id);
     
-    match remove_strategy_application(request.id, &request.user_id) {
+    match remove_strategy_application(request.id, request.user_id) {
         Ok(_) => {
             info!("Strategy application removed successfully: {}", request.id);
             Ok(MessageResponse {
@@ -130,12 +130,12 @@ pub async fn remove_strategy_application_command(request: RemoveStrategyApplicat
 
 #[command]
 pub async fn get_user_strategy_applications_command(
-    user_id: String,
+    user_id: i64,
     asset_id: Option<i64>,
 ) -> Result<Vec<StrategyApplication>, ErrorResponse> {
     info!("Get user strategy applications request received for user: {}", user_id);
     
-    match get_user_strategy_applications(&user_id, asset_id) {
+    match get_user_strategy_applications(user_id, asset_id) {
         Ok(applications) => {
             info!("Retrieved {} strategy applications for user: {}", applications.len(), user_id);
             Ok(applications)
@@ -152,7 +152,7 @@ pub async fn backtest_strategy_command(request: BacktestStrategyRequest) -> Resu
     info!("Backtest strategy request received for user: {}", request.user_id);
     
     match backtest_strategy(
-        &request.user_id,
+        request.user_id,
         request.strategy_id,
         request.asset_id,
         request.start_date,

@@ -15,7 +15,7 @@ pub async fn create_investment_plan_command(request: CreateInvestmentPlanRequest
     info!("Create investment plan request received for user: {}", request.user_id);
     
     match create_investment_plan(
-        &request.user_id,
+        request.user_id,
         request.asset_id,
         &request.name,
         &request.frequency,
@@ -40,7 +40,7 @@ pub async fn update_investment_plan_command(request: UpdateInvestmentPlanRequest
     
     match update_investment_plan(
         request.id,
-        &request.user_id,
+        request.user_id,
         &request.name,
         &request.frequency,
         request.day_of_week,
@@ -63,7 +63,7 @@ pub async fn update_investment_plan_command(request: UpdateInvestmentPlanRequest
 pub async fn delete_investment_plan_command(request: DeleteInvestmentPlanRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete investment plan request received for plan: {}", request.id);
     
-    match delete_investment_plan(request.id, &request.user_id) {
+    match delete_investment_plan(request.id, request.user_id) {
         Ok(_) => {
             info!("Investment plan deleted successfully: {}", request.id);
             Ok(MessageResponse {
@@ -79,12 +79,12 @@ pub async fn delete_investment_plan_command(request: DeleteInvestmentPlanRequest
 
 #[command]
 pub async fn get_user_investment_plans_command(
-    user_id: String,
+    user_id: i64,
     asset_id: Option<i64>,
 ) -> Result<Vec<InvestmentPlan>, ErrorResponse> {
     info!("Get user investment plans request received for user: {}", user_id);
     
-    match get_user_investment_plans(&user_id, asset_id) {
+    match get_user_investment_plans(user_id, asset_id) {
         Ok(plans) => {
             info!("Retrieved {} investment plans for user: {}", plans.len(), user_id);
             Ok(plans)

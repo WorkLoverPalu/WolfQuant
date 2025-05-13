@@ -12,7 +12,7 @@ use rusqlite::params;
 use serde_json::{self, Value};
 
 pub fn create_investment_strategy(
-    user_id: &str,
+    user_id: i64,
     name: &str,
     description: Option<&str>,
     strategy_type: &str,
@@ -67,7 +67,7 @@ pub fn create_investment_strategy(
 
     let strategy = InvestmentStrategy {
         id: strategy_id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         name: name.to_string(),
         description: description.map(|s| s.to_string()),
         strategy_type: strategy_type.to_string(),
@@ -85,7 +85,7 @@ pub fn create_investment_strategy(
 
 pub fn update_investment_strategy(
     id: i64,
-    user_id: &str,
+    user_id: i64,
     name: &str,
     description: Option<&str>,
     parameters: &str,
@@ -132,7 +132,7 @@ pub fn update_investment_strategy(
 
     let strategy = InvestmentStrategy {
         id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         name: name.to_string(),
         description: description.map(|s| s.to_string()),
         strategy_type,
@@ -148,7 +148,7 @@ pub fn update_investment_strategy(
     Ok(strategy)
 }
 
-pub fn delete_investment_strategy(id: i64, user_id: &str) -> Result<(), AuthError> {
+pub fn delete_investment_strategy(id: i64, user_id: i64) -> Result<(), AuthError> {
     let mut conn = get_connection_from_pool()?;
 
     // 检查策略是否存在且属于该用户
@@ -194,7 +194,7 @@ pub fn delete_investment_strategy(id: i64, user_id: &str) -> Result<(), AuthErro
     Ok(())
 }
 
-pub fn get_user_investment_strategies(user_id: &str) -> Result<Vec<InvestmentStrategy>, AuthError> {
+pub fn get_user_investment_strategies(user_id: i64) -> Result<Vec<InvestmentStrategy>, AuthError> {
     let conn = get_connection_from_pool()?;
 
     let mut stmt = conn.prepare(
@@ -227,7 +227,7 @@ pub fn get_user_investment_strategies(user_id: &str) -> Result<Vec<InvestmentStr
 }
 
 pub fn apply_strategy(
-    user_id: &str,
+    user_id: i64,
     strategy_id: i64,
     asset_id: i64,
 ) -> Result<StrategyApplication, AuthError> {
@@ -309,7 +309,7 @@ pub fn apply_strategy(
 
     let application = StrategyApplication {
         id: application_id,
-        user_id: user_id.to_string(),
+        user_id: user_id,
         strategy_id,
         strategy_name: strategy_name.clone(),
         asset_id,
@@ -327,7 +327,7 @@ pub fn apply_strategy(
     Ok(application)
 }
 
-pub fn remove_strategy_application(id: i64, user_id: &str) -> Result<(), AuthError> {
+pub fn remove_strategy_application(id: i64, user_id: i64) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
 
     // 检查应用是否存在且属于该用户
@@ -356,7 +356,7 @@ pub fn remove_strategy_application(id: i64, user_id: &str) -> Result<(), AuthErr
 }
 
 pub fn get_user_strategy_applications(
-    user_id: &str,
+    user_id: i64,
     asset_id: Option<i64>,
 ) -> Result<Vec<StrategyApplication>, AuthError> {
     let conn = get_connection_from_pool()?;
@@ -431,7 +431,7 @@ pub fn get_user_strategy_applications(
 }
 
 pub fn backtest_strategy(
-    user_id: &str,
+    user_id: i64,
     strategy_id: i64,
     asset_id: i64,
     start_date: i64,
@@ -561,7 +561,7 @@ fn backtest_macd_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),
@@ -584,7 +584,7 @@ fn backtest_macd_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),
@@ -701,7 +701,7 @@ fn backtest_rsi_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),
@@ -724,7 +724,7 @@ fn backtest_rsi_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),
@@ -843,7 +843,7 @@ fn backtest_ma_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),
@@ -869,7 +869,7 @@ fn backtest_ma_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),
@@ -987,7 +987,7 @@ fn backtest_custom_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),
@@ -1014,7 +1014,7 @@ fn backtest_custom_strategy(
 
             let transaction = Transaction {
                 id: 0, // 模拟ID
-                user_id: "backtest".to_string(),
+                user_id: 0,
                 asset_id,
                 asset_name: "Backtest Asset".to_string(),
                 asset_code: "BACKTEST".to_string(),

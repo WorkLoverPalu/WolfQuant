@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 // 已有的用户模型
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
-    pub id: String,
+    pub id: i64,
     pub username: String,
     pub email: String,
     pub email_verified: bool,
@@ -29,7 +29,7 @@ pub struct LoginRequest {
 // 退出登陆
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LogoutRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub token: String,
 }
 
@@ -71,7 +71,7 @@ pub struct MessageResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PasswordResetToken {
-    pub user_id: String,
+    pub user_id: i64,
     pub token: String,
     pub expires_at: i64,
     pub created_at: i64,
@@ -89,7 +89,7 @@ pub struct AssetType {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserGroup {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub name: String,
     pub asset_type_id: i64,
     pub asset_type_name: String,
@@ -102,7 +102,7 @@ pub struct UserGroup {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Asset {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub group_id: Option<i64>,
     pub group_name: Option<String>,
     pub asset_type_id: i64,
@@ -126,7 +126,7 @@ pub struct Asset {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Transaction {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub asset_id: i64,
     pub asset_name: String,
     pub asset_code: String,
@@ -143,7 +143,7 @@ pub struct Transaction {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InvestmentPlan {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub asset_id: i64,
     pub asset_name: String,
     pub asset_code: String,
@@ -163,7 +163,7 @@ pub struct InvestmentPlan {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InvestmentStrategy {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub name: String,
     pub description: Option<String>,
     pub strategy_type: String,
@@ -176,7 +176,7 @@ pub struct InvestmentStrategy {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StrategyApplication {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub strategy_id: i64,
     pub strategy_name: String,
     pub asset_id: i64,
@@ -205,7 +205,7 @@ pub struct PriceHistory {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TradeAlert {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub asset_id: i64,
     pub asset_name: String,
     pub asset_code: String,
@@ -220,7 +220,7 @@ pub struct TradeAlert {
 // 请求模型
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateGroupRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub name: String,
     pub asset_type_id: i64,
     pub description: Option<String>,
@@ -229,7 +229,7 @@ pub struct CreateGroupRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateGroupRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub name: String,
     pub description: Option<String>,
 }
@@ -237,12 +237,12 @@ pub struct UpdateGroupRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteGroupRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAssetRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub group_id: Option<i64>,
     pub asset_type_id: i64,
     pub code: String,
@@ -253,7 +253,7 @@ pub struct CreateAssetRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateAssetRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub group_id: Option<i64>,
     pub name: String,
     pub current_price: Option<f64>,
@@ -262,12 +262,12 @@ pub struct UpdateAssetRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteAssetRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateTransactionRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub asset_id: i64,
     pub transaction_type: String,
     pub amount: f64,
@@ -279,7 +279,7 @@ pub struct CreateTransactionRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateTransactionRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub transaction_type: String,
     pub amount: f64,
     pub price: f64,
@@ -290,12 +290,12 @@ pub struct UpdateTransactionRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteTransactionRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateInvestmentPlanRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub asset_id: i64,
     pub name: String,
     pub frequency: String,
@@ -307,7 +307,7 @@ pub struct CreateInvestmentPlanRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateInvestmentPlanRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub name: String,
     pub frequency: String,
     pub day_of_week: Option<i64>,
@@ -319,12 +319,12 @@ pub struct UpdateInvestmentPlanRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteInvestmentPlanRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateInvestmentStrategyRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub name: String,
     pub description: Option<String>,
     pub strategy_type: String,
@@ -334,7 +334,7 @@ pub struct CreateInvestmentStrategyRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateInvestmentStrategyRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
     pub name: String,
     pub description: Option<String>,
     pub parameters: String,
@@ -343,12 +343,12 @@ pub struct UpdateInvestmentStrategyRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteInvestmentStrategyRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApplyStrategyRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub strategy_id: i64,
     pub asset_id: i64,
 }
@@ -356,25 +356,25 @@ pub struct ApplyStrategyRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RemoveStrategyApplicationRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MarkAlertReadRequest {
     pub id: i64,
-    pub user_id: String,
+    pub user_id: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetUserAssetsRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub asset_type_id: Option<i64>,
     pub group_id: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetUserTransactionsRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub asset_id: Option<i64>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
@@ -389,7 +389,7 @@ pub struct GetAssetPriceHistoryRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BacktestStrategyRequest {
-    pub user_id: String,
+    pub user_id: i64,
     pub strategy_id: i64,
     pub asset_id: i64,
     pub start_date: i64,
