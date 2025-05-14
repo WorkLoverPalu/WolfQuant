@@ -53,30 +53,26 @@ export const useUserStore = defineStore("user", () => {
   }
 
   // 登录
-  async function login(email: string, password: string) {
+  async function login(usernameOrEmail: string, password: string) {
     isLoading.value = true
     error.value = null
 
     try {
-      // 这里应该是实际的登录逻���，调用后端API
-      // 模拟登录成功
-      const userData: User = {
-        id: "1",
-        username: email.split("@")[0],
-        email,
-        avatar: email.charAt(0).toUpperCase(),
-      }
-
-      // 模拟获取token
-      const authToken = "mock-token-" + Date.now()
+      // 调用 Tauri API 进行登录
+      const response: any = await invoke('auth_login_command', {
+        request: {
+          username_or_email: usernameOrEmail,
+          password: password
+        }
+      })
 
       // 保存用户数据和token
-      user.value = userData
-      token.value = authToken
-      localStorage.setItem("user", JSON.stringify(userData))
-      localStorage.setItem("auth_token", authToken)
+      user.value = response.user
+      token.value = response.token
+      localStorage.setItem("user", JSON.stringify(response.user))
+      localStorage.setItem("auth_token", response.token)
 
-      return userData
+      return response.user
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "登录失败"
       error.value = errorMessage
@@ -86,31 +82,73 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  // 注册
-  async function register(username: string, email: string, password: string) {
+  // 发送验证码
+  async function sendVerificationCode(email: string, purpose: 'register' | 'reset_password') {
     isLoading.value = true
     error.value = null
 
     try {
-      // 这里应该是实际的注册逻辑，调用后端API
-      // 模拟注册成功
-      const userData: User = {
-        id: "1",
-        username,
-        email,
-        avatar: username.charAt(0).toUpperCase(),
-      }
+      await invoke('auth_send_verification_code_command', {
+        request: {
+          email: email,
+          purpose: purpose
+        }
+      })
+      return true
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "发送验证码失败"
+      error.value = errorMessage
+      throw new Error(errorMessage)
+    } finally {
+      isLoading.value = false
+    }
+  }
 
-      // 模拟获取token
-      const authToken = "mock-token-" + Date.now()
+  // 验证重置密码的验证码
+  async function verifyResetPasswordCode(email: string, code: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      await invoke('verify_reset_password_code', {
+        email: email,
+        code: code
+      })
+      return true
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "验证码验证失败"
+      error.value = errorMessage
+      throw new Error(errorMessage)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // 注册
+  async function register(username: string, email: string, password: string, verificationCode: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response: any = await invoke('auth_register_command', {
+        request: {
+          email: email,
+          verification_code: verificationCode,
+          username: username,
+          password: password
+        }
+      })
 
       // 保存用户数据和token
-      user.value = userData
-      token.value = authToken
-      localStorage.setItem("user", JSON.stringify(userData))
-      localStorage.setItem("auth_token", authToken)
+      user.value = response.user
+      token.value = response.token
+      localStorage.setItem("user", JSON.stringify(response.user))
+      localStorage.setItem("auth_token", response.token)
 
-      return userData
+      return {
+        user: response.user,
+        message: response.message
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "注册失败"
       error.value = errorMessage
@@ -121,8 +159,24 @@ export const useUserStore = defineStore("user", () => {
   }
 
   // 登出
-  function logout() {
-    clearUserData()
+  async function logout() {
+    if (!user.value || !token.value) return
+
+    try {
+      await invoke('auth_logout_command', {
+        request: {
+          user_id: user.value.id,
+          token: token.value
+        }
+      })
+      clearUserData()
+      return true
+    } catch (err) {
+      console.error("Logout failed:", err)
+      // 即使API调用失败，也清除本地数据
+      clearUserData()
+      throw err
+    }
   }
 
   // 清除用户数据
@@ -131,6 +185,29 @@ export const useUserStore = defineStore("user", () => {
     token.value = null
     localStorage.removeItem("user")
     localStorage.removeItem("auth_token")
+  }
+
+  // 重置密码
+  async function resetPassword(email: string, code: string, newPassword: string) {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response: any = await invoke('reset_password_command', {
+        request: {
+          email: email,
+          code: code,
+          new_password: newPassword
+        }
+      })
+      return response
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "重置密码失败"
+      error.value = errorMessage
+      throw new Error(errorMessage)
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // 更新用户偏好设置
@@ -148,25 +225,6 @@ export const useUserStore = defineStore("user", () => {
     localStorage.setItem("user", JSON.stringify(user.value))
   }
 
-  // 重置密码
-  async function resetPassword(email: string) {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      // 这里应该是实际的重置密码逻辑，调用后端API
-      // 模拟重置密码成功
-      console.log(`重置密码链接已发送至: ${email}`)
-      return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "重置密码失败"
-      error.value = errorMessage
-      throw new Error(errorMessage)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
   return {
     user,
     isLoading,
@@ -177,9 +235,12 @@ export const useUserStore = defineStore("user", () => {
     userInitial,
     initUser,
     login,
+    sendVerificationCode,
+    verifyResetPasswordCode,
     register,
     logout,
-    updateUserPreferences,
     resetPassword,
+    updateUserPreferences,
+    clearUserData
   }
 })

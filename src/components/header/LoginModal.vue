@@ -41,20 +41,20 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
-
+import { useUserStore } from '../../stores/userStore';
 
 const username = ref('');
 const password = ref('');
 const isLoading = ref(false);
 const error = ref('');
 
+const userStore = useUserStore();
+
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'login-success', user: any, token: string): void;
+  (e: 'login-success', user: any, token: any): void;
   (e: 'forgot-password'): void;
   (e: 'register'): void;
 }>();
@@ -66,33 +66,17 @@ const handleSubmit = async () => {
   error.value = '';
 
   try {
-    const response: any = await invoke('auth_login_command', {
-      request: {
-        username_or_email: username.value,
-        password: password.value
-      }
-    });
-
-    console.log("response", response)
-
-    // 存储用户信息和令牌
-    localStorage.setItem('auth_token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
+    // 使用 store 的 login 方法
+    const user = await userStore.login(username.value, password.value);
 
     // 通知父组件登录成功
-    const user = {
-      id: response.user.id,
-      username: response.user.username,
-      email: response.user.email,
-      avatar: response.user.username.charAt(0).toUpperCase(),
-    };
-    emit('login-success', user, response.token);
+    emit('login-success', user, userStore.token);
 
     // 清空表单
     username.value = '';
     password.value = '';
   } catch (err: any) {
-    error.value = err.error || '登录失败，请检查用户名和密码';
+    error.value = err.message || '登录失败，请检查用户名和密码';
   } finally {
     isLoading.value = false;
   }

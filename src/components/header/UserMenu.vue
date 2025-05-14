@@ -80,12 +80,12 @@
       </button>
     </div>
   </div>
-  
+
   <div class="menu-backdrop" @click="$emit('close')"></div>
 </template>
-
 <script setup lang="ts">
 import { computed, inject } from 'vue';
+import { useUserStore } from '../../stores/userStore';
 import type { ThemeType } from '../../services/theme-service';
 import SettingsIcon from '../../assets/icons/SettingsIcon.vue';
 import LogoutIcon from '../../assets/icons/LogoutIcon.vue';
@@ -94,14 +94,13 @@ import WindowIcon from '../../assets/icons/WindowIcon.vue';
 import ClipboardIcon from '../../assets/icons/ClipboardIcon.vue';
 import ZoomIcon from '../../assets/icons/ZoomIcon.vue';
 
-import { invoke } from '@tauri-apps/api/core';
-
 import { User } from "../../types/index.ts";
-
 
 const props = defineProps<{
   user: User;
 }>();
+
+const userStore = useUserStore();
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -130,29 +129,16 @@ const userInitial = computed(() => {
 // 处理退出登录
 const handleLogout = async () => {
   try {
-    const token = localStorage.getItem('auth_token');
+    // 使用 store 的 logout 方法
+    await userStore.logout();
 
-    if (token) {
-      await invoke('auth_logout_command', {
-        request: {
-          user_id: props.user.id,
-          token
-        }
-      });
-
-      // 清除本地存储的用户信息和令牌
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-
-      // 通知父组件退出登录
-      emit('logout');
-    }
+    // 通知父组件退出登录
+    emit('logout');
   } catch (err) {
     console.error('Logout failed:', err);
   }
 };
 </script>
-
 <style lang="scss" scoped>
 .user-menu {
   position: absolute;

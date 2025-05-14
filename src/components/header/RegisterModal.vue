@@ -64,10 +64,9 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
+import { useUserStore } from '../../stores/userStore';
 
 const email = ref('123@qq.com');
 const verificationCode = ref('');
@@ -80,6 +79,8 @@ const countdown = ref(0);
 const error = ref('');
 const success = ref('');
 let countdownTimer: number | null = null;
+
+const userStore = useUserStore();
 
 const passwordError = computed(() => {
   if (password.value && confirmPassword.value && password.value !== confirmPassword.value) {
@@ -99,7 +100,8 @@ const isFormValid = computed(() => {
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'login-success', user: any, token: string): void;
+  (e: 'login'): void;
+  (e: 'login-success', user: any, token: any): void;
 }>();
 
 const startCountdown = () => {
@@ -120,19 +122,13 @@ const sendVerificationCode = async () => {
   error.value = '';
 
   try {
-    await invoke('auth_send_verification_code_command', {
-      request:
-      {
-        email: email.value,
-        purpose: "register"
-      }
-    });
+    // 使用 store 的 sendVerificationCode 方法
+    await userStore.sendVerificationCode(email.value, "register");
 
     isCodeSent.value = true;
     startCountdown();
   } catch (err: any) {
-    console.log("err", err)
-    error.value = err || '验证码发送失败，请稍后再试';
+    error.value = err.message || '验证码发送失败，请稍后再试';
   } finally {
     isLoading.value = false;
   }
@@ -146,16 +142,15 @@ const handleSubmit = async () => {
   success.value = '';
 
   try {
-    const response: any = await invoke('auth_register_command', {
-      request: {
-        email: email.value,
-        verification_code: verificationCode.value,
-        username: username.value,
-        password: password.value
-      }
-    });
+    // 使用 store 的 register 方法
+    const result = await userStore.register(
+      username.value, 
+      email.value, 
+      password.value, 
+      verificationCode.value
+    );
 
-    success.value = response.message;
+    success.value = result.message;
 
     // 清空表单
     email.value = '';
@@ -164,24 +159,13 @@ const handleSubmit = async () => {
     password.value = '';
     confirmPassword.value = '';
     isCodeSent.value = false;
-    isCodeSent.value = false;
-
-    // 存储用户信息和令牌
-    localStorage.setItem('auth_token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
 
     // 1秒后自动切换到登录页面
     setTimeout(() => {
-      const userInfo = {
-        id: response.user.id,
-        username: response.user.username,
-        email: response.user.email,
-        avatar: response.user.username.charAt(0).toUpperCase(),
-      };
-      emit('login-success', userInfo, response.token);
+      emit('login-success', result.user, userStore.token);
     }, 1000);
   } catch (err: any) {
-    error.value = err.error || '注册失败，请稍后再试';
+    error.value = err.message || '注册失败，请稍后再试';
   } finally {
     isLoading.value = false;
   }

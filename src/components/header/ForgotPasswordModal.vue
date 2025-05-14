@@ -66,10 +66,9 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue';
-import { invoke } from '@tauri-apps/api/core';
+import { useUserStore } from '../../stores/userStore';
 
 const email = ref('');
 const verificationCode = ref('');
@@ -83,6 +82,8 @@ const countdown = ref(0);
 const error = ref('');
 const success = ref('');
 let countdownTimer: number | null = null;
+
+const userStore = useUserStore();
 
 const passwordError = computed(() => {
   if (newPassword.value && confirmNewPassword.value && newPassword.value !== confirmNewPassword.value) {
@@ -120,18 +121,14 @@ const sendVerificationCode = async () => {
   error.value = '';
 
   try {
-    await invoke('auth_send_verification_code_command', {
-      request: {
-        email: email.value,
-        purpose: 'reset_password' // 指定验证码用途 
-      }
-    });
+    // 使用 store 的 sendVerificationCode 方法
+    await userStore.sendVerificationCode(email.value, 'reset_password');
 
     isCodeSent.value = true;
     startCountdown();
     success.value = '验证码已发送，请查收邮箱';
   } catch (err: any) {
-    error.value = err.error || '验证码发送失败，请稍后再试';
+    error.value = err.message || '验证码发送失败，请稍后再试';
   } finally {
     isLoading.value = false;
   }
@@ -144,15 +141,13 @@ const handleSubmit = async () => {
   error.value = '';
 
   try {
-    await invoke('verify_reset_password_code', {
-      email: email.value,
-      code: verificationCode.value
-    });
+    // 使用 store 的 verifyResetPasswordCode 方法
+    await userStore.verifyResetPasswordCode(email.value, verificationCode.value);
 
     showResetForm.value = true;
     success.value = '验证码正确，请设置新密码';
   } catch (err: any) {
-    error.value = err.error || '验证码验证失败，请检查后重试';
+    error.value = err.message || '验证码验证失败，请检查后重试';
   } finally {
     isLoading.value = false;
   }
@@ -165,13 +160,12 @@ const handleResetPassword = async () => {
   error.value = '';
 
   try {
-    const response: any = await invoke('reset_password_command', {
-      request: {
-        email: email.value,
-        code: verificationCode.value,
-        new_password: newPassword.value
-      }
-    });
+    // 使用 store 的 resetPassword 方法
+    const response = await userStore.resetPassword(
+      email.value, 
+      verificationCode.value, 
+      newPassword.value
+    );
 
     success.value = response.message;
 
@@ -180,7 +174,7 @@ const handleResetPassword = async () => {
       emit('login');
     }, 3000);
   } catch (err: any) {
-    error.value = err.error || '重置密码失败，请稍后再试';
+    error.value = err.message || '重置密码失败，请稍后再试';
   } finally {
     isResetting.value = false;
   }
