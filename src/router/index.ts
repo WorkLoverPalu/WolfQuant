@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import UserProfile from '@/components/UserProfile.vue';
-import MarketWatchlist from '@/components/MarketWatchlist.vue';
+import MarketWatchlist from '@/views/marketWatch/MarketWatchlist.vue';
 
 const routes: Array<RouteRecordRaw> = [
   {

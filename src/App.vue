@@ -60,7 +60,7 @@ import UserMenu from './components/header/UserMenu.vue';
 import SettingsModal from './components/header/SettingsModal.vue';
 import PlusIcon from './assets/icons/PlusIcon.vue';
 import UserProfile from './components/UserProfile.vue';
-import MarketWatchlist from './components/MarketWatchlist.vue';
+import MarketWatchlist from './views/marketWatch/MarketWatchlist.vue';
 import MarketFooter from './components/footer/MarketFooter.vue';
 import SideNavigation from './components/SideNavigation.vue';
 import './styles/transitions.scss';
