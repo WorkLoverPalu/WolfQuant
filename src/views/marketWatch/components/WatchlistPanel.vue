@@ -69,7 +69,7 @@
   
   // 分类数据
   const categories = [
-    { id: 'fund', name: '基金1' },
+    { id: 'fund', name: '基金' },
     { id: 'stock', name: '股票' },
     { id: 'gold', name: '黄金' },
     { id: 'crypto', name: '数字货币' }
