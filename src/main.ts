@@ -1,18 +1,18 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import EmptyTab from './components/EmptyTab.vue';
-import TradingView from './components/TradingView.vue';
 import { themeService } from './services/theme-service';
-import router from './router';
+import { createPinia } from 'pinia'
 
 // 初始化主题
 themeService.applyTheme(themeService.getThemePreference());
 
 const app = createApp(App);
-app.use(router);
+const pinia = createPinia()
 
 // 全局注册组件用于动态组件加载
 app.component('EmptyTab', EmptyTab);
-app.component('TradingView', TradingView);
 
+
+app.use(pinia)
 app.mount('#app');

@@ -1,27 +1,82 @@
 <template>
-  <div class="user-menu">
-    <div class="menu-header">
-      <div class="user-info">
-        <div class="avatar">{{ user.avatar || user.username.charAt(0).toUpperCase() }}</div>
+  <div class="user-menu-overlay" @click="$emit('close')">
+    <div class="user-menu" @click.stop>
+      <div class="user-info" @click="$emit('open-profile')">
+        <div class="user-avatar">{{ userInitial }}</div>
         <div class="user-details">
           <div class="username">{{ user.username }}</div>
           <div class="email">{{ user.email }}</div>
         </div>
       </div>
-    </div>
-    
-    <div class="menu-items">
-      <button class="menu-item" @click="$emit('open-profile')">
-        <i class="icon-user"></i>
-        个人中心
-      </button>
-      <button class="menu-item" @click="$emit('open-settings')">
-        <i class="icon-settings"></i>
-        设置
-      </button>
-      <button class="menu-item" @click="$emit('logout')">
-        <i class="icon-log-out"></i>
-        退出登录
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-items">
+        <button class="menu-item" @click="$emit('open-settings')">
+          <SettingsIcon />
+          <span>设置</span>
+          <span class="shortcut">⌘,</span>
+        </button>
+
+        <button class="menu-item" @click="$emit('close')">
+          <PlusIcon />
+          <span>新标签页</span>
+          <span class="shortcut">⌘T</span>
+        </button>
+
+        <button class="menu-item" @click="$emit('close')">
+          <WindowIcon />
+          <span>新窗口</span>
+          <span class="shortcut">⌘N</span>
+        </button>
+
+        <button class="menu-item" @click="$emit('close')">
+          <ClipboardIcon />
+          <span>从剪贴板打开链接</span>
+        </button>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="menu-items">
+        <button class="menu-item" @click="$emit('close')">
+          <ZoomIcon />
+          <span>缩放</span>
+          <div class="zoom-controls">
+            <button class="zoom-button">−</button>
+            <span class="zoom-level">100%</span>
+            <button class="zoom-button">+</button>
+          </div>
+        </button>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <div class="theme-selector">
+        <div class="theme-options">
+          <button class="theme-option" :class="{ active: themeContext.currentTheme === 'system' }"
+            @click="setTheme('system')">
+            <div class="theme-preview system-theme"></div>
+            <span>系统</span>
+          </button>
+          <button class="theme-option" :class="{ active: themeContext.currentTheme === 'dark' }"
+            @click="setTheme('dark')">
+            <div class="theme-preview dark-theme"></div>
+            <span>暗色</span>
+          </button>
+          <button class="theme-option" :class="{ active: themeContext.currentTheme === 'light' }"
+            @click="setTheme('light')">
+            <div class="theme-preview light-theme"></div>
+            <span>亮色</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-divider"></div>
+
+      <button class="menu-item logout-button" @click="handleLogout">
+        <LogoutIcon />
+        <span>退出 WolfQuant</span>
       </button>
     </div>
   </div>
@@ -30,14 +85,72 @@
 </template>
 
 <script setup lang="ts">
-defineProps({
-  user: {
-    type: Object,
-    required: true
-  }
+import { computed, inject } from 'vue';
+import type { ThemeType } from '../../services/theme-service';
+import SettingsIcon from '../../assets/icons/SettingsIcon.vue';
+import LogoutIcon from '../../assets/icons/LogoutIcon.vue';
+import PlusIcon from '../../assets/icons/PlusIcon.vue';
+import WindowIcon from '../../assets/icons/WindowIcon.vue';
+import ClipboardIcon from '../../assets/icons/ClipboardIcon.vue';
+import ZoomIcon from '../../assets/icons/ZoomIcon.vue';
+
+import { invoke } from '@tauri-apps/api/core';
+
+import { User } from "../../types/index.ts";
+
+
+const props = defineProps<{
+  user: User;
+}>();
+
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'logout'): void;
+  (e: 'open-settings'): void;
+  (e: 'open-profile'): void;
+}>();
+
+// 注入主题上下文
+const themeContext = inject('theme', {
+  currentTheme: 'dark',
+  setTheme: (theme: ThemeType) => { }
 });
 
-defineEmits(['close', 'logout', 'open-settings', 'open-profile']);
+// 设置主题
+const setTheme = (theme: ThemeType) => {
+  themeContext.setTheme(theme);
+  emit('close');
+};
+
+// 用户头像显示的首字母
+const userInitial = computed(() => {
+  return props.user.avatar || props.user.username.charAt(0).toUpperCase();
+});
+
+// 处理退出登录
+const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem('auth_token');
+
+    if (token) {
+      await invoke('auth_logout_command', {
+        request: {
+          user_id: props.user.id,
+          token
+        }
+      });
+
+      // 清除本地存储的用户信息和令牌
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+
+      // 通知父组件退出登录
+      emit('logout');
+    }
+  } catch (err) {
+    console.error('Logout failed:', err);
+  }
+};
 </script>
 
 <style lang="scss" scoped>
@@ -70,6 +183,37 @@ defineEmits(['close', 'logout', 'open-settings', 'open-profile']);
 .user-info {
   display: flex;
   align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--avatar-bg);
+    color: var(--avatar-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 18px;
+    margin-right: 12px;
+  }
+
+  .user-details {
+    flex: 1;
+
+    .username {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .email {
+      font-size: 12px;
+      color: var(--tab-text);
+    }
+  }
 }
 
 .avatar {
@@ -93,12 +237,67 @@ defineEmits(['close', 'logout', 'open-settings', 'open-profile']);
   font-size: 16px;
   font-weight: 500;
   color: var(--tab-active-text);
-  margin-bottom: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+
+  svg {
+    margin-right: 12px;
+    color: var(--tab-text);
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .shortcut {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--tab-text);
+  }
+
+  .zoom-controls {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+
+    .zoom-button {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--tab-text);
+      font-size: 14px;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--tab-active-text);
+      }
+    }
+
+    .zoom-level {
+      margin: 0 8px;
+      font-size: 12px;
+      color: var(--tab-text);
+    }
+  }
 }
 
-.email {
-  font-size: 12px;
-  color: var(--tab-text);
+.logout-button {
+  color: #ef4444;
+
+  svg {
+    color: #ef4444;
+  }
+}
+
+.theme-selector {
+  padding: 8px 16px;
 }
 
 .menu-items {
@@ -116,14 +315,41 @@ defineEmits(['close', 'logout', 'open-settings', 'open-profile']);
   font-size: 14px;
   text-align: left;
   cursor: pointer;
-  
-  i {
-    margin-right: 12px;
-    font-size: 16px;
-  }
-  
+  padding: 8px 4px;
+  border-radius: 4px;
+
   &:hover {
     background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  &.active {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .theme-preview {
+    width: 64px;
+    height: 40px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+
+    &.system-theme {
+      background: linear-gradient(to right, #1a1a1a 50%, #f5f5f5 50%);
+    }
+
+    &.dark-theme {
+      background-color: #1a1a1a;
+    }
+
+    &.light-theme {
+      background-color: #f5f5f5;
+    }
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--tab-text);
   }
 }
 </style>

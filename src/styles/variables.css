@@ -1,0 +1,59 @@
+:root {
+    /* 基础颜色 - 会被主题服务动态覆盖 */
+    --bgColor: #121212;
+    --cardBg: #1e1e1e;
+    --headerBg: #1a1a1a;
+    --borderColor: #333333;
+    --textColor: #ffffff;
+    --textSecondary: #a0a0a0;
+    --accentColor: #2962ff;
+    --positiveColor: #26a69a;
+    --negativeColor: #ef5350;
+    --hoverBg: rgba(255, 255, 255, 0.05);
+    --activeBg: rgba(255, 255, 255, 0.1);
+    --inputBg: #2c2c2c;
+    --buttonBg: #2962ff;
+    --buttonHoverBg: #1e53e4;
+    --modalBg: #1e1e1e;
+    --scrollbarThumb: #555555;
+    --toolsBg: #0a0a0a;
+    --resizerColor: #444444;
+    --resizerHoverColor: #2962ff;
+    --chartGridColor: rgba(255, 255, 255, 0.05);
+  
+    /* 间距 */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+  
+    /* 字体大小 */
+    --font-size-xs: 11px;
+    --font-size-sm: 12px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 18px;
+    --font-size-2xl: 24px;
+  
+    /* 圆角 */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  
+    /* 阴影 */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+  
+    /* 过渡 */
+    --transition-fast: 150ms;
+    --transition-normal: 250ms;
+    --transition-slow: 350ms;
+  
+    /* Z-index层级 */
+    --z-index-dropdown: 100;
+    --z-index-modal: 1000;
+    --z-index-tooltip: 1500;
+  }
+  

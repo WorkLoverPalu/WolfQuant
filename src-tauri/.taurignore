@@ -1,0 +1,6 @@
+*.db
+*.sqlite
+*-wal
+*-shm
+data/
+logs/

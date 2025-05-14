@@ -1,0 +1,79 @@
+# WolfQuant 应用配置文件
+
+[app]
+# 应用名称
+name = "WolfQuant"
+# 是否为开发模式
+dev_mode = true
+# 应用版本
+version = "1.0.0"
+
+[auth]
+# JWT密钥，生产环境应使用强随机密钥
+jwt_secret = "your-super-secret-jwt-key-change-in-production"
+# JWT令牌过期时间（小时）
+jwt_expiry_hours = 24
+# 是否启用邮箱验证
+enable_email_verification = false
+# 验证码有效期（分钟）
+verification_code_expiry_minutes = 30
+# 密码重置令牌有效期（小时）
+password_reset_token_expiry_hours = 24
+# 最小密码长度
+min_password_length = 6
+# 密码是否需要包含特殊字符
+require_special_chars = false
+# 密码是否需要包含数字
+require_numbers = false
+# 密码是否需要包含大写字母
+require_uppercase = false
+# 登录尝试失败次数限制
+max_login_attempts = 5
+# 登录锁定时间（分钟）
+login_lockout_minutes = 30
+
+[database]
+# 数据库路径，相对于应用数据目录
+path = "wolfquant.db"
+# 是否在启动时初始化数据库
+init_on_startup = true
+# 是否备份数据库
+enable_backup = true
+# 备份间隔（小时）
+backup_interval_hours = 24
+# 保留备份数量
+max_backups = 5
+
+[logging]
+# 是否启用日志
+enable = true
+# 日志级别: "error", "warn", "info", "debug", "trace"
+level = "info"
+# 是否输出到文件
+log_to_file = true
+# 日志文件路径，相对于应用数据目录
+file_path = "logs/app.log"
+# 日志文件最大大小（MB）
+max_file_size_mb = 10
+# 保留日志文件数量
+max_files = 5
+
+[email]
+# 是否启用邮件功能
+enable = false
+# SMTP服务器
+smtp_server = "smtp.example.com"
+# SMTP端口
+smtp_port = 587
+# 是否使用SSL/TLS
+use_tls = true
+# 发件人邮箱
+from_email = "noreply@example.com"
+# 发件人名称
+from_name = "WolfQuant"
+# SMTP用户名
+username = "your-email@example.com"
+# SMTP密码
+password = "your-email-password"
+# 邮件发送超时时间（秒）
+timeout_seconds = 10

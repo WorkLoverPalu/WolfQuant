@@ -1,4 +1,6 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import UserProfile from '@/components/UserProfile.vue';
+import MarketWatchlist from '@/views/marketWatch/MarketWatchlist.vue';
 
 const routes = [
   {
@@ -8,9 +10,20 @@ const routes = [
   },
   {
     path: '/profile',
-    name: 'UserProfile',
-    component: () => import('../components/UserProfile.vue')
-  }
+    name: 'profile',
+    component: UserProfile,
+    meta: {
+      requiresAuth: true // 可选：如果需要登录才能访问
+    }
+  },
+  {
+    path: '/market-watchlist',
+    name: 'market-watchlist',
+    component: MarketWatchlist,
+    meta: {
+      requiresAuth: true // 可选：如果需要登录才能访问
+    }
+  },
 ];
 
 const router = createRouter({
