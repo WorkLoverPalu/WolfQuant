@@ -1,111 +1,83 @@
 <template>
-  <div class="user-profile-header">
-    <div 
-      v-if="user" 
-      class="user-info" 
-      @click="$emit('open-profile')"
-    >
-      <div class="avatar">{{ user.avatar || user.username.charAt(0).toUpperCase() }}</div>
-      <div class="user-details">
-        <div class="username">{{ user.username }}</div>
-        <div class="email">{{ user.email }}</div>
+  <div class="user-profile">
+    <!-- 已登录状态 -->
+    <div v-if="userStore.isAuthenticated" class="user-logged-in" @click="$emit('open-menu')">
+      <div class="user-avatar">
+        {{ userStore.user?.avatar || userStore.userInitial }}
       </div>
-      <button class="menu-button" @click.stop="$emit('open-menu')">
-        <i class="icon-chevron-down"></i>
-      </button>
+      <!-- <span class="username">{{ userStore.username }}</span> -->
     </div>
-    
-    <button 
-      v-else 
-      class="login-button" 
-      @click="$emit('login')"
-    >
-      登录
-    </button>
+
+    <!-- 未登录状态 -->
+    <div v-else class="user-logged-out" @click="$emit('login')">
+      <div class="user-icon">
+        <UserIcon />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps({
-  user: {
-    type: Object,
-    default: null
-  }
-});
+import UserIcon from '../../assets/icons/UserIcon.vue';
+import { useUserStore } from "../../stores/userStore";
 
-defineEmits(['login', 'logout', 'open-menu', 'open-profile']);
+// 获取 userStore 实例
+const userStore = useUserStore();
+
+defineEmits<{
+  (e: 'login'): void;
+  (e: 'open-menu'): void;
+}>();
 </script>
 
 <style lang="scss" scoped>
-.user-profile-header {
+.user-profile {
   display: flex;
   align-items: center;
+  cursor: pointer;
+  padding: 8px;
 }
 
-.user-info {
+.user-logged-in,
+.user-logged-out {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  
+  gap: 4px;
+
   &:hover {
-    background-color: var(--header-hover-bg, rgba(255, 255, 255, 0.05));
+    opacity: 0.8;
   }
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
+.user-avatar {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background-color: var(--avatar-bg);
   color: var(--avatar-text);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 500;
-  margin-right: 8px;
+  font-weight: bold;
 }
 
-.user-details {
-  margin-right: 8px;
+.user-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tab-text);
+  width: 24px;
+  height: 24px;
 }
 
-.username {
-  font-size: 14px;
-  font-weight: 500;
+.username,
+.login-text {
+  font-size: 12px;
   color: var(--tab-active-text);
 }
 
-.email {
-  font-size: 12px;
-  color: var(--tab-text);
-}
-
-.menu-button {
-  background: transparent;
-  border: none;
-  color: var(--tab-text);
-  cursor: pointer;
-  padding: 4px;
-  
-  &:hover {
-    color: var(--tab-active-text);
-  }
-}
-
-.login-button {
-  background-color: var(--button-primary);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  
-  &:hover {
-    background-color: var(--button-primary-hover);
-  }
+.login-text {
+  color: #3b82f6;
 }
 </style>
