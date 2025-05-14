@@ -99,7 +99,7 @@ const isFormValid = computed(() => {
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'login'): void;
+  (e: 'login-success', user: any, token: string): void;
 }>();
 
 const startCountdown = () => {
@@ -164,12 +164,22 @@ const handleSubmit = async () => {
     password.value = '';
     confirmPassword.value = '';
     isCodeSent.value = false;
-    isCodeSent.value=false;
+    isCodeSent.value = false;
 
-    // 3秒后自动切换到登录页面
+    // 存储用户信息和令牌
+    localStorage.setItem('auth_token', response.token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+
+    // 1秒后自动切换到登录页面
     setTimeout(() => {
-      emit('login');
-    }, 3000);
+      const userInfo = {
+        id: response.user.id,
+        username: response.user.username,
+        email: response.user.email,
+        avatar: response.user.username.charAt(0).toUpperCase(),
+      };
+      emit('login-success', userInfo, response.token);
+    }, 1000);
   } catch (err: any) {
     error.value = err.error || '注册失败，请稍后再试';
   } finally {

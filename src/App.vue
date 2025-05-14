@@ -30,7 +30,7 @@
         @forgot-password="openForgotPasswordModal" @register="openRegisterModal" />
 
       <!-- 注册模态框 -->
-      <RegisterModal v-if="showRegisterModal" @close="showRegisterModal = false" @register="handleRegister" />
+      <RegisterModal v-if="showRegisterModal" @close="showRegisterModal = false" @login-success="handleLogin" />
 
       <!-- 忘记密码模态框 -->
       <ForgotPasswordModal v-if="showForgotPasswordModal" @close="showForgotPasswordModal = false"
@@ -47,7 +47,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, markRaw, shallowRef,onMounted } from 'vue';
+import { invoke } from '@tauri-apps/api/core';
+import { ref, computed, markRaw, shallowRef, onMounted } from 'vue';
 import { User, Tab, MarketData } from "./types/index.ts";
 import ThemeProvider from './components/ThemeProvider.vue';
 import TabItem from './components/tabs/TabItem.vue';
@@ -190,18 +191,9 @@ const handleLogin = (user: User, password: string) => {
     avatar: user.username.charAt(0).toUpperCase()
   };
   showLoginModal.value = false;
-};
-
-const handleRegister = (email: string, password: string, username: string) => {
-  // 这里应该是实际的注册逻辑
-  currentUser.value = {
-    id: Date.now().toString(),
-    username: username,
-    email: email,
-    avatar: username.charAt(0).toUpperCase()
-  };
   showRegisterModal.value = false;
 };
+
 
 const handleResetPassword = (email: string) => {
   // 这里应该是实际的重置密码逻辑
@@ -305,16 +297,34 @@ const handleOpenTab = (tabData: any) => {
   }
 };
 // 页面加载时处理 localStorage 中的用户数据
-onMounted(() => {
-  const savedUser = localStorage.getItem('user');
-  if (savedUser) {
-    try {
-      currentUser.value = JSON.parse(savedUser);
-    } catch (error) {
-      console.error('Failed to parse saved user data:', error);
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem('auth_token');
+    const tokenVerify = await invoke("auth_verify_session", {
+      request: {
+        token,
+      }
+    })
+    console.log("tokenVerify", tokenVerify)
+
+
+    if (tokenVerify) {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        currentUser.value = JSON.parse(savedUser);
+      }
     }
+  } catch (error) {
+    removeUser();
   }
+
 });
+const removeUser = () => {
+  localStorage.setItem('auth_token', "");
+  localStorage.setItem('user', "");
+}
+
+// 页面加载之后，应该读取服务端的 auth_verify_session 校验token的有效性，如果无效，则删除本地用户信息
 </script>
 
 <style lang="scss">

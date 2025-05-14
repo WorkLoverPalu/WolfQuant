@@ -157,9 +157,10 @@ pub fn logout_user(user_id: i64, token: &str) -> Result<(), AuthError> {
         params![user_id, token],
     )?;
 
-    if rows_affected == 0 {
-        return Err(AuthError::InvalidSession("会话不存在或已过期".to_string()));
-    }
+    // 会话不存在，默认过期，自动退出登录
+    // if rows_affected == 0 {
+    //     return Err(AuthError::InvalidSession("会话不存在或已过期".to_string()));
+    // }
 
     info!("User logged out: {}", user_id);
     Ok(())
