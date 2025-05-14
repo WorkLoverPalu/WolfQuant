@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::error::auth::AuthError;
+use crate::utils::crypto::hash_password;
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use r2d2::Pool;
@@ -10,6 +11,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use rusqlite::{params};
 
 // 连接池静态变量
 lazy_static! {
@@ -35,7 +37,7 @@ lazy_static! {
             .build(manager)
             .expect("Failed to create connection pool")
     };
-    
+
     // 加载表结构定义
     static ref TABLE_SCHEMAS: HashMap<String, String> = {
         load_table_schemas().expect("Failed to load table schemas")
@@ -97,6 +99,21 @@ pub fn init_database() -> Result<(), AuthError> {
 
     // 验证并更新表结构
     verify_and_update_table_schemas(&mut conn)?;
+
+    //插入一个默认的用户
+    // 创建用户
+    conn.execute(
+        "INSERT INTO users (id,username, email, password_hash, email_verified, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6,?7)",
+        params![
+            10000,
+            "nantang",
+            "nantang@qq.com",
+            hash_password("qwe123")?,
+            1, // email_verified
+            Utc::now().timestamp(),
+            Utc::now().timestamp()
+        ],
+    )?;
 
     Ok(())
 }
@@ -192,7 +209,7 @@ fn migrate_database(conn: &mut Connection, current_version: u32) -> Result<(), A
 /// 从外部文件加载表结构定义
 fn load_table_schemas() -> Result<HashMap<String, String>, AuthError> {
     let mut schemas = HashMap::new();
-    
+
     // 获取schema目录路径
     let config = Config::get();
     let schema_dir = if config.database.schema_dir.is_empty() {
@@ -200,49 +217,51 @@ fn load_table_schemas() -> Result<HashMap<String, String>, AuthError> {
     } else {
         Path::new(&config.database.schema_dir)
     };
-    
+
     // 确保目录存在
     if !schema_dir.exists() {
         fs::create_dir_all(schema_dir)
             .map_err(|e| AuthError::DatabaseError(format!("无法创建schema目录: {}", e)))?;
-        
+
         // 如果是新创建的目录，生成默认schema文件
         generate_default_schemas(schema_dir)?;
     }
-    
+
     // 读取所有.sql文件
     for entry in fs::read_dir(schema_dir)
         .map_err(|e| AuthError::DatabaseError(format!("无法读取schema目录: {}", e)))?
     {
-        let entry = entry.map_err(|e| AuthError::DatabaseError(format!("无法读取目录项: {}", e)))?;
+        let entry =
+            entry.map_err(|e| AuthError::DatabaseError(format!("无法读取目录项: {}", e)))?;
         let path = entry.path();
-        
+
         if path.is_file() && path.extension().map_or(false, |ext| ext == "sql") {
             // 从文件名获取表名
-            let table_name = path.file_stem()
+            let table_name = path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .ok_or_else(|| AuthError::DatabaseError("无效的schema文件名".to_string()))?
                 .to_string();
-            
+
             // 读取文件内容
             let mut file = fs::File::open(&path)
                 .map_err(|e| AuthError::DatabaseError(format!("无法打开schema文件: {}", e)))?;
-            
+
             let mut content = String::new();
             file.read_to_string(&mut content)
                 .map_err(|e| AuthError::DatabaseError(format!("无法读取schema文件: {}", e)))?;
-            
+
             // 添加到schemas
             schemas.insert(table_name, content);
         }
     }
-    
+
     if schemas.is_empty() {
         warn!("没有找到schema定义文件，将使用默认schema");
         generate_default_schemas(schema_dir)?;
         return load_table_schemas(); // 递归调用以加载生成的默认schema
     }
-    
+
     Ok(schemas)
 }
 
@@ -250,8 +269,9 @@ fn load_table_schemas() -> Result<HashMap<String, String>, AuthError> {
 fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
     // 用户相关表
     let user_tables = [
-        ("users", 
-         "CREATE TABLE IF NOT EXISTS users (
+        (
+            "users",
+            "CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             email TEXT UNIQUE NOT NULL,
@@ -259,27 +279,33 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             email_verified BOOLEAN NOT NULL DEFAULT 1,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL
-        )"),
-        ("sessions", 
-         "CREATE TABLE IF NOT EXISTS sessions (
+        )",
+        ),
+        (
+            "sessions",
+            "CREATE TABLE IF NOT EXISTS sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             token TEXT UNIQUE NOT NULL,
             expires_at INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        )"),
-        ("password_reset_tokens", 
-         "CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        )",
+        ),
+        (
+            "password_reset_tokens",
+            "CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             token TEXT UNIQUE NOT NULL,
             expires_at INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        )"),
-        ("email_verification_codes", 
-         "CREATE TABLE IF NOT EXISTS email_verification_codes (
+        )",
+        ),
+        (
+            "email_verification_codes",
+            "CREATE TABLE IF NOT EXISTS email_verification_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT NOT NULL,
             code TEXT NOT NULL,
@@ -287,19 +313,23 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             expires_at INTEGER NOT NULL,
             created_at INTEGER NOT NULL,
             UNIQUE (email, purpose)
-        )")
+        )",
+        ),
     ];
-    
+
     // 资产相关表
     let asset_tables = [
-        ("asset_types", 
-         "CREATE TABLE IF NOT EXISTS asset_types (
+        (
+            "asset_types",
+            "CREATE TABLE IF NOT EXISTS asset_types (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             description TEXT
-        )"),
-        ("user_groups", 
-         "CREATE TABLE IF NOT EXISTS user_groups (
+        )",
+        ),
+        (
+            "user_groups",
+            "CREATE TABLE IF NOT EXISTS user_groups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
@@ -310,9 +340,11 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             FOREIGN KEY (asset_type_id) REFERENCES asset_types (id) ON DELETE CASCADE,
             UNIQUE (user_id, name, asset_type_id)
-        )"),
-        ("assets", 
-         "CREATE TABLE IF NOT EXISTS assets (
+        )",
+        ),
+        (
+            "assets",
+            "CREATE TABLE IF NOT EXISTS assets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             group_id INTEGER,
@@ -327,9 +359,11 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             FOREIGN KEY (group_id) REFERENCES user_groups (id) ON DELETE SET NULL,
             FOREIGN KEY (asset_type_id) REFERENCES asset_types (id) ON DELETE CASCADE,
             UNIQUE (user_id, asset_type_id, code)
-        )"),
-        ("price_history", 
-         "CREATE TABLE IF NOT EXISTS price_history (
+        )",
+        ),
+        (
+            "price_history",
+            "CREATE TABLE IF NOT EXISTS price_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             asset_id INTEGER NOT NULL,
             date INTEGER NOT NULL,
@@ -341,13 +375,15 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             created_at INTEGER NOT NULL,
             FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE,
             UNIQUE (asset_id, date)
-        )")
+        )",
+        ),
     ];
-    
+
     // 交易相关表
     let transaction_tables = [
-        ("transactions", 
-         "CREATE TABLE IF NOT EXISTS transactions (
+        (
+            "transactions",
+            "CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             asset_id INTEGER NOT NULL,
@@ -360,9 +396,11 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             created_at INTEGER NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
-        )"),
-        ("investment_plans", 
-         "CREATE TABLE IF NOT EXISTS investment_plans (
+        )",
+        ),
+        (
+            "investment_plans",
+            "CREATE TABLE IF NOT EXISTS investment_plans (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             asset_id INTEGER NOT NULL,
@@ -378,9 +416,11 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             updated_at INTEGER NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE
-        )"),
-        ("investment_strategies", 
-         "CREATE TABLE IF NOT EXISTS investment_strategies (
+        )",
+        ),
+        (
+            "investment_strategies",
+            "CREATE TABLE IF NOT EXISTS investment_strategies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             name TEXT NOT NULL,
@@ -390,9 +430,11 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        )"),
-        ("strategy_applications", 
-         "CREATE TABLE IF NOT EXISTS strategy_applications (
+        )",
+        ),
+        (
+            "strategy_applications",
+            "CREATE TABLE IF NOT EXISTS strategy_applications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             strategy_id INTEGER NOT NULL,
@@ -404,9 +446,11 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             FOREIGN KEY (strategy_id) REFERENCES investment_strategies (id) ON DELETE CASCADE,
             FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE,
             UNIQUE (strategy_id, asset_id)
-        )"),
-        ("trade_alerts", 
-         "CREATE TABLE IF NOT EXISTS trade_alerts (
+        )",
+        ),
+        (
+            "trade_alerts",
+            "CREATE TABLE IF NOT EXISTS trade_alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             asset_id INTEGER NOT NULL,
@@ -418,34 +462,39 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             FOREIGN KEY (asset_id) REFERENCES assets (id) ON DELETE CASCADE,
             FOREIGN KEY (strategy_id) REFERENCES investment_strategies (id) ON DELETE SET NULL
-        )")
+        )",
+        ),
     ];
-    
+
     // 合并所有表定义
     let all_tables = [&user_tables[..], &asset_tables[..], &transaction_tables[..]].concat();
-    
+
     // 写入文件
     for (table_name, schema) in all_tables {
         let file_path = schema_dir.join(format!("{}.sql", table_name));
         fs::write(&file_path, schema)
             .map_err(|e| AuthError::DatabaseError(format!("无法写入schema文件: {}", e)))?;
-        
+
         info!("生成默认schema文件: {:?}", file_path);
     }
-    
+
     Ok(())
 }
 
 /// 获取表的当前结构
-fn get_current_table_schema(conn: &Connection, table_name: &str) -> Result<Option<String>, AuthError> {
+fn get_current_table_schema(
+    conn: &Connection,
+    table_name: &str,
+) -> Result<Option<String>, AuthError> {
     let sql = "SELECT sql FROM sqlite_master WHERE type='table' AND name=?";
-    
-    let result: Result<String, rusqlite::Error> = conn.query_row(sql, [table_name], |row| row.get(0));
-    
+
+    let result: Result<String, rusqlite::Error> =
+        conn.query_row(sql, [table_name], |row| row.get(0));
+
     match result {
         Ok(schema) => Ok(Some(schema)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-        Err(e) => Err(AuthError::DatabaseError(format!("获取表结构失败: {}", e)))
+        Err(e) => Err(AuthError::DatabaseError(format!("获取表结构失败: {}", e))),
     }
 }
 
@@ -462,19 +511,19 @@ fn normalize_sql(sql: &str) -> String {
 /// 验证并更新表结构
 fn verify_and_update_table_schemas(conn: &mut Connection) -> Result<(), AuthError> {
     let tx = conn.transaction()?;
-    
+
     for (table_name, expected_schema) in TABLE_SCHEMAS.iter() {
         match get_current_table_schema(&tx, table_name)? {
             Some(current_schema) => {
                 // 规范化SQL以便比较
                 let normalized_current = normalize_sql(&current_schema);
                 let normalized_expected = normalize_sql(expected_schema);
-                
+
                 if normalized_current != normalized_expected {
                     info!("表 {} 结构不匹配，进行更新", table_name);
                     update_table_structure(&tx, table_name, &current_schema, expected_schema)?;
                 }
-            },
+            }
             None => {
                 // 表不存在，创建它
                 info!("表 {} 不存在，创建新表", table_name);
@@ -482,77 +531,81 @@ fn verify_and_update_table_schemas(conn: &mut Connection) -> Result<(), AuthErro
             }
         }
     }
-    
+
     tx.commit()?;
     Ok(())
 }
 
 /// 更新表结构
 fn update_table_structure(
-    tx: &Transaction, 
-    table_name: &str, 
-    current_schema: &str, 
-    expected_schema: &str
+    tx: &Transaction,
+    table_name: &str,
+    current_schema: &str,
+    expected_schema: &str,
 ) -> Result<(), AuthError> {
     // 获取表中的数据
     let temp_table_name = format!("{}_temp", table_name);
-    
+
     // 1. 获取当前表的列
-    let mut stmt = tx.prepare(&format!(
-        "PRAGMA table_info({})", 
-        table_name
-    ))?;
-    
-    let current_columns: Vec<String> = stmt.query_map([], |row| {
-        let name: String = row.get(1)?;
-        Ok(name)
-    })?
-    .filter_map(Result::ok)
-    .collect();
-    
+    let mut stmt = tx.prepare(&format!("PRAGMA table_info({})", table_name))?;
+
+    let current_columns: Vec<String> = stmt
+        .query_map([], |row| {
+            let name: String = row.get(1)?;
+            Ok(name)
+        })?
+        .filter_map(Result::ok)
+        .collect();
+
     // 2. 获取期望表的列
     tx.execute_batch(&format!("DROP TABLE IF EXISTS {}", temp_table_name))?;
-    tx.execute_batch(&expected_schema.replace(&format!("CREATE TABLE {}", table_name), &format!("CREATE TABLE {}", temp_table_name)))?;
-    
-    let mut stmt = tx.prepare(&format!(
-        "PRAGMA table_info({})", 
-        temp_table_name
+    tx.execute_batch(&expected_schema.replace(
+        &format!("CREATE TABLE {}", table_name),
+        &format!("CREATE TABLE {}", temp_table_name),
     ))?;
-    
-    let expected_columns: Vec<String> = stmt.query_map([], |row| {
-        let name: String = row.get(1)?;
-        Ok(name)
-    })?
-    .filter_map(Result::ok)
-    .collect();
-    
+
+    let mut stmt = tx.prepare(&format!("PRAGMA table_info({})", temp_table_name))?;
+
+    let expected_columns: Vec<String> = stmt
+        .query_map([], |row| {
+            let name: String = row.get(1)?;
+            Ok(name)
+        })?
+        .filter_map(Result::ok)
+        .collect();
+
     // 3. 找出共同的列
-    let common_columns: Vec<String> = current_columns.iter()
+    let common_columns: Vec<String> = current_columns
+        .iter()
         .filter(|col| expected_columns.contains(col))
         .cloned()
         .collect();
-    
+
     let columns_str = common_columns.join(", ");
-    
+
     // 4. 创建新表并迁移数据
-    tx.execute_batch(&format!("
+    tx.execute_batch(&format!(
+        "
         CREATE TABLE {}_new {};
         INSERT INTO {}_new ({}) 
         SELECT {} FROM {};
         DROP TABLE {};
         ALTER TABLE {}_new RENAME TO {};
-    ", 
-        table_name, 
-        &expected_schema[expected_schema.find("(").unwrap()..],
-        table_name, columns_str,
-        columns_str, table_name,
+    ",
         table_name,
-        table_name, table_name
+        &expected_schema[expected_schema.find("(").unwrap()..],
+        table_name,
+        columns_str,
+        columns_str,
+        table_name,
+        table_name,
+        table_name,
+        table_name
     ))?;
-    
+
     // 5. 清理临时表
     tx.execute_batch(&format!("DROP TABLE IF EXISTS {}", temp_table_name))?;
-    
+
     info!("表 {} 结构已更新", table_name);
     Ok(())
 }

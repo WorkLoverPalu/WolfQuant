@@ -86,7 +86,7 @@
   const messages = ref([
     {
       id: 1,
-      user: 'brqiu8982',
+      user: '@nantang',
       symbol: 'GOLD 15',
       time: '11小时前',
       text: '@aws2333:是滴<br>人家在要理钱啊<br>几秒钟的时差可能是几K钱的差<br>分分钟几百万上下<br>要做男成expert才没有延迟?',
@@ -94,7 +94,7 @@
     },
     {
       id: 2,
-      user: 'moyao1750516',
+      user: '@nantang',
       symbol: 'ETHUSDTP 30',
       time: '10小时前',
       text: '添加了 止盈止损线段',
@@ -103,10 +103,10 @@
     },
     {
       id: 3,
-      user: 'uququomt330',
+      user: '@nantang',
       symbol: 'TSLA 1',
       time: '38分钟前',
-      text: '1.tv编程100行以内100r,300行以内可当天交付<br>2.python定制量化策略，速达到秒，支持电/外交易<br>所<br>欢迎咨询: md13380479846',
+      text: '1.tv编程100行以内100r,300行以内可当天交付<br>2.python定制量化策略，速达到秒，支持电/外交易<br>所<br>欢迎咨询: @nantang',
       type: 'public'
     }
   ]);
