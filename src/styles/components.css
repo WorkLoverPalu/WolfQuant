@@ -1,0 +1,319 @@
+@import "./variables.css";
+
+/* 应用容器 */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* 应用头部 */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--headerBg);
+  border-bottom: 1px solid var(--borderColor);
+  padding: 0 var(--spacing-md);
+  height: 40px;
+  -webkit-app-region: drag;
+}
+
+/* 标签容器 */
+.tabs-container {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+  -webkit-app-region: no-drag;
+}
+
+.tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* 新标签按钮 */
+.new-tab-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--textSecondary);
+  height: 100%;
+  padding: 0 var(--spacing-sm);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.new-tab-button:hover {
+  color: var(--textColor);
+}
+
+/* 用户资料区域 */
+.user-profile {
+  -webkit-app-region: no-drag;
+}
+
+/* 应用内容区域 */
+.app-content {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--bgColor);
+  padding-right: 40px;
+  padding-bottom: 48px;
+}
+
+/* 标签项 */
+.tab-item {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--spacing-md);
+  border-right: 1px solid var(--borderColor);
+  background-color: var(--headerBg);
+  color: var(--textSecondary);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+  -webkit-app-region: no-drag;
+  min-width: 120px;
+  max-width: 200px;
+}
+
+.tab-item.active {
+  background-color: var(--bgColor);
+  color: var(--textColor);
+}
+
+.tab-item:hover {
+  background-color: var(--hoverBg);
+}
+
+.tab-item-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  overflow: hidden;
+}
+
+.tab-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--font-size-sm);
+}
+
+.tab-close {
+  margin-left: var(--spacing-xs);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+}
+
+.tab-item:hover .tab-close {
+  opacity: 1;
+}
+
+/* 市场观察列表 */
+.market-watchlist {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.watchlist-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 左侧面板 */
+.left-panel {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--borderColor);
+  position: relative;
+}
+
+.left-top {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 右侧面板 */
+.right-panel {
+  width: 650px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-top {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-bottom {
+  flex: 1;
+  border-top: 1px solid var(--borderColor);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 分隔线 */
+.vertical-resizer {
+  width: 5px;
+  height: 100%;
+  background-color: var(--bgColor);
+  cursor: ew-resize;
+  position: relative;
+}
+
+.vertical-resizer:hover,
+.vertical-resizer:active {
+  background-color: var(--resizerHoverColor);
+}
+
+.vertical-resizer::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1px;
+  height: 30px;
+  background-color: var(--resizerColor);
+}
+
+.horizontal-resizer {
+  width: 100%;
+  height: 5px;
+  background-color: var(--bgColor);
+  cursor: ns-resize;
+  position: relative;
+}
+
+.horizontal-resizer:hover,
+.horizontal-resizer:active {
+  background-color: var(--resizerHoverColor);
+}
+
+.horizontal-resizer::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 1px;
+  background-color: var(--resizerColor);
+}
+
+/* 符号图标 */
+.symbol-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--spacing-sm);
+  font-size: var(--font-size-md);
+  color: white;
+}
+
+.symbol-icon.small {
+  width: 20px;
+  height: 20px;
+  font-size: var(--font-size-xs);
+  margin-right: var(--spacing-xs);
+}
+
+.symbol-spx {
+  background-color: #e91e63;
+}
+.symbol-ndq {
+  background-color: #2196f3;
+}
+.symbol-dji {
+  background-color: #4caf50;
+}
+.symbol-vix {
+  background-color: #ff9800;
+}
+.symbol-dxy {
+  background-color: #9c27b0;
+}
+.symbol-btc {
+  background-color: #f57c00;
+}
+.symbol-eth {
+  background-color: #7b1fa2;
+}
+.symbol-gold {
+  background-color: #ffc107;
+}
+.symbol-fund {
+  background-color: #607d8b;
+}
+.symbol-default {
+  background-color: #607d8b;
+}
+
+/* 底部行情组件 */
+.market-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background-color: var(--headerBg);
+  border-top: 1px solid var(--borderColor);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-md);
+  z-index: 10;
+}
+
+/* 右侧导航 */
+.side-navigation {
+  position: fixed;
+  top: 40px;
+  right: 0;
+  bottom: 48px;
+  width: 40px;
+  background-color: var(--headerBg);
+  border-left: 1px solid var(--borderColor);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  z-index: 10;
+}
+
+/* 用户菜单 */
+.user-menu {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  width: 240px;
+  background-color: var(--cardBg);
+  border: 1px solid var(--borderColor);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: var(--z-index-dropdown);
+}

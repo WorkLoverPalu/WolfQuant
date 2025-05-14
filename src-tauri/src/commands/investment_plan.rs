@@ -11,7 +11,7 @@ use tauri::command;
 use log::{info, error};
 
 #[command]
-pub async fn create_investment_plan_command(request: CreateInvestmentPlanRequest) -> Result<InvestmentPlan, ErrorResponse> {
+pub async fn plan_create_investment_plan_command(request: CreateInvestmentPlanRequest) -> Result<InvestmentPlan, ErrorResponse> {
     info!("Create investment plan request received for user: {}", request.user_id);
     
     match create_investment_plan(
@@ -35,7 +35,7 @@ pub async fn create_investment_plan_command(request: CreateInvestmentPlanRequest
 }
 
 #[command]
-pub async fn update_investment_plan_command(request: UpdateInvestmentPlanRequest) -> Result<InvestmentPlan, ErrorResponse> {
+pub async fn plan_update_investment_plan_command(request: UpdateInvestmentPlanRequest) -> Result<InvestmentPlan, ErrorResponse> {
     info!("Update investment plan request received for plan: {}", request.id);
     
     match update_investment_plan(
@@ -60,7 +60,7 @@ pub async fn update_investment_plan_command(request: UpdateInvestmentPlanRequest
 }
 
 #[command]
-pub async fn delete_investment_plan_command(request: DeleteInvestmentPlanRequest) -> Result<MessageResponse, ErrorResponse> {
+pub async fn plan_delete_investment_plan_command(request: DeleteInvestmentPlanRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete investment plan request received for plan: {}", request.id);
     
     match delete_investment_plan(request.id, request.user_id) {
@@ -78,7 +78,7 @@ pub async fn delete_investment_plan_command(request: DeleteInvestmentPlanRequest
 }
 
 #[command]
-pub async fn get_user_investment_plans_command(
+pub async fn plan_get_user_investment_plans_command(
     user_id: i64,
     asset_id: Option<i64>,
 ) -> Result<Vec<InvestmentPlan>, ErrorResponse> {
@@ -97,7 +97,7 @@ pub async fn get_user_investment_plans_command(
 }
 
 #[command]
-pub async fn execute_due_investment_plans_command() -> Result<MessageResponse, ErrorResponse> {
+pub async fn plan_execute_due_investment_plans_command() -> Result<MessageResponse, ErrorResponse> {
     info!("Execute due investment plans request received");
     
     match execute_due_investment_plans() {

@@ -29,7 +29,21 @@ use commands::data::{
 use crate::config::Config;
 use commands::auth::{
     auth_forgot_password_command, auth_login_command, auth_logout_command, auth_register_command,
-    auth_reset_password_command, auth_verify_session_command,auth_send_verification_code_command,
+    auth_reset_password_command, auth_send_verification_code_command, auth_verify_session_command,
+};
+//资产
+use commands::asset::{
+    asset_create_asset_command, asset_create_group_command, asset_delete_asset_command,
+    asset_delete_group_command, asset_get_asset_types_command, asset_get_user_assets_command,
+    asset_get_user_groups_command, asset_update_asset_command, asset_update_group_command,
+};
+//定投计划
+use commands::investment_plan::{
+    plan_create_investment_plan_command,
+    plan_update_investment_plan_command,
+    plan_delete_investment_plan_command,
+    plan_get_user_investment_plans_command,
+    plan_execute_due_investment_plans_command,
 };
 fn main() {
     // 加载配置
@@ -65,6 +79,22 @@ fn main() {
             data_mark_alert_read,
             data_get_user_trade_alerts,
             data_get_portfolio_summary,
+            //资产
+            asset_get_asset_types_command,
+            asset_create_group_command,
+            asset_update_group_command,
+            asset_delete_group_command,
+            asset_get_user_groups_command,
+            asset_create_asset_command,
+            asset_update_asset_command,
+            asset_delete_asset_command,
+            asset_get_user_assets_command,
+            //定投计划
+            plan_create_investment_plan_command,
+            plan_update_investment_plan_command,
+            plan_delete_investment_plan_command,
+            plan_get_user_investment_plans_command,
+            plan_execute_due_investment_plans_command,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

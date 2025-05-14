@@ -12,7 +12,7 @@ use tauri::command;
 use log::{info, error};
 
 #[command]
-pub async fn get_asset_types_command() -> Result<Vec<AssetType>, ErrorResponse> {
+pub async fn asset_get_asset_types_command() -> Result<Vec<AssetType>, ErrorResponse> {
     match get_asset_types() {
         Ok(types) => {
             info!("Retrieved {} asset types", types.len());
@@ -26,7 +26,7 @@ pub async fn get_asset_types_command() -> Result<Vec<AssetType>, ErrorResponse> 
 }
 
 #[command]
-pub async fn create_group_command(request: CreateGroupRequest) -> Result<UserGroup, ErrorResponse> {
+pub async fn asset_create_group_command(request: CreateGroupRequest) -> Result<UserGroup, ErrorResponse> {
     info!("Create group request received for user: {}", request.user_id);
     
     match create_user_group(
@@ -47,7 +47,7 @@ pub async fn create_group_command(request: CreateGroupRequest) -> Result<UserGro
 }
 
 #[command]
-pub async fn update_group_command(request: UpdateGroupRequest) -> Result<UserGroup, ErrorResponse> {
+pub async fn asset_update_group_command(request: UpdateGroupRequest) -> Result<UserGroup, ErrorResponse> {
     info!("Update group request received for group: {}", request.id);
     
     match update_user_group(
@@ -68,7 +68,7 @@ pub async fn update_group_command(request: UpdateGroupRequest) -> Result<UserGro
 }
 
 #[command]
-pub async fn delete_group_command(request: DeleteGroupRequest) -> Result<MessageResponse, ErrorResponse> {
+pub async fn asset_delete_group_command(request: DeleteGroupRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete group request received for group: {}", request.id);
     
     match delete_user_group(request.id, request.user_id) {
@@ -86,7 +86,7 @@ pub async fn delete_group_command(request: DeleteGroupRequest) -> Result<Message
 }
 
 #[command]
-pub async fn get_user_groups_command(
+pub async fn asset_get_user_groups_command(
     user_id: i64,
     asset_type_id: Option<i64>,
 ) -> Result<Vec<UserGroup>, ErrorResponse> {
@@ -105,7 +105,7 @@ pub async fn get_user_groups_command(
 }
 
 #[command]
-pub async fn create_asset_command(request: CreateAssetRequest) -> Result<Asset, ErrorResponse> {
+pub async fn asset_create_asset_command(request: CreateAssetRequest) -> Result<Asset, ErrorResponse> {
     info!("Create asset request received for user: {}", request.user_id);
     
     match create_asset(
@@ -128,7 +128,7 @@ pub async fn create_asset_command(request: CreateAssetRequest) -> Result<Asset, 
 }
 
 #[command]
-pub async fn update_asset_command(request: UpdateAssetRequest) -> Result<Asset, ErrorResponse> {
+pub async fn asset_update_asset_command(request: UpdateAssetRequest) -> Result<Asset, ErrorResponse> {
     info!("Update asset request received for asset: {}", request.id);
     
     match update_asset(
@@ -150,7 +150,7 @@ pub async fn update_asset_command(request: UpdateAssetRequest) -> Result<Asset, 
 }
 
 #[command]
-pub async fn delete_asset_command(request: DeleteAssetRequest) -> Result<MessageResponse, ErrorResponse> {
+pub async fn asset_delete_asset_command(request: DeleteAssetRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete asset request received for asset: {}", request.id);
     
     match delete_asset(request.id, request.user_id) {
@@ -168,7 +168,7 @@ pub async fn delete_asset_command(request: DeleteAssetRequest) -> Result<Message
 }
 
 #[command]
-pub async fn get_user_assets_command(request: GetUserAssetsRequest) -> Result<Vec<Asset>, ErrorResponse> {
+pub async fn asset_get_user_assets_command(request: GetUserAssetsRequest) -> Result<Vec<Asset>, ErrorResponse> {
     info!("Get user assets request received for user: {}", request.user_id);
     
     match get_user_assets(request.user_id, request.asset_type_id, request.group_id) {

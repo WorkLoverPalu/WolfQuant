@@ -30,7 +30,7 @@
         @forgot-password="openForgotPasswordModal" @register="openRegisterModal" />
 
       <!-- 注册模态框 -->
-      <RegisterModal v-if="showRegisterModal" @close="showRegisterModal = false" @login-success="handleLogin" />
+      <RegisterModal v-if="showRegisterModal" @close="showRegisterModal = false"  @login-success="handleLogin" />
 
       <!-- 忘记密码模态框 -->
       <ForgotPasswordModal v-if="showForgotPasswordModal" @close="showForgotPasswordModal = false"
