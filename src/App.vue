@@ -81,11 +81,19 @@ const isUserMenuOpen = ref(false);
 const showSettingsModal = ref(false);
 
 // 打开登录模态框
-const openLoginModal = (pageId) => {
-  showForgotPasswordModal.value = false;
-  showRegisterModal.value = false;
+const openLoginModal = (pageId: any) => {
+  switch (pageId) {
+    case "showForgotPasswordModal":
+      showForgotPasswordModal.value = false;
+      break;
+    case "showRegisterModal":
+    showRegisterModal.value = false;
+      break;
+
+    default:
+      break;
+  }
   showLoginModal.value = true;
-  isUserMenuOpen.value = false;
 };
 
 // 打开注册模态框

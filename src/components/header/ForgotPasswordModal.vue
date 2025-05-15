@@ -10,7 +10,7 @@
         <div v-if="error" class="error-message">{{ error }}</div>
         <div v-if="success" class="success-message">{{ success }}</div>
 
-        <form @submit.prevent="handleSubmit" v-if="!showResetForm">
+        <form @submit.prevent="handleResetPassword">
           <div class="form-group">
             <label for="email">邮箱</label>
             <div class="input-with-button">
@@ -29,14 +29,6 @@
               :disabled="isLoading" />
           </div>
 
-          <div class="form-actions">
-            <button type="submit" class="primary-button" :disabled="!email || !verificationCode || isLoading">
-              {{ isLoading ? '验证中...' : '验证邮箱' }}
-            </button>
-          </div>
-        </form>
-
-        <form v-if="showResetForm" @submit.prevent="handleResetPassword">
           <div class="form-group">
             <label for="newPassword">新密码</label>
             <input type="password" id="newPassword" v-model="newPassword" placeholder="请输入新密码" required minlength="6"
@@ -59,7 +51,7 @@
       </div>
 
       <div class="modal-footer">
-        <button class="text-button" @click="$emit('login')">
+        <button class="text-button" @click="$emit('login', pageId)">
           返回登录
         </button>
       </div>
@@ -77,12 +69,12 @@ const confirmNewPassword = ref('');
 const isLoading = ref(false);
 const isResetting = ref(false);
 const isCodeSent = ref(false);
-const showResetForm = ref(false);
 const countdown = ref(0);
 const error = ref('');
 const success = ref('');
 const userStore = useUserStore();
 let countdownTimer: number | null = null;
+const pageId = "showForgotPasswordModal";
 
 const passwordError = computed(() => {
   if (newPassword.value && confirmNewPassword.value && newPassword.value !== confirmNewPassword.value) {
@@ -99,7 +91,7 @@ const isResetFormValid = computed(() => {
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'login'): void;
+  (e: 'login', pageId: string): void;
 }>();
 
 const startCountdown = () => {
@@ -133,24 +125,6 @@ const sendVerificationCode = async () => {
   }
 };
 
-const handleSubmit = async () => {
-  if (!email.value || !verificationCode.value) return;
-
-  isLoading.value = true;
-  error.value = '';
-
-  try {
-    // 使用 store 的 verifyResetPasswordCode 方法
-    await userStore.verifyResetPasswordCode(email.value, verificationCode.value);
-
-    showResetForm.value = true;
-    success.value = '验证码正确，请设置新密码';
-  } catch (err: any) {
-    error.value = err.message || '验证码验证失败，请检查后重试';
-  } finally {
-    isLoading.value = false;
-  }
-};
 
 const handleResetPassword = async () => {
   if (!isResetFormValid.value) return;
@@ -161,8 +135,8 @@ const handleResetPassword = async () => {
   try {
     // 使用 store 的 resetPassword 方法
     const response = await userStore.resetPassword(
-      email.value, 
-      verificationCode.value, 
+      email.value,
+      verificationCode.value,
       newPassword.value
     );
 
@@ -170,7 +144,7 @@ const handleResetPassword = async () => {
 
     // 3秒后自动切换到登录页面
     setTimeout(() => {
-      emit('login');
+      emit('login', pageId);
     }, 3000);
   } catch (err: any) {
     error.value = err.message || '重置密码失败，请稍后再试';

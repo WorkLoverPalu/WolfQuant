@@ -104,26 +104,6 @@ export const useUserStore = defineStore("user", () => {
     }
   }
 
-  // 验证重置密码的验证码
-  async function verifyResetPasswordCode(email: string, code: string) {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      await invoke('verify_reset_password_code', {
-        email: email,
-        code: code
-      })
-      return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "验证码验证失败"
-      error.value = errorMessage
-      throw new Error(errorMessage)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
   // 注册
   async function register(username: string, email: string, password: string, verificationCode: string) {
     isLoading.value = true
@@ -196,7 +176,7 @@ export const useUserStore = defineStore("user", () => {
       const response: any = await invoke('reset_password_command', {
         request: {
           email: email,
-          code: code,
+          verification_code: code,
           new_password: newPassword
         }
       })
