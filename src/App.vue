@@ -67,7 +67,6 @@
       <ForgotPasswordModal 
         v-if="showForgotPasswordModal" 
         @close="showForgotPasswordModal = false"
-        @reset-password="handleResetPassword" 
       />
 
       <!-- 用户菜单 -->
@@ -107,13 +106,13 @@ import SideNavigation from './components/right/SideNavigation.vue';
 // 导入状态管理
 import { useUserStore } from './stores/userStore';
 import { useTabStore } from './stores/tabStore';
-import { useMarketStore } from './stores/marketStore';
+import { useAssetStore } from './stores/assetStore.ts';
 import { useThemeStore } from './stores/themeStore';
 
 // 使用状态管理
 const userStore = useUserStore();
 const tabStore = useTabStore();
-const marketStore = useMarketStore();
+const marketStore = useAssetStore();
 const themeStore = useThemeStore();
 
 // 模态框状态
@@ -155,11 +154,7 @@ const handleLogin = (user:any, password:any) => {
   showRegisterModal.value = false;
 };
 
-// 处理重置密码
-const handleResetPassword = (email:any) => {
-  userStore.resetPassword(email);
-  showForgotPasswordModal.value = false;
-};
+
 
 // 处理保存设置
 const handleSaveSettings = (settings:any) => {

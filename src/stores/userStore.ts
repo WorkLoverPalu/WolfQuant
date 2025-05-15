@@ -34,7 +34,7 @@ export const useUserStore = defineStore("user", () => {
     token.value = savedToken
 
     try {
-      const tokenVerify = await invoke("auth_verify_session", {
+      const tokenVerify = await invoke("auth_verify_session_command", {
         request: { token: savedToken },
       })
 

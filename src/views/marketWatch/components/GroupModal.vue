@@ -15,75 +15,137 @@
         </div>
 
         <div class="form-group">
-          <label for="groupCategory">所属分类</label>
-          <select id="groupCategory" class="form-select" v-model="groupForm.category">
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
+          <label for="assetType">资产类型</label>
+          <select id="assetType" class="form-select" v-model="groupForm.assetTypeId">
+            <option v-for="type in assetStore.assetTypes" :key="type.id" :value="type.id">
+              {{ type.name }}
             </option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label for="groupDescription">描述 (可选)</label>
+          <input type="text" id="groupDescription" class="form-input" v-model="groupForm.description" placeholder="请输入分组描述" />
         </div>
       </div>
 
       <div class="modal-footer">
-        <button class="cancel-button" @click="closeModal">取消</button>
-        <button class="confirm-button" @click="saveGroup">确定</button>
+        <button class="cancel-button" @click="closeModal" :disabled="loading">取消</button>
+        <button class="confirm-button" @click="saveGroup" :disabled="loading">
+          <span v-if="loading">处理中...</span>
+          <span v-else>确定</span>
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onMounted } from 'vue';
+import { ref, onMounted, defineProps, defineEmits } from 'vue';
 import { XIcon } from 'lucide-vue-next';
-import { invoke } from '@tauri-apps/api/core';
+import { useAssetStore, } from '../../../stores/assetStore';
+import { useUserStore } from '../../../stores/userStore';
+import type { UserGroup } from '../../../stores/assetStore';
 
-// 注入全局状态
-const showGroupModal = inject('showGroupModal');
-const activeCategory = inject('activeCategory');
+const props = defineProps<{
+  show: boolean;
+  editingGroup?: UserGroup | null;
+}>();
 
-// 分类数据
-const categories = [
-  { id: 'fund', name: '基金' },
-  { id: 'stock', name: '股票' },
-  { id: 'gold', name: '黄金' },
-  { id: 'crypto', name: '数字货币' }
-];
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'saved', group: UserGroup): void;
+}>();
 
-// 编辑状态
-const editingGroup = ref(null);
+const assetStore = useAssetStore();
+const userStore = useUserStore();
+
+// 表单状态
 const groupForm = ref({
   name: '',
-  category: activeCategory.value
+  assetTypeId: 0,
+  description: ''
+});
+
+const loading = ref(false);
+const error = ref<string | null>(null);
+
+// 初始化
+onMounted(async () => {
+  // 加载资产类型
+  if (assetStore.assetTypes.length === 0) {
+    try {
+      await assetStore.fetchAssetTypes();
+      
+      // 设置默认资产类型
+      if (assetStore.assetTypes.length > 0 && !groupForm.value.assetTypeId) {
+        groupForm.value.assetTypeId = assetStore.assetTypes[0].id;
+      }
+    } catch (err) {
+      console.error('Failed to load asset types:', err);
+      error.value = '加载资产类型失败';
+    }
+  }
+  
+  // 如果是编辑模式，填充表单
+  if (props.editingGroup) {
+    groupForm.value = {
+      name: props.editingGroup.name,
+      assetTypeId: props.editingGroup.asset_type_id,
+      description: props.editingGroup.description || ''
+    };
+  } else if (assetStore.assetTypes.length > 0) {
+    // 新建模式，设置默认资产类型
+    groupForm.value.assetTypeId = assetStore.assetTypes[0].id;
+  }
 });
 
 // 关闭模态框
 const closeModal = () => {
-  showGroupModal.value = false;
-  editingGroup.value = null;
-  groupForm.value = {
-    name: '',
-    category: activeCategory.value
-  };
+  emit('close');
 };
 
 // 保存分组
 const saveGroup = async () => {
+  if (!groupForm.value.name.trim()) {
+    error.value = '请输入分组名称';
+    return;
+  }
+  
+  if (!groupForm.value.assetTypeId) {
+    error.value = '请选择资产类型';
+    return;
+  }
+  
+  loading.value = true;
+  error.value = null;
+  
   try {
-
-    if (!groupForm.value.name.trim()) {
-      alert('请输入分组名称');
-      return;
+    let savedGroup: UserGroup;
+    
+    if (props.editingGroup) {
+      // 更新分组
+      savedGroup = await assetStore.updateUserGroup(
+        props.editingGroup.id,
+        groupForm.value.name,
+        groupForm.value.description || undefined
+      );
+    } else {
+      // 创建新分组
+      savedGroup = await assetStore.createUserGroup(
+        groupForm.value.name,
+        groupForm.value.assetTypeId,
+        groupForm.value.description || undefined
+      );
     }
-
-    //  invoke
-
-
-
-
-
+    
+    emit('saved', savedGroup);
     closeModal();
   } catch (err) {
-
+    console.error('Failed to save group:', err);
+    error.value = props.editingGroup ? '更新分组失败' : '创建分组失败';
+  } finally {
+    loading.value = false;
   }
 };
 </script>
@@ -208,8 +270,13 @@ const saveGroup = async () => {
   font-size: 14px;
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--hover-bg);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
@@ -222,8 +289,19 @@ const saveGroup = async () => {
   font-size: 14px;
   cursor: pointer;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background-color: var(--button-hover-bg);
   }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: 8px;
 }
 </style>

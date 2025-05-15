@@ -1,5 +1,5 @@
 <template>
-  <div class="user-menu-overlay" @click="$emit('close')">
+  <div class="user-menu-overlay" >
     <div class="user-menu" @click.stop>
       <div class="user-info" @click="$emit('open-profile')">
         <div class="user-avatar">{{ userInitial }}</div>
@@ -54,17 +54,17 @@
 
       <div class="theme-selector">
         <div class="theme-options">
-          <button class="theme-option" :class="{ active: themeContext.currentTheme === 'system' }"
+          <button class="theme-option" :class="{ active: themeStore.currentTheme === 'system' }"
             @click="setTheme('system')">
             <div class="theme-preview system-theme"></div>
             <span>系统</span>
           </button>
-          <button class="theme-option" :class="{ active: themeContext.currentTheme === 'dark' }"
+          <button class="theme-option" :class="{ active: themeStore.currentTheme === 'dark' }"
             @click="setTheme('dark')">
             <div class="theme-preview dark-theme"></div>
             <span>暗色</span>
           </button>
-          <button class="theme-option" :class="{ active: themeContext.currentTheme === 'light' }"
+          <button class="theme-option" :class="{ active: themeStore.currentTheme === 'light' }"
             @click="setTheme('light')">
             <div class="theme-preview light-theme"></div>
             <span>亮色</span>
@@ -84,9 +84,10 @@
   <div class="menu-backdrop" @click="$emit('close')"></div>
 </template>
 <script setup lang="ts">
-import { computed, inject } from 'vue';
+import { computed } from 'vue';
 import { useUserStore } from '../../stores/userStore';
-import type { ThemeType } from '../../services/theme-service';
+import { useThemeStore } from '../../stores/themeStore';
+import type { ThemeType } from '../../styles/theme';
 import SettingsIcon from '../../assets/icons/SettingsIcon.vue';
 import LogoutIcon from '../../assets/icons/LogoutIcon.vue';
 import PlusIcon from '../../assets/icons/PlusIcon.vue';
@@ -101,6 +102,7 @@ const props = defineProps<{
 }>();
 
 const userStore = useUserStore();
+const themeStore = useThemeStore();
 
 const emit = defineEmits<{
   (e: 'close'): void;
@@ -109,16 +111,10 @@ const emit = defineEmits<{
   (e: 'open-profile'): void;
 }>();
 
-// 注入主题上下文
-const themeContext = inject('theme', {
-  currentTheme: 'dark',
-  setTheme: (theme: ThemeType) => { }
-});
-
 // 设置主题
 const setTheme = (theme: ThemeType) => {
-  themeContext.setTheme(theme);
-  emit('close');
+  themeStore.setTheme(theme);
+  // emit('close');
 };
 
 // 用户头像显示的首字母
@@ -140,6 +136,15 @@ const handleLogout = async () => {
 };
 </script>
 <style lang="scss" scoped>
+.user-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
 .user-menu {
   position: absolute;
   top: 60px;
@@ -161,9 +166,10 @@ const handleLogout = async () => {
   z-index: 999;
 }
 
-.menu-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+.menu-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 4px 0;
 }
 
 .user-info {
@@ -193,6 +199,7 @@ const handleLogout = async () => {
       font-weight: 500;
       font-size: 14px;
       margin-bottom: 4px;
+      color: var(--tab-active-text);
     }
 
     .email {
@@ -202,30 +209,26 @@ const handleLogout = async () => {
   }
 }
 
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: var(--avatar-bg);
-  color: var(--avatar-text);
+.menu-items {
+  padding: 8px 0;
+}
+
+.menu-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 500;
-  margin-right: 12px;
-}
-
-.user-details {
-  flex: 1;
-}
-
-.username {
-  font-size: 16px;
-  font-weight: 500;
+  width: 100%;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
   color: var(--tab-active-text);
-  cursor: pointer;
-  text-align: left;
   font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
 
   svg {
     margin-right: 12px;
@@ -234,8 +237,8 @@ const handleLogout = async () => {
     height: 16px;
   }
 
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+  span {
+    color: var(--tab-active-text);
   }
 
   .shortcut {
@@ -272,13 +275,13 @@ const handleLogout = async () => {
       color: var(--tab-text);
     }
   }
-}
 
-.logout-button {
-  color: #ef4444;
-
-  svg {
+  &.logout-button {
     color: #ef4444;
+
+    svg {
+      color: #ef4444;
+    }
   }
 }
 
@@ -286,22 +289,20 @@ const handleLogout = async () => {
   padding: 8px 16px;
 }
 
-.menu-items {
-  padding: 8px 0;
+.theme-options {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.menu-item {
+.theme-option {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  width: 100%;
-  padding: 12px 16px;
   background: transparent;
   border: none;
-  color: var(--tab-active-text);
-  font-size: 14px;
-  text-align: left;
   cursor: pointer;
-  padding: 8px 4px;
+  padding: 4px;
   border-radius: 4px;
 
   &:hover {
