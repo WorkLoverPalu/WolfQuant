@@ -1,11 +1,11 @@
 <template>
-  <div class="user-menu-overlay">
+  <div class="user-menu-overlay" @click="$emit('close')">
     <div class="user-menu" @click.stop>
       <div class="user-info" @click="$emit('open-profile')">
         <div class="user-avatar">{{ userInitial }}</div>
         <div class="user-details">
-          <div class="username">{{ user.username }}</div>
-          <div class="email">{{ user.email }}</div>
+          <div class="username">{{ userStore.user?.username }}</div>
+          <div class="email">{{ userStore.user?.email }}</div>
         </div>
       </div>
 
@@ -18,19 +18,19 @@
           <span class="shortcut">⌘,</span>
         </button>
 
-        <button class="menu-item" @click="$emit('close')">
+        <button class="menu-item" @click="tabStore.addNewTab()">
           <PlusIcon />
           <span>新标签页</span>
           <span class="shortcut">⌘T</span>
         </button>
 
-        <button class="menu-item" @click="$emit('close')">
+        <button class="menu-item">
           <WindowIcon />
           <span>新窗口</span>
           <span class="shortcut">⌘N</span>
         </button>
 
-        <button class="menu-item" @click="$emit('close')">
+        <button class="menu-item">
           <ClipboardIcon />
           <span>从剪贴板打开链接</span>
         </button>
@@ -39,7 +39,7 @@
       <div class="menu-divider"></div>
 
       <div class="menu-items">
-        <button class="menu-item" @click="$emit('close')">
+        <button class="menu-item">
           <ZoomIcon />
           <span>缩放</span>
           <div class="zoom-controls">
@@ -81,12 +81,13 @@
     </div>
   </div>
 
-  <div class="menu-backdrop" @click="$emit('close')"></div>
 </template>
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useUserStore } from '../../stores/userStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { useTabStore } from '../../stores/tabStore';
+
 import type { ThemeType } from '../../styles/theme';
 import SettingsIcon from '../../assets/icons/SettingsIcon.vue';
 import LogoutIcon from '../../assets/icons/LogoutIcon.vue';
@@ -95,18 +96,12 @@ import WindowIcon from '../../assets/icons/WindowIcon.vue';
 import ClipboardIcon from '../../assets/icons/ClipboardIcon.vue';
 import ZoomIcon from '../../assets/icons/ZoomIcon.vue';
 
-import { User } from "../../types/index.ts";
-
-const props = defineProps<{
-  user: User;
-}>();
-
 const userStore = useUserStore();
 const themeStore = useThemeStore();
+const tabStore = useTabStore();
 
 const emit = defineEmits<{
   (e: 'close'): void;
-  (e: 'logout'): void;
   (e: 'open-settings'): void;
   (e: 'open-profile'): void;
 }>();
@@ -114,12 +109,12 @@ const emit = defineEmits<{
 // 设置主题
 const setTheme = (theme: ThemeType) => {
   themeStore.setTheme(theme);
-  // emit('close');
 };
+
 
 // 用户头像显示的首字母
 const userInitial = computed(() => {
-  return props.user.avatar || props.user.username.charAt(0).toUpperCase();
+  return userStore.user?.avatar || userStore.user?.username?.charAt(0)?.toUpperCase() || '';
 });
 
 // 处理退出登录
@@ -129,7 +124,7 @@ const handleLogout = async () => {
     await userStore.logout();
 
     // 通知父组件退出登录
-    emit('logout');
+    emit('close');
   } catch (err) {
     console.error('Logout failed:', err);
   }
@@ -147,24 +142,17 @@ const handleLogout = async () => {
 
 .user-menu {
   position: absolute;
-  top: 60px;
-  right: 20px;
-  width: 240px;
+  top: 50px;
+  right: 50px;
+  width: 260px;
   background-color: var(--modalBg);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   z-index: var(--z-index-dropdown);
   overflow: hidden;
+  outline: solid 1px var(--borderColor);
 }
 
-.menu-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: calc(var(--z-index-dropdown) - 1);
-}
 
 .menu-divider {
   height: 1px;
@@ -188,6 +176,7 @@ const handleLogout = async () => {
     height: 40px;
     border-radius: 50%;
     background-color: var(--cardBg);
+    border: solid 1px var(--borderColor);
     color: var(--textColor);
     display: flex;
     align-items: center;

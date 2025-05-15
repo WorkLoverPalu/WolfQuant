@@ -3,88 +3,47 @@
     <div class="app-container">
       <header class="app-header">
         <div class="tabs-container">
-          <TabItem 
-            v-for="(tab, index) in tabStore.tabs" 
-            :key="tab.id" 
-            :tab="tab" 
-            :active="tabStore.activeTabIndex === index"
-            @click="tabStore.switchTab(index)" 
-            @close="tabStore.closeTab(index)" 
-          />
+          <TabItem v-for="(tab, index) in tabStore.tabs" :key="tab.id" :tab="tab"
+            :active="tabStore.activeTabIndex === index" @click="tabStore.switchTab(index)"
+            @close="tabStore.closeTab(index)" />
           <button class="new-tab-button" @click="tabStore.addNewTab()">
             <PlusIcon />
           </button>
         </div>
 
-        <!-- 用户登录组件 -->
-        <HeaderUserProfile 
-          :user="userStore.user" 
-          @login="openLoginModal" 
-          @logout="userStore.logout"
-          @open-menu="isUserMenuOpen = true" 
-          @open-profile="openUserProfileTab" 
-        />
+        <!-- header右侧用户登录状态组件 -->
+        <HeaderUserProfile :user="userStore.user" @login="openLoginModal" @logout="userStore.logout"
+          @open-menu="isUserMenuOpen = true" />
       </header>
-      
+
       <main class="app-content">
         <component :is="tabStore.activeTabComponent" v-bind="tabStore.activeTabProps"></component>
       </main>
 
       <!-- 底部行情组件 -->
-      <MarketFooter 
-        :show-account="true" 
-        :show-nav="true" 
-        :market-data="marketStore.currentMarketData" 
-        :current-user="userStore.user"
-        @nav-click="handleFooterNavClick" 
-        @market-click="handleMarketClick" 
-        @open-tab="tabStore.openTab" 
-      />
+      <MarketFooter :show-account="true" :show-nav="true" :market-data="marketStore.currentMarketData"
+        :current-user="userStore.user" @nav-click="handleFooterNavClick" @market-click="handleMarketClick" />
 
       <!-- 右侧导航组件 -->
-      <SideNavigation 
-        :current-user="userStore.user" 
-        @open-tab="tabStore.openTab" 
-      />
+      <SideNavigation :current-user="userStore.user" @open-tab="tabStore.openTab" />
 
       <!-- 登录模态框 -->
-      <LoginModal 
-        v-if="showLoginModal" 
-        @close="showLoginModal = false" 
-        @login-success="handleLogin"
-        @forgot-password="openForgotPasswordModal" 
-        @register="openRegisterModal" 
-      />
+      <LoginModal v-if="showLoginModal" @close="showLoginModal = false" @login-success="handleLogin"
+        @forgot-password="openForgotPasswordModal" @register="openRegisterModal" />
 
       <!-- 注册模态框 -->
-      <RegisterModal 
-        v-if="showRegisterModal" 
-        @close="showRegisterModal = false" 
-        @login-success="handleLogin" 
-      />
+      <RegisterModal v-if="showRegisterModal" @close="showRegisterModal = false" @login-success="handleLogin" />
 
       <!-- 忘记密码模态框 -->
-      <ForgotPasswordModal 
-        v-if="showForgotPasswordModal" 
-        @close="showForgotPasswordModal = false"
-      />
+      <ForgotPasswordModal v-if="showForgotPasswordModal" @close="showForgotPasswordModal = false" />
 
       <!-- 用户菜单 -->
-      <UserMenu 
-        v-if="isUserMenuOpen && userStore.user" 
-        :user="userStore.user" 
-        @close="isUserMenuOpen = false"
-        @logout="userStore.logout" 
-        @open-settings="openSettingsModal" 
-        @open-profile="openUserProfileTab" 
-      />
+      <UserMenu v-if="isUserMenuOpen && userStore.user"  @close="isUserMenuOpen = false"
+        @logout="userStore.logout" @open-settings="openSettingsModal" @open-profile="openUserProfileTab"
+        @new-tab="tabStore.addNewTab()" />
 
       <!-- 设置弹窗 -->
-      <SettingsModal 
-        v-if="showSettingsModal" 
-        @close="showSettingsModal = false" 
-        @save="handleSaveSettings" 
-      />
+      <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" @save="handleSaveSettings" />
     </div>
   </ThemeProvider>
 </template>
@@ -123,7 +82,7 @@ const isUserMenuOpen = ref(false);
 const showSettingsModal = ref(false);
 
 // 打开登录模态框
-const openLoginModal = () => {
+const openLoginModal = (pageId) => {
   showForgotPasswordModal.value = false;
   showRegisterModal.value = false;
   showLoginModal.value = true;
@@ -149,7 +108,7 @@ const openSettingsModal = () => {
 };
 
 // 处理登录成功
-const handleLogin = (user:any, password:any) => {
+const handleLogin = (user: any, password: any) => {
   showLoginModal.value = false;
   showRegisterModal.value = false;
 };
@@ -157,7 +116,7 @@ const handleLogin = (user:any, password:any) => {
 
 
 // 处理保存设置
-const handleSaveSettings = (settings:any) => {
+const handleSaveSettings = (settings: any) => {
   // 保存设置逻辑
   if (settings.theme) {
     themeStore.setTheme(settings.theme);
@@ -172,12 +131,12 @@ const openUserProfileTab = () => {
 };
 
 // 底部行情组件相关操作
-const handleFooterNavClick = (index:any, item:any) => {
+const handleFooterNavClick = (index: any, item: any) => {
   console.log(`底部导航点击: ${item.label || '未命名'} (索引: ${index})`);
 };
 
 // 处理市场点击
-const handleMarketClick = (market:any) => {
+const handleMarketClick = (market: any) => {
   tabStore.openTab({
     id: `market-${market.symbol}`,
     title: market.name,

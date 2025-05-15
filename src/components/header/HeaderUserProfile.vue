@@ -9,7 +9,7 @@
     </div>
 
     <!-- 未登录状态 -->
-    <div v-else class="user-logged-out" @click="$emit('login')">
+    <div v-else class="user-logged-out" @click="$emit('login', pageId)">
       <div class="user-icon">
         <UserIcon />
       </div>
@@ -20,14 +20,15 @@
 <script setup lang="ts">
 import UserIcon from '../../assets/icons/UserIcon.vue';
 import { useUserStore } from "../../stores/userStore";
-
+const pageId = 'HeaderUserProfile';
 // 获取 userStore 实例
 const userStore = useUserStore();
 
 defineEmits<{
-  (e: 'login'): void;
+  (e: 'login', pageId: string): void;
   (e: 'open-menu'): void;
 }>();
+
 </script>
 
 <style lang="scss" scoped>
