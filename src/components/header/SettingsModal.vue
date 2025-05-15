@@ -36,17 +36,17 @@
 
             <h3>主题</h3>
             <div class="theme-options">
-              <button class="theme-option" :class="{ active: themeContext.currentTheme === 'system' }"
+              <button class="theme-option" :class="{ active: themeStore.currentTheme === 'system' }"
                 @click="setTheme('system')">
                 <div class="theme-preview system-theme"></div>
                 <span>系统</span>
               </button>
-              <button class="theme-option" :class="{ active: themeContext.currentTheme === 'dark' }"
+              <button class="theme-option" :class="{ active: themeStore.currentTheme === 'dark' }"
                 @click="setTheme('dark')">
                 <div class="theme-preview dark-theme"></div>
                 <span>暗色</span>
               </button>
-              <button class="theme-option" :class="{ active: themeContext.currentTheme === 'light' }"
+              <button class="theme-option" :class="{ active: themeStore.currentTheme === 'light' }"
                 @click="setTheme('light')">
                 <div class="theme-preview light-theme"></div>
                 <span>亮色</span>
@@ -140,8 +140,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, inject } from 'vue';
-import type { ThemeType } from '../../services/theme-service';
+import { ref, reactive } from 'vue';
+import { useThemeStore } from '../../stores/themeStore';
+import type { ThemeType } from '../../styles/theme';
 import GeneralIcon from '../../assets/icons/GeneralIcon.vue';
 import TabsIcon from '../../assets/icons/TabsIcon.vue';
 import MediaIcon from '../../assets/icons/MediaIcon.vue';
@@ -163,20 +164,17 @@ const sections = [
   { id: 'about', name: '关于', icon: AboutIcon },
 ];
 
-// 注入主题上下文
-const themeContext = inject('theme', {
-  currentTheme: 'dark',
-  setTheme: (theme: ThemeType) => { }
-});
+// 使用 Pinia theme store
+const themeStore = useThemeStore();
 
 // 设置主题
 const setTheme = (theme: ThemeType) => {
-  themeContext.setTheme(theme);
+  themeStore.setTheme(theme);
   settings.theme = theme;
 };
 
 const settings = reactive({
-  theme: themeContext.currentTheme,
+  theme: themeStore.currentTheme,
   autoFill: false,
   crosshair: true,
   askDownloadLocation: false,
