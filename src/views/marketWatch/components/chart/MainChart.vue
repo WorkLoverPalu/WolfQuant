@@ -47,7 +47,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--bg-color);
+    background-color: var(--bgColor);
   }
   
   .no-symbol-selected {
@@ -55,7 +55,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     
     .large-icon {
       width: 48px;
@@ -78,8 +78,8 @@
     width: 100%;
     height: 100%;
     background-image: 
-      linear-gradient(to right, var(--chart-grid-color) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--chart-grid-color) 1px, transparent 1px);
+      linear-gradient(to right, var(--chartGridColor) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--chartGridColor) 1px, transparent 1px);
     background-size: 50px 50px;
     position: relative;
     

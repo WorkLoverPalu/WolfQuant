@@ -21,8 +21,8 @@
     align-items: center;
     padding: 0 16px;
     height: 36px;
-    background-color: var(--header-bg);
-    border-bottom: 1px solid var(--border-color);
+    background-color: var(--headerBg);
+    border-bottom: 1px solid var(--borderColor);
     overflow-x: auto;
     
     &::-webkit-scrollbar {
@@ -35,7 +35,7 @@
     height: 36px;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     font-size: 12px;
     cursor: pointer;
     display: flex;
@@ -43,11 +43,11 @@
     gap: 4px;
     
     &:hover {
-      color: var(--text-color);
+      color: var(--textColor);
     }
     
     &.active {
-      color: var(--accent-color);
+      color: var(--accentColor);
       position: relative;
       
       &::after {
@@ -57,7 +57,7 @@
         left: 0;
         width: 100%;
         height: 2px;
-        background-color: var(--accent-color);
+        background-color: var(--accentColor);
       }
     }
     

@@ -27,8 +27,8 @@
   <style lang="scss" scoped>
   .left-bottom {
     flex: 1;
-    background-color: var(--tools-bg);
-    border-top: 1px solid var(--border-color);
+    background-color: var(--toolsBg);
+    border-top: 1px solid var(--borderColor);
     overflow: hidden;
   }
   
@@ -38,8 +38,8 @@
     align-items: center;
     padding: 0 12px;
     height: 36px;
-    background-color: var(--tools-bg);
-    border-bottom: 1px solid var(--border-color);
+    background-color: var(--toolsBg);
+    border-bottom: 1px solid var(--borderColor);
     overflow-x: auto;
     
     &::-webkit-scrollbar {
@@ -52,7 +52,7 @@
     height: 36px;
     background: transparent;
     border: none;
-    color: var(--text-color);
+    color: var(--textColor);
     font-size: 12px;
     white-space: nowrap;
     cursor: pointer;
@@ -70,7 +70,7 @@
   }
   
   .zoom-control {
-    color: var(--accent-color);
+    color: var(--accentColor);
     font-size: 12px;
   }
   
@@ -84,7 +84,7 @@
     height: 24px;
     background: transparent;
     border: none;
-    color: var(--text-color);
+    color: var(--textColor);
     font-size: 12px;
     cursor: pointer;
     

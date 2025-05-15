@@ -130,9 +130,9 @@ export interface MessageResponse {
 
 export const useAssetStore = defineStore("market", () => {
   const userStore = useUserStore()
-  
+
   // ===== EXISTING MARKET STORE STATE =====
-  
+
   // 当前市场数据
   const currentMarketData = ref<MarketData>({
     name: "上证指数",
@@ -281,14 +281,6 @@ export const useAssetStore = defineStore("market", () => {
   // 当前选中的商品
   const selectedSymbol = ref<WatchlistItem | null>(null)
 
-  // 分类数据
-  const categories = [
-    { id: "fund", name: "基金" },
-    { id: "stock", name: "股票" },
-    { id: "gold", name: "黄金" },
-    { id: "crypto", name: "数字货币" },
-  ]
-
   // 当前激活的分类
   const activeCategory = ref("fund")
 
@@ -301,42 +293,42 @@ export const useAssetStore = defineStore("market", () => {
   })
 
   // ===== NEW ASSET MANAGEMENT STATE =====
-  
+
   const assetTypes = ref<AssetType[]>([])
   const userGroups = ref<UserGroup[]>([])
   const userAssets = ref<Asset[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
-  
+
   // Computed properties for asset management
   const groupsByType = computed(() => {
     const result: Record<number, UserGroup[]> = {}
-    
+
     userGroups.value.forEach(group => {
       if (!result[group.asset_type_id]) {
         result[group.asset_type_id] = []
       }
       result[group.asset_type_id].push(group)
     })
-    
+
     return result
   })
-  
+
   const assetsByGroup = computed(() => {
     const result: Record<number, Asset[]> = {}
-    
+
     userAssets.value.forEach(asset => {
       if (!result[asset.group_id]) {
         result[asset.group_id] = []
       }
       result[asset.group_id].push(asset)
     })
-    
+
     return result
   })
 
   // ===== EXISTING MARKET STORE METHODS =====
-  
+
   // 设置激活分类
   function setActiveCategory(categoryId: string) {
     activeCategory.value = categoryId
@@ -347,13 +339,13 @@ export const useAssetStore = defineStore("market", () => {
     selectedSymbol.value = item
   }
 
-  // ===== NEW ASSET MANAGEMENT METHODS =====
-  
-  // Get all asset types
+  // =====资产管理方法 =====
+
+  // 获取所有资产类型
   async function fetchAssetTypes() {
     loading.value = true
     error.value = null
-    
+
     try {
       const types = await invoke<AssetType[]>("asset_get_asset_types_command")
       assetTypes.value = types
@@ -366,22 +358,22 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Get user groups
+
+  // 获取用户组
   async function fetchUserGroups(assetTypeId?: number) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     try {
       const groups = await invoke<UserGroup[]>("asset_get_user_groups_command", {
         userId: userStore.user.id,
         assetTypeId: assetTypeId
       })
-      
+
       // If fetching for a specific type, merge with existing groups
       if (assetTypeId) {
         const filteredGroups = userGroups.value.filter(g => g.asset_type_id !== assetTypeId)
@@ -389,7 +381,7 @@ export const useAssetStore = defineStore("market", () => {
       } else {
         userGroups.value = groups
       }
-      
+
       return groups
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
@@ -399,23 +391,23 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Create a new user group
+
+  // 创建一个新的用户组
   async function createUserGroup(name: string, assetTypeId: number, description?: string) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     const request: CreateGroupRequest = {
       user_id: userStore.user.id,
       name,
       asset_type_id: assetTypeId,
       description
     }
-    
+
     try {
       const newGroup = await invoke<UserGroup>("asset_create_group_command", { request })
       userGroups.value.push(newGroup)
@@ -428,32 +420,32 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Update a user group
+
+  // 更新用户分组
   async function updateUserGroup(groupId: number, name: string, description?: string) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     const request: UpdateGroupRequest = {
       id: groupId,
       user_id: userStore.user.id,
       name,
       description
     }
-    
+
     try {
       const updatedGroup = await invoke<UserGroup>("asset_update_group_command", { request })
-      
+
       // Update the group in the local state
       const index = userGroups.value.findIndex(g => g.id === groupId)
       if (index !== -1) {
         userGroups.value[index] = updatedGroup
       }
-      
+
       return updatedGroup
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
@@ -463,27 +455,27 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Delete a user group
+
+  // 删除用户组
   async function deleteUserGroup(groupId: number) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     const request: DeleteGroupRequest = {
       id: groupId,
       user_id: userStore.user.id
     }
-    
+
     try {
       const response = await invoke<MessageResponse>("asset_delete_group_command", { request })
-      
+
       // Remove the group from local state
       userGroups.value = userGroups.value.filter(g => g.id !== groupId)
-      
+
       return response
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
@@ -493,42 +485,42 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Get user assets
+
+  // 获取用户资产
   async function fetchUserAssets(assetTypeId?: number, groupId?: number) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     const request: GetUserAssetsRequest = {
       user_id: userStore.user.id,
       asset_type_id: assetTypeId,
       group_id: groupId
     }
-    
+
     try {
       const assets = await invoke<Asset[]>("asset_get_user_assets_command", { request })
-      
+
       // If fetching for a specific group or type, merge with existing assets
       if (assetTypeId || groupId) {
         let filteredAssets = userAssets.value
-        
+
         if (assetTypeId) {
           filteredAssets = filteredAssets.filter(a => a.asset_type_id !== assetTypeId)
         }
-        
+
         if (groupId) {
           filteredAssets = filteredAssets.filter(a => a.group_id !== groupId)
         }
-        
+
         userAssets.value = [...filteredAssets, ...assets]
       } else {
         userAssets.value = assets
       }
-      
+
       return assets
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
@@ -538,22 +530,22 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Create a new asset
+
+  // 创建一个新资产
   async function createAsset(
-    groupId: number, 
-    assetTypeId: number, 
-    code: string, 
-    name: string, 
+    groupId: number,
+    assetTypeId: number,
+    code: string,
+    name: string,
     currentPrice: number
   ) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     const request: CreateAssetRequest = {
       user_id: userStore.user.id,
       group_id: groupId,
@@ -562,7 +554,7 @@ export const useAssetStore = defineStore("market", () => {
       name,
       current_price: currentPrice
     }
-    
+
     try {
       const newAsset = await invoke<Asset>("asset_create_asset_command", { request })
       userAssets.value.push(newAsset)
@@ -575,21 +567,21 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Update an asset
+
+  // 更新资产
   async function updateAsset(
-    assetId: number, 
-    groupId: number, 
-    name: string, 
+    assetId: number,
+    groupId: number,
+    name: string,
     currentPrice: number
   ) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     const request: UpdateAssetRequest = {
       id: assetId,
       user_id: userStore.user.id,
@@ -597,16 +589,16 @@ export const useAssetStore = defineStore("market", () => {
       name,
       current_price: currentPrice
     }
-    
+
     try {
       const updatedAsset = await invoke<Asset>("asset_update_asset_command", { request })
-      
+
       // Update the asset in the local state
       const index = userAssets.value.findIndex(a => a.id === assetId)
       if (index !== -1) {
         userAssets.value[index] = updatedAsset
       }
-      
+
       return updatedAsset
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
@@ -616,27 +608,27 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Delete an asset
+
+  // 删除资产
   async function deleteAsset(assetId: number) {
     if (!userStore.user?.id) {
       throw new Error("User not authenticated")
     }
-    
+
     loading.value = true
     error.value = null
-    
+
     const request: DeleteAssetRequest = {
       id: assetId,
       user_id: userStore.user.id
     }
-    
+
     try {
       const response = await invoke<MessageResponse>("asset_delete_asset_command", { request })
-      
+
       // Remove the asset from local state
       userAssets.value = userAssets.value.filter(a => a.id !== assetId)
-      
+
       return response
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)
@@ -646,9 +638,11 @@ export const useAssetStore = defineStore("market", () => {
       loading.value = false
     }
   }
-  
-  // Initialize asset data
+
+  // 初始化资产数据
   async function initAssetData() {
+    console.log("***初始化资产数据*****");
+
     if (userStore.isAuthenticated) {
       try {
         await fetchAssetTypes()
@@ -659,21 +653,20 @@ export const useAssetStore = defineStore("market", () => {
       }
     }
   }
-  
+
   return {
     // ===== EXISTING MARKET STORE STATE =====
     currentMarketData,
     groups,
     positions,
     selectedSymbol,
-    categories,
     activeCategory,
     filteredGroups,
-    
+
     // ===== EXISTING MARKET STORE METHODS =====
     setActiveCategory,
     selectSymbol,
-    
+
     // ===== NEW ASSET MANAGEMENT STATE =====
     assetTypes,
     userGroups,
@@ -682,7 +675,7 @@ export const useAssetStore = defineStore("market", () => {
     error,
     groupsByType,
     assetsByGroup,
-    
+
     // ===== NEW ASSET MANAGEMENT METHODS =====
     fetchAssetTypes,
     fetchUserGroups,

@@ -112,7 +112,7 @@ const filteredGroups = computed(() => {
 });
 
 // 获取持仓输入
-const getPositionInput = (symbol:any) => {
+const getPositionInput = (symbol: any) => {
   if (!positionInputs.value[symbol]) {
     const position = positions.value[symbol] || { cost: 0, amount: 0 };
     positionInputs.value[symbol] = {
@@ -192,7 +192,7 @@ const savePositions = () => {
   width: 90%;
   max-width: 600px;
   max-height: 80vh;
-  background-color: var(--modal-bg);
+  background-color: var(--modalBg);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -208,7 +208,7 @@ const savePositions = () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--borderColor);
 
   h3 {
     margin: 0;
@@ -225,12 +225,12 @@ const savePositions = () => {
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     cursor: pointer;
 
     &:hover {
       background-color: var(--hover-bg);
-      color: var(--text-color);
+      color: var(--textColor);
     }
 
     svg {
@@ -254,13 +254,13 @@ const savePositions = () => {
   }
 
   &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
+    background: var(--scrollbarThumb);
     border-radius: 2px;
   }
 }
 
 .position-group {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--borderColor);
   padding-bottom: 8px;
   margin-bottom: 8px;
 
@@ -273,7 +273,7 @@ const savePositions = () => {
 .position-group-header {
   padding: 12px 16px 8px;
   font-weight: 500;
-  color: var(--accent-color);
+  color: var(--accentColor);
 }
 
 .position-item {
@@ -363,7 +363,7 @@ const savePositions = () => {
 
 .symbol-name {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: var(--textSecondary);
   margin-top: 1px;
 }
 
@@ -378,7 +378,7 @@ const savePositions = () => {
 
   label {
     font-size: 12px;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     margin-bottom: 4px;
   }
 }
@@ -387,15 +387,15 @@ const savePositions = () => {
   width: 100px;
   height: 32px;
   padding: 0 8px;
-  background-color: var(--input-bg);
-  border: 1px solid var(--border-color);
+  background-color: var( --inputBg);
+  border: 1px solid var(--borderColor);
   border-radius: 4px;
-  color: var(--text-color);
+  color: var(--textColor);
   font-size: 13px;
 
   &:focus {
     outline: none;
-    border-color: var(--accent-color);
+    border-color: var(--accentColor);
   }
 }
 
@@ -404,15 +404,15 @@ const savePositions = () => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--borderColor);
 }
 
 .cancel-button {
   padding: 8px 16px;
   background-color: transparent;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--borderColor);
   border-radius: 4px;
-  color: var(--text-color);
+  color: var(--textColor);
   font-size: 14px;
   cursor: pointer;
 
@@ -423,7 +423,7 @@ const savePositions = () => {
 
 .confirm-button {
   padding: 8px 16px;
-  background-color: var(--button-bg);
+  background-color: var(--buttonBg);
   border: none;
   border-radius: 4px;
   color: white;
@@ -431,7 +431,7 @@ const savePositions = () => {
   cursor: pointer;
 
   &:hover {
-    background-color: var(--button-hover-bg);
+    background-color: var( --buttonHoverBg);
   }
 }
 </style>

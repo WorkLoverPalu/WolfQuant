@@ -292,7 +292,7 @@
     }
     
     &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
+      background: var(--scrollbarThumb);
       border-radius: 3px;
     }
   }
@@ -300,7 +300,7 @@
   .watchlist-group {
     margin-bottom: 8px;
     border-radius: 6px;
-    background-color: var(--card-bg);
+    background-color: var(--cardBg);
     overflow: hidden;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
     
@@ -314,8 +314,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 12px;
-    background-color: var(--header-bg);
-    border-bottom: 1px solid var(--border-color);
+    background-color: var(--headerBg);
+    border-bottom: 1px solid var(--borderColor);
   }
   
   .group-title {
@@ -341,18 +341,18 @@
   }
   
   .position-amount {
-    color: var(--text-secondary);
+    color: var(--textSecondary);
   }
   
   .position-profit {
     margin-left: 6px;
     
     &.positive {
-      color: var(--positive-color);
+      color: var(--positiveColor);
     }
     
     &.negative {
-      color: var(--negative-color);
+      color: var(--negativeColor);
     }
   }
   
@@ -370,12 +370,12 @@
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     cursor: pointer;
     
     &:hover {
       background-color: var(--hover-bg);
-      color: var(--text-color);
+      color: var(--textColor);
     }
     
     svg {
@@ -388,9 +388,9 @@
   .list-header {
     display: flex;
     padding: 6px 12px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--borderColor);
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
   }
   
   /* 列表内容 */
@@ -407,7 +407,7 @@
     }
     
     &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
+      background: var(--scrollbarThumb);
       border-radius: 2px;
     }
   }
@@ -415,7 +415,7 @@
   .list-item {
     display: flex;
     padding: 8px 12px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--borderColor);
     font-size: 12px;
     cursor: pointer;
     
@@ -520,24 +520,24 @@
   
   .symbol-name {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     margin-top: 1px;
   }
   
   /* 价格单位 */
   .unit {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     margin-left: 2px;
   }
   
   /* 涨跌颜色 */
   .positive {
-    color: var(--positive-color);
+    color: var(--positiveColor);
   }
   
   .negative {
-    color: var(--negative-color);
+    color: var(--negativeColor);
   }
   
   /* 走势图视图 */
@@ -549,14 +549,14 @@
   }
   
   .chart-item {
-    background-color: var(--card-bg);
+    background-color: var(--cardBg);
     border-radius: 4px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--borderColor);
     overflow: hidden;
     cursor: pointer;
     
     &:hover {
-      border-color: var(--accent-color);
+      border-color: var(--accentColor);
     }
   }
   
@@ -565,7 +565,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--borderColor);
   }
   
   .price-info {
@@ -590,8 +590,8 @@
   .mini-chart {
     width: 100%;
     height: 100%;
-    background-image: linear-gradient(to right, var(--chart-grid-color) 1px, transparent 1px),
-                      linear-gradient(to bottom, var(--chart-grid-color) 1px, transparent 1px);
+    background-image: linear-gradient(to right, var(--chartGridColor) 1px, transparent 1px),
+                      linear-gradient(to bottom, var(--chartGridColor) 1px, transparent 1px);
     background-size: 20px 20px;
     position: relative;
     
@@ -626,7 +626,7 @@
   }
   
   .empty-message {
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     margin-bottom: 12px;
     font-size: 13px;
   }
@@ -636,7 +636,7 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background-color: var(--button-bg);
+    background-color: var(--buttonBg);
     color: white;
     border: none;
     border-radius: 4px;
@@ -644,7 +644,7 @@
     font-size: 12px;
     
     &:hover {
-      background-color: var(--button-hover-bg);
+      background-color: var( --buttonHoverBg);
     }
     
     svg {

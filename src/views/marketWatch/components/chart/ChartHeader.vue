@@ -87,8 +87,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background-color: var(--header-bg);
-    border-bottom: 1px solid var(--border-color);
+    background-color: var(--headerBg);
+    border-bottom: 1px solid var(--borderColor);
   }
   
   .chart-symbol-info {
@@ -175,11 +175,11 @@
     }
     
     &.positive {
-      color: var(--positive-color);
+      color: var(--positiveColor);
     }
     
     &.negative {
-      color: var(--negative-color);
+      color: var(--negativeColor);
     }
   }
   
@@ -193,10 +193,10 @@
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background-color: var(--cardBg);
+    border: 1px solid var(--borderColor);
     border-radius: 4px;
-    color: var(--text-color);
+    color: var(--textColor);
     font-size: 13px;
     cursor: pointer;
     

@@ -205,7 +205,7 @@ defineEmits<{
 }
 
 .settings-modal {
-  background-color: var(--modal-bg);
+  background-color: var(--modalBg);
   border-radius: 8px;
   width: 800px;
   height: 600px;
@@ -222,7 +222,7 @@ defineEmits<{
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--borderColor);
 
   h2 {
     margin: 0;
@@ -251,7 +251,7 @@ defineEmits<{
 
 .settings-sidebar {
   width: 200px;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--borderColor);
   overflow-y: auto;
 
   .sidebar-item {
@@ -345,7 +345,7 @@ defineEmits<{
     height: 50px;
     border-radius: 4px;
     margin-bottom: 8px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--borderColor);
 
     &.system-theme {
       background: linear-gradient(to right, #1a1a1a 50%, #f5f5f5 50%);
@@ -384,7 +384,7 @@ defineEmits<{
     margin-left: 8px;
     padding: 8px 16px;
     background-color: transparent;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--borderColor);
     border-radius: 4px;
     color: var(--tab-active-text);
     cursor: pointer;
@@ -408,7 +408,7 @@ defineEmits<{
     flex: 1;
     height: 4px;
     -webkit-appearance: none;
-    background: var(--border-color);
+    background: var(--borderColor);
     border-radius: 2px;
     outline: none;
 

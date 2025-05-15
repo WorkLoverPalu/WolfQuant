@@ -347,7 +347,7 @@
     flex: 1;
     height: 36px;
     padding: 0 12px;
-    background-color: var(--input-bg, #2c2c2c);
+    background-color: var( --inputBg, #2c2c2c);
     border: 1px solid var(--panel-border, #333333);
     border-radius: 18px;
     color: var(--panel-text, #ffffff);

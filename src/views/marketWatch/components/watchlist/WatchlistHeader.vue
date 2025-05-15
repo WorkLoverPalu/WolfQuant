@@ -86,8 +86,8 @@
     align-items: center;
     padding: 0 16px;
     height: 48px;
-    background-color: var(--header-bg);
-    border-bottom: 1px solid var(--border-color);
+    background-color: var(--headerBg);
+    border-bottom: 1px solid var(--borderColor);
     flex-shrink: 0;
   }
   
@@ -100,19 +100,19 @@
     padding: 6px 12px;
     border: none;
     background: transparent;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     font-size: 13px;
     cursor: pointer;
     border-radius: 4px;
     
     &:hover {
       background-color: var(--hover-bg);
-      color: var(--text-color);
+      color: var(--textColor);
     }
     
     &.active {
-      background-color: var(--active-bg);
-      color: var(--text-color);
+      background-color: var(--activeBg);
+      color: var(--textColor);
       font-weight: 500;
     }
   }
@@ -131,12 +131,12 @@
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     cursor: pointer;
     
     &:hover {
       background-color: var(--hover-bg);
-      color: var(--text-color);
+      color: var(--textColor);
     }
     
     .icon-small {
@@ -164,12 +164,12 @@
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     cursor: pointer;
     
     &:hover {
       background-color: var(--hover-bg);
-      color: var(--text-color);
+      color: var(--textColor);
     }
   }
   
@@ -178,8 +178,8 @@
     top: 100%;
     right: 0;
     width: 150px;
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
+    background-color: var(--cardBg);
+    border: 1px solid var(--borderColor);
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 10;
@@ -193,7 +193,7 @@
     text-align: left;
     background: transparent;
     border: none;
-    color: var(--text-color);
+    color: var(--textColor);
     font-size: 13px;
     cursor: pointer;
     
@@ -202,7 +202,7 @@
     }
     
     &.active {
-      background-color: var(--active-bg);
+      background-color: var(--activeBg);
       font-weight: 500;
     }
   }

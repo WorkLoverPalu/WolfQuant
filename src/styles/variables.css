@@ -1,59 +1,147 @@
 :root {
-    /* 基础颜色 - 会被主题服务动态覆盖 */
-    --bgColor: #121212;
-    --cardBg: #1e1e1e;
-    --headerBg: #1a1a1a;
-    --borderColor: #333333;
-    --textColor: #ffffff;
-    --textSecondary: #a0a0a0;
-    --accentColor: #2962ff;
-    --positiveColor: #26a69a;
-    --negativeColor: #ef5350;
-    --hoverBg: rgba(255, 255, 255, 0.05);
-    --activeBg: rgba(255, 255, 255, 0.1);
-    --inputBg: #2c2c2c;
-    --buttonBg: #2962ff;
-    --buttonHoverBg: #1e53e4;
-    --modalBg: #1e1e1e;
-    --scrollbarThumb: #555555;
-    --toolsBg: #0a0a0a;
-    --resizerColor: #444444;
-    --resizerHoverColor: #2962ff;
-    --chartGridColor: rgba(255, 255, 255, 0.05);
-  
-    /* 间距 */
-    --spacing-xs: 4px;
-    --spacing-sm: 8px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 32px;
-  
-    /* 字体大小 */
-    --font-size-xs: 11px;
-    --font-size-sm: 12px;
-    --font-size-md: 14px;
-    --font-size-lg: 16px;
-    --font-size-xl: 18px;
-    --font-size-2xl: 24px;
-  
-    /* 圆角 */
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
-  
-    /* 阴影 */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-    --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
-    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
-  
-    /* 过渡 */
-    --transition-fast: 150ms;
-    --transition-normal: 250ms;
-    --transition-slow: 350ms;
-  
-    /* Z-index层级 */
-    --z-index-dropdown: 100;
-    --z-index-modal: 1000;
-    --z-index-tooltip: 1500;
-  }
-  
+  /* 基础颜色 - 会被主题服务动态覆盖 */
+  --bgColor: #121212;
+  --cardBg: #1e1e1e;
+  --headerBg: #1a1a1a;
+  --borderColor: #333333;
+  --textColor: #ffffff;
+  --textSecondary: #a0a0a0;
+  --accentColor: #2962ff;
+  --positiveColor: #26a69a;
+  --negativeColor: #ef5350;
+  --hoverBg: rgba(255, 255, 255, 0.05);
+  --activeBg: rgba(255, 255, 255, 0.1);
+  --inputBg: #2c2c2c;
+  --buttonBg: #2962ff;
+  --buttonHoverBg: #1e53e4;
+  --modalBg: #1e1e1e;
+  --scrollbarThumb: #555555;
+  --toolsBg: #0a0a0a;
+  --resizerColor: #444444;
+  --resizerHoverColor: rgba(0, 0, 0, 0.1);
+  --chartGridColor: rgba(255, 255, 255, 0.05);
+
+  --tabActiveText: #000000;
+  --tabText: #a0a0a0;
+
+  --navBg: #1a1a1a;
+  --iconColor: #a0a0a0;
+  --iconActiveColor: #2563eb;
+  --iconHoverColor: #ffffff;
+
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* 字体大小 */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+
+  /* 过渡 */
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+  --transition-slow: 350ms;
+
+  /* Z-index层级 */
+  --z-index-dropdown: 100;
+  --z-index-modal: 1000;
+  --z-index-tooltip: 1500;
+}
+.light-theme {
+  /* 基础颜色 - 亮色主题 */
+  /* 背景反色 */
+  --bgColor: #ffffff;
+  /* 卡片浅灰 */
+  --cardBg: #f5f5f5;
+  /* 头部稍深灰 */
+  --headerBg: #f0f0f0;
+  /* 边框浅灰 */
+  --borderColor: #e0e0e0;
+  /*文字深色  */
+  --textColor: #333333;
+  /* 次要文字中灰 */
+  --textSecondary: #666666;
+  /* 主色保留（品牌色通常不变） */
+  --accentColor: #2962ff;
+  /* 成功色更亮绿 */
+  --positiveColor: #00a152;
+  /* 错误色保持但微调 */
+  --negativeColor: #d32f2f;
+  /* 悬停反色透明度 */
+  --hoverBg: rgba(0, 0, 0, 0.05);
+  /* 激活状态反色 */
+  --activeBg: rgba(0, 0, 0, 0.1);
+  /* 输入框白色 */
+  --inputBg: #ffffff;
+  /* 按钮主色保留 */
+  --buttonBg: #2962ff;
+  /* 按钮悬停保留 */
+  --buttonHoverBg: #1e53e4;
+  /* 弹窗白色 */
+  --modalBg: #ffffff;
+  /* 滚动条浅灰 */
+  --scrollbarThumb: #cccccc;
+  /* 工具区浅灰 */
+  --toolsBg: #eeeeee;
+  /* 分割线浅色 */
+  --resizerColor: #dddddd;
+  /* 悬停保留主色 */
+  --resizerHoverColor: rgba(0, 0, 0, 0.1);
+  /* 图表网格反色 */
+  --chartGridColor: rgba(0, 0, 0, 0.05);
+
+  --tabActiveText: #ffffff;
+  --tabText: #666666;
+  --navBg: #ffffff;
+  --iconColor: #666666;
+  --iconActiveColor: #2563eb;
+  --iconHoverColor: #ffffff;
+
+  /* 以下间距/字体/阴影等变量与深色主题保持一致 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 24px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* 亮色阴影微调（减少扩散） */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 6px 12px rgba(0, 0, 0, 0.15);
+
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+  --transition-slow: 350ms;
+
+  --z-index-dropdown: 100;
+  --z-index-modal: 1000;
+  --z-index-tooltip: 1500;
+}

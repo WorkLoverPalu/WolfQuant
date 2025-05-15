@@ -150,7 +150,7 @@ const handleLogout = async () => {
   top: 60px;
   right: 20px;
   width: 240px;
-  background-color: var(--modal-bg);
+  background-color: var(--modalBg);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   z-index: 1000;
@@ -168,7 +168,7 @@ const handleLogout = async () => {
 
 .menu-divider {
   height: 1px;
-  background-color: var(--border-color);
+  background-color: var(--borderColor);
   margin: 4px 0;
 }
 
@@ -318,7 +318,7 @@ const handleLogout = async () => {
     height: 40px;
     border-radius: 4px;
     margin-bottom: 8px;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--borderColor);
     overflow: hidden;
 
     &.system-theme {

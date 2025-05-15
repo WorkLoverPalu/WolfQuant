@@ -3,7 +3,7 @@
     <!-- 左侧上部分 - 自选列表 -->
     <div class="left-top" :style="{ height: `${leftTopHeight}px` }">
       <!-- 顶部导航栏 -->
-      <WatchlistHeader :categories="marketStore.categories" :activeCategory="marketStore.activeCategory"
+      <WatchlistHeader :categories="assetStore.categories" :activeCategory="assetStore.activeCategory"
         :sortOptions="sortOptions" :currentSort="currentSort" :showSortMenu="showSortMenu"
         :showChartView="showChartView" @setActiveCategory="setActiveCategory" @toggleSortMenu="toggleSortMenu"
         @setSort="setSort" @toggleChartView="toggleChartView" @openPositionSettingsModal="openPositionSettingsModal"
@@ -56,7 +56,7 @@ const emit = defineEmits([
 ]);
 
 // 使用 store
-const marketStore = useAssetStore();
+const assetStore = useAssetStore();
 const userStore = useUserStore();
 
 // 模态框状态
@@ -99,7 +99,7 @@ const toggleChartView = () => {
 
 // 设置激活分类
 const setActiveCategory = (categoryId: any) => {
-  marketStore.setActiveCategory(categoryId);
+  assetStore.setActiveCategory(categoryId);
 };
 
 // 将后端资产数据转换为前端 WatchlistItem 格式
@@ -119,17 +119,17 @@ const convertAssetsToWatchlistItems = (assets: Asset[]): WatchlistItem[] => {
 // 将用户组和资产转换为前端分组格式
 const convertedGroups = computed(() => {
   // 如果没有用户组数据，使用现有的市场数据分组
-  if (marketStore.userGroups.length === 0) {
-    return marketStore.filteredGroups;
+  if (assetStore.userGroups.length === 0) {
+    return assetStore.filteredGroups;
   }
 
   // 将用户组转换为前端分组格式
-  return marketStore.userGroups.map((group: any) => {
+  return assetStore.userGroups.map((group: any) => {
     // 查找该组下的所有资产
-    const groupAssets = marketStore.userAssets.filter((asset: any) => asset.group_id === group.id);
+    const groupAssets = assetStore.userAssets.filter((asset: any) => asset.group_id === group.id);
 
     // 查找资产类型
-    const assetType = marketStore.assetTypes.find((type: any) => type.id === group.asset_type_id);
+    const assetType = assetStore.assetTypes.find((type: any) => type.id === group.asset_type_id);
     const category = assetType ? mapAssetTypeToCategory(assetType.code) : 'other';
 
     return {
@@ -156,15 +156,15 @@ const mapAssetTypeToCategory = (assetTypeCode: string): string => {
 
 // 根据当前分类过滤分组
 const filteredGroups = computed(() => {
-  if (marketStore.activeCategory === 'all') {
+  if (assetStore.activeCategory === 'all') {
     return convertedGroups.value;
   }
-  return convertedGroups.value.filter((group: any) => group.category === marketStore.activeCategory);
+  return convertedGroups.value.filter((group: any) => group.category === assetStore.activeCategory);
 });
 
 // 获取单个商品的持仓信息
 const getItemPosition = (symbol: any) => {
-  const position = marketStore.positions[symbol];
+  const position = assetStore.positions[symbol];
   if (!position || !position.amount) return null;
 
   // 查找商品当前价格
@@ -239,7 +239,7 @@ const selectedSymbol = ref<WatchlistItem | null>(null);
 // 选择商品
 const selectSymbol = (item: any) => {
   selectedSymbol.value = item;
-  marketStore.selectSymbol(item);
+  assetStore.selectSymbol(item);
 };
 
 // 拖拽排序相关
@@ -291,7 +291,7 @@ const closeGroupModal = () => {
 // 处理分组保存
 const handleGroupSaved = (group: UserGroup) => {
   // 刷新分组列表
-  marketStore.fetchUserGroups();
+  assetStore.fetchUserGroups();
 
   // 如果是新建的分组，添加到展开列表
   if (!editingGroup.value) {
@@ -302,7 +302,7 @@ const handleGroupSaved = (group: UserGroup) => {
 // 编辑分组
 const editGroup = (group: any) => {
   // 查找对应的后端分组数据
-  const backendGroup = marketStore.userGroups.find((g: any) => g.id.toString() === group.id);
+  const backendGroup = assetStore.userGroups.find((g: any) => g.id.toString() === group.id);
   if (backendGroup) {
     editingGroup.value = backendGroup;
     showGroupModal.value = true;
@@ -327,7 +327,7 @@ const deleteGroup = async (groupId: any) => {
     }
 
     // 调用 store 方法删除分组
-    await marketStore.deleteUserGroup(numericId);
+    await assetStore.deleteUserGroup(numericId);
 
     // 从展开列表中移除
     const expandedIndex = expandedGroups.value.indexOf(groupId);
@@ -383,11 +383,11 @@ provide('selectedSymbol', selectedSymbol);
 onMounted(async () => {
   // 加载资产类型和用户分组
   try {
-    await marketStore.initAssetData();
+    await assetStore.initAssetData();
 
     // 初始化展开的分组
-    if (marketStore.userGroups.length > 0) {
-      expandedGroups.value = marketStore.userGroups.map(g => g.id.toString());
+    if (assetStore.userGroups.length > 0) {
+      expandedGroups.value = assetStore.userGroups.map(g => g.id.toString());
     }
 
     // 选择默认商品
@@ -414,7 +414,7 @@ onMounted(async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--borderColor);
   position: relative;
 }
 
@@ -428,13 +428,13 @@ onMounted(async () => {
 .horizontal-resizer {
   width: 100%;
   height: 5px;
-  background-color: var(--bg-color);
+  background-color: var(--bgColor);
   cursor: ns-resize;
   position: relative;
 
   &:hover,
   &:active {
-    background-color: var(--resizer-hover-color);
+    background-color: var(--resizerHoverColor);
   }
 
   &::after {
@@ -445,7 +445,7 @@ onMounted(async () => {
     transform: translate(-50%, -50%);
     width: 30px;
     height: 1px;
-    background-color: var(--resizer-color);
+    background-color: var( --resizerColor);
   }
 }
 </style>

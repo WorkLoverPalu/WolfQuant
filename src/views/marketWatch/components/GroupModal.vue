@@ -169,7 +169,7 @@ const saveGroup = async () => {
   width: 90%;
   max-width: 600px;
   max-height: 80vh;
-  background-color: var(--modal-bg);
+  background-color: var(--modalBg);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -185,7 +185,7 @@ const saveGroup = async () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--borderColor);
 
   h3 {
     margin: 0;
@@ -202,12 +202,12 @@ const saveGroup = async () => {
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: var(--textSecondary);
     cursor: pointer;
 
     &:hover {
       background-color: var(--hover-bg);
-      color: var(--text-color);
+      color: var(--textColor);
     }
 
     svg {
@@ -241,15 +241,15 @@ const saveGroup = async () => {
   width: 100%;
   height: 40px;
   padding: 0 12px;
-  background-color: var(--input-bg);
-  border: 1px solid var(--border-color);
+  background-color: var( --inputBg);
+  border: 1px solid var(--borderColor);
   border-radius: 4px;
-  color: var(--text-color);
+  color: var(--textColor);
   font-size: 14px;
 
   &:focus {
     outline: none;
-    border-color: var(--accent-color);
+    border-color: var(--accentColor);
   }
 }
 
@@ -258,15 +258,15 @@ const saveGroup = async () => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--borderColor);
 }
 
 .cancel-button {
   padding: 8px 16px;
   background-color: transparent;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--borderColor);
   border-radius: 4px;
-  color: var(--text-color);
+  color: var(--textColor);
   font-size: 14px;
   cursor: pointer;
 
@@ -282,7 +282,7 @@ const saveGroup = async () => {
 
 .confirm-button {
   padding: 8px 16px;
-  background-color: var(--button-bg);
+  background-color: var(--buttonBg);
   border: none;
   border-radius: 4px;
   color: white;
@@ -290,7 +290,7 @@ const saveGroup = async () => {
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    background-color: var(--button-hover-bg);
+    background-color: var( --buttonHoverBg);
   }
   
   &:disabled {

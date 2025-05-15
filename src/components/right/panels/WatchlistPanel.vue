@@ -312,7 +312,7 @@
     width: 100%;
     height: 36px;
     padding: 0 36px 0 12px;
-    background-color: var(--input-bg, #2c2c2c);
+    background-color: var( --inputBg, #2c2c2c);
     border: 1px solid var(--panel-border, #333333);
     border-radius: 4px;
     color: var(--panel-text, #ffffff);

@@ -314,26 +314,17 @@ defineExpose({
     left: 0;
     right: 0;
     height: 48px;
-    background-color: var(--header-bg, #1a1a1a);
-    color: var(--tab-active-text, #ffffff);
+    background-color: var(--headerBg);
+    color: var(--tabActiveText);
     display: flex;
     align-items: center;
-    border-top: 1px solid var(--border-color, #333333);
+    border-top: 1px solid var(--borderColor);
     z-index: 1000;
     font-size: 14px;
     justify-content: space-between;
-
-    &.light-theme {
-        --header-bg: var(--header-bg, #ffffff);
-        --tab-active-text: var(--tab-active-text, #000000);
-        --border-color: var(--border-color, #dddddd);
-        --tab-text: var(--tab-text, #666666);
-        --button-primary: var(--button-primary, #2563eb);
-        --positive-color: #4caf50;
-        --negative-color: #f44336;
-    }
 }
-.left{
+
+.left {
     display: flex;
     align-items: center;
 }
@@ -359,7 +350,7 @@ defineExpose({
         width: 16px;
         height: 16px;
         margin-right: 4px;
-        color: var(--button-primary, #2563eb);
+        color: var(--buttonBg);
     }
 
     .value {
@@ -370,7 +361,7 @@ defineExpose({
 
     .separator {
         margin: 0 4px;
-        color: var(--tab-text, #a0a0a0);
+        color: var(--tabText);
     }
 }
 
@@ -404,11 +395,11 @@ defineExpose({
 .market-change,
 .market-percent {
     &.positive {
-        color: var(--positive-color, #26a69a);
+        color: var(--positiveColor, #26a69a);
     }
 
     &.negative {
-        color: var(--negative-color, #ef5350);
+        color: var(--negativeColor, #ef5350);
     }
 }
 
@@ -418,8 +409,8 @@ defineExpose({
     left: 50%;
     transform: translateX(-50%);
     width: 300px;
-    background-color: var(--header-bg, #1a1a1a);
-    border: 1px solid var(--border-color, #333333);
+    background-color: var(--headerBg, #1a1a1a);
+    border: 1px solid var(--borderColor, #333333);
     border-bottom: none;
     border-radius: 8px 8px 0 0;
     padding: 12px;
@@ -442,7 +433,7 @@ defineExpose({
 }
 
 .detail-label {
-    color: var(--tab-text, #a0a0a0);
+    color: var(--tabText);
     margin-right: 4px;
     font-size: 12px;
 }
@@ -468,7 +459,7 @@ defineExpose({
     cursor: pointer;
 
     &.active {
-        color: var(--button-primary, #2563eb);
+        color: var(--buttonHoverBg);
     }
 
     &:hover {
@@ -496,11 +487,5 @@ defineExpose({
 .slide-up-leave-to {
     transform: translateX(-50%) translateY(20px);
     opacity: 0;
-}
-
-/* 主题变量 */
-:root {
-    --positive-color: #26a69a;
-    --negative-color: #ef5350;
 }
 </style>

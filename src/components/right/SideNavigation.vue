@@ -290,26 +290,13 @@ defineExpose({
   /* 导航栏在右侧，面板在左侧 */
   z-index: 100;
   /* 降低z-index，确保不会覆盖顶部标签栏 */
-
-  &.light-theme {
-    --nav-bg: var(--header-bg, #ffffff);
-    --nav-border: var(--border-color, #dddddd);
-    --icon-color: var(--tab-text, #666666);
-    --icon-active-color: var(--button-primary, #2563eb);
-    --badge-bg: #f44336;
-    --panel-bg: var(--header-bg, #ffffff);
-    --panel-border: var(--border-color, #dddddd);
-    --panel-text: var(--tab-active-text, #000000);
-    --panel-secondary-text: var(--tab-text, #666666);
-    --resizer-hover-bg: rgba(0, 0, 0, 0.1);
-  }
 }
 
 .nav-bar {
   width: 48px;
   height: 100%;
-  background-color: var(--nav-bg, #1a1a1a);
-  border-left: 1px solid var(--nav-border, #333333);
+  background-color: var(--navBg, #1a1a1a);
+  border-left: 1px solid var(--borderColor, #333333);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -326,16 +313,16 @@ defineExpose({
   margin: 6px 0;
   border-radius: 4px;
   cursor: pointer;
-  color: var(--icon-color, #a0a0a0);
+  color: var(--iconColor, #a0a0a0);
   position: relative;
 
   &:hover {
     background-color: rgba(128, 128, 128, 0.1);
-    color: var(--icon-active-color, #ffffff);
+    color: var(--iconHoverColor);
   }
 
   &.active {
-    color: var(--icon-active-color, #2563eb);
+    color: var(--iconActiveColor);
   }
 }
 
@@ -351,7 +338,7 @@ defineExpose({
   min-width: 18px;
   height: 18px;
   border-radius: 9px;
-  background-color: var(--badge-bg, #e53935);
+  background-color: var(--negativeColor);
   color: white;
   font-size: 12px;
   display: flex;
@@ -363,8 +350,8 @@ defineExpose({
 .side-panel {
   width: 320px;
   height: 100%;
-  background-color: var(--panel-bg, #1e1e1e);
-  border-right: 1px solid var(--panel-border, #333333);
+  background-color: var(--bgColor, #1e1e1e);
+  border-right: 1px solid var(--borderColor, #333333);
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -376,13 +363,13 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  border-bottom: 1px solid var(--panel-border, #333333);
+  border-bottom: 1px solid var(--borderColor, #333333);
 
   h3 {
     margin: 0;
     font-size: 16px;
     font-weight: 500;
-    color: var(--panel-text, #ffffff);
+    color: var(--textColor, #ffffff);
   }
 
   .close-button {
@@ -394,12 +381,12 @@ defineExpose({
     background: transparent;
     border: none;
     border-radius: 4px;
-    color: var(--icon-color, #a0a0a0);
+    color: var(--iconColor, #a0a0a0);
     cursor: pointer;
 
     &:hover {
       background-color: rgba(128, 128, 128, 0.1);
-      color: var(--panel-text, #ffffff);
+      color: var(--textColor, #ffffff);
     }
 
     svg {
@@ -436,7 +423,7 @@ defineExpose({
   z-index: 102;
 
   &:hover {
-    background-color: var(--resizer-hover-bg, rgba(255, 255, 255, 0.1));
+    background-color: var(--resizerHoverColor, rgba(255, 255, 255, 0.1));
   }
 }
 

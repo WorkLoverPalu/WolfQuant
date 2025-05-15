@@ -98,7 +98,7 @@ const handleSubmit = async () => {
 }
 
 .modal-container {
-  background-color: var(--modal-bg);
+  background-color: var(--modalBg);
   border-radius: 8px;
   width: 100%;
   max-width: 400px;
@@ -111,7 +111,7 @@ const handleSubmit = async () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--borderColor);
 
   h2 {
     margin: 0;
@@ -158,8 +158,8 @@ const handleSubmit = async () => {
       width: 100%;
       padding: 10px 12px;
       border-radius: 4px;
-      border: 1px solid var(--border-color);
-      background-color: var(--input-bg);
+      border: 1px solid var(--borderColor);
+      background-color: var( --inputBg);
       color: var(--tab-active-text);
       font-size: 14px;
 
@@ -209,7 +209,7 @@ const handleSubmit = async () => {
   display: flex;
   justify-content: space-between;
   padding: 16px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--borderColor);
 
   .text-button {
     background: transparent;

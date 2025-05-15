@@ -51,7 +51,7 @@ const getChangeClass = (change: string) => {
   max-width: 200px;
   background-color: var(--tab-bg);
   color: var(--tab-text);
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid var(--borderColor);
   cursor: pointer;
   user-select: none;
   position: relative;
