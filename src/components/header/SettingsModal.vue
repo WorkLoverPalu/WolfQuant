@@ -265,6 +265,7 @@ defineEmits<{
     text-align: left;
     cursor: pointer;
     transition: background-color var(--transition-fast), color var(--transition-fast);
+    font-size: var(--font-size-md);
 
     &:hover {
       background-color: var(--hoverBg);

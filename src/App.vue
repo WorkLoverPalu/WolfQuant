@@ -38,12 +38,11 @@
       <ForgotPasswordModal v-if="showForgotPasswordModal" @close="showForgotPasswordModal = false" />
 
       <!-- 用户菜单 -->
-      <UserMenu v-if="isUserMenuOpen && userStore.user"  @close="isUserMenuOpen = false"
-        @logout="userStore.logout" @open-settings="openSettingsModal" @open-profile="openUserProfileTab"
-        @new-tab="tabStore.addNewTab()" />
+      <UserMenu v-if="isUserMenuOpen && userStore.user" @close="isUserMenuOpen = false" @logout="userStore.logout"
+        @open-settings="openSettingsModal" @open-profile="openUserProfileTab" />
 
       <!-- 设置弹窗 -->
-      <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" @save="handleSaveSettings" />
+      <SettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" @save="showSettingsModal = false" />
     </div>
   </ThemeProvider>
 </template>
@@ -115,14 +114,7 @@ const handleLogin = (user: any, password: any) => {
 
 
 
-// 处理保存设置
-const handleSaveSettings = (settings: any) => {
-  // 保存设置逻辑
-  if (settings.theme) {
-    themeStore.setTheme(settings.theme);
-  }
-  showSettingsModal.value = false;
-};
+
 
 // 打开用户个人中心标签
 const openUserProfileTab = () => {
