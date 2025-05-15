@@ -21,7 +21,8 @@
   --resizerHoverColor: rgba(0, 0, 0, 0.1);
   --chartGridColor: rgba(255, 255, 255, 0.05);
 
-  --tabActiveText: #000000;
+  --tabActiceBg:#333333;
+  --tabActiveText: #ffffff;
   --tabText: #a0a0a0;
 
   --navBg: #1a1a1a;
@@ -107,6 +108,7 @@
   /* 图表网格反色 */
   --chartGridColor: rgba(0, 0, 0, 0.05);
 
+  --tabActiceBg:#e0e0e0;
   --tabActiveText: #ffffff;
   --tabText: #666666;
   --navBg: #ffffff;

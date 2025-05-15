@@ -58,7 +58,7 @@ const getChangeClass = (change: string) => {
   transition: background-color var(--transition-fast), color var(--transition-fast);
 
   &.active {
-    background-color: var(--accentColor);
+    background-color: var(--tabActiceBg);
     color: var(--tabActiveText);
   }
 
