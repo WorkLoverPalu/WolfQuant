@@ -46,19 +46,20 @@ const getChangeClass = (change: string) => {
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 0 12px;
+  padding: 0 var(--spacing-md);
   min-width: 120px;
   max-width: 200px;
-  background-color: var(--tab-bg);
-  color: var(--tab-text);
+  background-color: var(--cardBg);
+  color: var(--tabText);
   border-right: 1px solid var(--borderColor);
   cursor: pointer;
   user-select: none;
   position: relative;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 
   &.active {
-    background-color: var(--tab-active-bg);
-    color: var(--tab-active-text);
+    background-color: var(--accentColor);
+    color: var(--tabActiveText);
   }
 
   &:hover {
@@ -84,18 +85,18 @@ const getChangeClass = (change: string) => {
 }
 
 .tab-price {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .tab-change {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 
   &.positive {
-    color: #4caf50;
+    color: var(--positiveColor);
   }
 
   &.negative {
-    color: #f44336;
+    color: var(--negativeColor);
   }
 }
 
@@ -110,9 +111,10 @@ const getChangeClass = (change: string) => {
   padding: 2px;
   margin-left: 6px;
   border-radius: 50%;
+  transition: background-color var(--transition-fast);
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--hoverBg);
   }
 }
 </style>

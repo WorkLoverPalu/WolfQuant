@@ -35,7 +35,7 @@ defineEmits<{
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px;
+  padding: var(--spacing-sm);
 }
 
 .user-logged-in,
@@ -43,7 +43,7 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
 
   &:hover {
     opacity: 0.8;
@@ -54,8 +54,8 @@ defineEmits<{
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: var(--avatar-bg);
-  color: var(--avatar-text);
+  background-color: var(--cardBg);
+  color: var(--textColor);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,18 +66,18 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--tab-text);
+  color: var(--iconColor);
   width: 24px;
   height: 24px;
 }
 
 .username,
 .login-text {
-  font-size: 12px;
-  color: var(--tab-active-text);
+  font-size: var(--font-size-xs);
+  color: var(--textColor);
 }
 
 .login-text {
-  color: #3b82f6;
+  color: var(--accentColor);
 }
 </style>

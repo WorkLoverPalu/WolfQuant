@@ -1,7 +1,6 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import EmptyTab from './components/EmptyTab.vue';
-import { themeService } from './services/theme-service';
 import { createPinia } from 'pinia'
 import { useThemeStore } from "./stores/themeStore"
 import { useUserStore } from "./stores/userStore"
@@ -11,8 +10,6 @@ import "./styles/common.css"
 import "./styles/components.css"
 import "./styles/transitions.scss"
 
-// 初始化主题
-themeService.applyTheme(themeService.getThemePreference());
 
 const app = createApp(App);
 const pinia = createPinia()

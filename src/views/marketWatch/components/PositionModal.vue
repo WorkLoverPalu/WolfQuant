@@ -89,7 +89,8 @@ import { XIcon } from 'lucide-vue-next';
 const showPositionModal = inject('showPositionModal');
 const activeCategory = inject<string>('activeCategory');
 const groups = inject('groups');
-const positions = inject('positions');
+// 注入数据
+const positions = inject<Record<string, { cost: number; amount: number }>>('positions', {});
 
 // 持仓输入临时存储
 interface PositionInput {

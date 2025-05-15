@@ -280,28 +280,24 @@ defineExpose({
 .side-navigation {
   position: fixed;
   top: var(--header-height, 48px);
-  /* 使用变量控制顶部位置，避免遮挡标签栏 */
   right: 0;
-  /* 导航栏固定在右侧 */
   height: calc(100vh - var(--header-height, 48px));
-  /* 高度减去标签栏高度 */
   display: flex;
   flex-direction: row-reverse;
-  /* 导航栏在右侧，面板在左侧 */
-  z-index: 100;
-  /* 降低z-index，确保不会覆盖顶部标签栏 */
+  z-index: var(--z-index-dropdown);
+  transition: all var(--transition-normal);
 }
 
 .nav-bar {
   width: 48px;
   height: 100%;
-  background-color: var(--navBg, #1a1a1a);
-  border-left: 1px solid var(--borderColor, #333333);
+  background-color: var(--navBg);
+  border-left: 1px solid var(--borderColor);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 0;
-  z-index: 101;
+  padding: var(--spacing-sm) 0;
+  z-index: calc(var(--z-index-dropdown) + 1);
 }
 
 .nav-item {
@@ -310,14 +306,15 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 6px 0;
-  border-radius: 4px;
+  margin: var(--spacing-xs) 0;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  color: var(--iconColor, #a0a0a0);
+  color: var(--iconColor);
   position: relative;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 
   &:hover {
-    background-color: rgba(128, 128, 128, 0.1);
+    background-color: var(--hoverBg);
     color: var(--iconHoverColor);
   }
 
@@ -340,21 +337,22 @@ defineExpose({
   border-radius: 9px;
   background-color: var(--negativeColor);
   color: white;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 var(--spacing-xs);
 }
 
 .side-panel {
   width: 320px;
   height: 100%;
-  background-color: var(--bgColor, #1e1e1e);
-  border-right: 1px solid var(--borderColor, #333333);
+  background-color: var(--cardBg);
+  border-right: 1px solid var(--borderColor);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  z-index: var(--z-index-dropdown);
+  box-shadow: var(--shadow-md);
 }
 
 .panel-header {
@@ -362,14 +360,14 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--borderColor, #333333);
+  padding: 0 var(--spacing-md);
+  border-bottom: 1px solid var(--borderColor);
 
   h3 {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--font-size-lg);
     font-weight: 500;
-    color: var(--textColor, #ffffff);
+    color: var(--textColor);
   }
 
   .close-button {
@@ -380,13 +378,14 @@ defineExpose({
     justify-content: center;
     background: transparent;
     border: none;
-    border-radius: 4px;
-    color: var(--iconColor, #a0a0a0);
+    border-radius: var(--radius-sm);
+    color: var(--iconColor);
     cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
 
     &:hover {
-      background-color: rgba(128, 128, 128, 0.1);
-      color: var(--textColor, #ffffff);
+      background-color: var(--hoverBg);
+      color: var(--textColor);
     }
 
     svg {
@@ -409,7 +408,7 @@ defineExpose({
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: rgba(128, 128, 128, 0.3);
+    background-color: var(--scrollbarThumb);
     border-radius: 3px;
   }
 }
@@ -420,10 +419,11 @@ defineExpose({
   width: 6px;
   height: 100%;
   cursor: ew-resize;
-  z-index: 102;
+  z-index: calc(var(--z-index-dropdown) + 2);
+  transition: background-color var(--transition-fast);
 
   &:hover {
-    background-color: var(--resizerHoverColor, rgba(255, 255, 255, 0.1));
+    background-color: var(--resizerHoverColor);
   }
 }
 
@@ -433,13 +433,13 @@ defineExpose({
   left: 0;
   height: calc(100vh - var(--header-height, 48px));
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 99;
+  z-index: calc(var(--z-index-dropdown) - 1);
 }
 
 /* 动画 */
 .slide-left-enter-active,
 .slide-left-leave-active {
-  transition: transform 0.3s ease;
+  transition: transform var(--transition-normal);
 }
 
 .slide-left-enter-from,

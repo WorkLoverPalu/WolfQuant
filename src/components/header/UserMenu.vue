@@ -1,5 +1,5 @@
 <template>
-  <div class="user-menu-overlay" >
+  <div class="user-menu-overlay">
     <div class="user-menu" @click.stop>
       <div class="user-info" @click="$emit('open-profile')">
         <div class="user-avatar">{{ userInitial }}</div>
@@ -142,7 +142,7 @@ const handleLogout = async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
+  z-index: calc(var(--z-index-dropdown) - 1);
 }
 
 .user-menu {
@@ -151,9 +151,9 @@ const handleLogout = async () => {
   right: 20px;
   width: 240px;
   background-color: var(--modalBg);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: var(--z-index-dropdown);
   overflow: hidden;
 }
 
@@ -163,33 +163,38 @@ const handleLogout = async () => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
+  z-index: calc(var(--z-index-dropdown) - 1);
 }
 
 .menu-divider {
   height: 1px;
   background-color: var(--borderColor);
-  margin: 4px 0;
+  margin: var(--spacing-xs) 0;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
+  transition: background-color var(--transition-fast);
+
+  &:hover {
+    background-color: var(--hoverBg);
+  }
 
   .user-avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background-color: var(--avatar-bg);
-    color: var(--avatar-text);
+    background-color: var(--cardBg);
+    color: var(--textColor);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
-    font-size: 18px;
-    margin-right: 12px;
+    font-size: var(--font-size-xl);
+    margin-right: var(--spacing-md);
   }
 
   .user-details {
@@ -197,54 +202,56 @@ const handleLogout = async () => {
 
     .username {
       font-weight: 500;
-      font-size: 14px;
-      margin-bottom: 4px;
-      color: var(--tab-active-text);
+      font-size: var(--font-size-md);
+      margin-bottom: var(--spacing-xs);
+      color: var(--textColor);
     }
 
     .email {
-      font-size: 12px;
-      color: var(--tab-text);
+      font-size: var(--font-size-sm);
+      color: var(--textSecondary);
     }
   }
 }
 
 .menu-items {
-  padding: 8px 0;
+  padding: var(--spacing-sm) 0;
 }
 
 .menu-item {
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 8px 16px;
+  padding: var(--spacing-sm) var(--spacing-md);
   background: transparent;
   border: none;
-  color: var(--tab-active-text);
-  font-size: 14px;
+  color: var(--textColor);
+  font-size: var(--font-size-md);
   text-align: left;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--hoverBg);
   }
 
   svg {
-    margin-right: 12px;
-    color: var(--tab-text);
+    margin-right: var(--spacing-md);
+    color: var(--textSecondary);
     width: 16px;
     height: 16px;
+    transition: color var(--transition-fast);
   }
 
   span {
-    color: var(--tab-active-text);
+    color: var(--textColor);
   }
 
   .shortcut {
     margin-left: auto;
-    font-size: 12px;
-    color: var(--tab-text);
+    font-size: var(--font-size-sm);
+    color: var(--textSecondary);
   }
 
   .zoom-controls {
@@ -260,39 +267,40 @@ const handleLogout = async () => {
       justify-content: center;
       background: transparent;
       border: none;
-      color: var(--tab-text);
-      font-size: 14px;
+      color: var(--textSecondary);
+      font-size: var(--font-size-md);
       cursor: pointer;
+      transition: color var(--transition-fast);
 
       &:hover {
-        color: var(--tab-active-text);
+        color: var(--textColor);
       }
     }
 
     .zoom-level {
-      margin: 0 8px;
-      font-size: 12px;
-      color: var(--tab-text);
+      margin: 0 var(--spacing-sm);
+      font-size: var(--font-size-sm);
+      color: var(--textSecondary);
     }
   }
 
   &.logout-button {
-    color: #ef4444;
+    color: var(--negativeColor);
 
     svg {
-      color: #ef4444;
+      color: var(--negativeColor);
     }
   }
 }
 
 .theme-selector {
-  padding: 8px 16px;
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .theme-options {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .theme-option {
@@ -302,24 +310,26 @@ const handleLogout = async () => {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--transition-fast);
 
   &:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--hoverBg);
   }
 
   &.active {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: var(--activeBg);
   }
 
   .theme-preview {
     width: 64px;
     height: 40px;
-    border-radius: 4px;
-    margin-bottom: 8px;
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-sm);
     border: 1px solid var(--borderColor);
     overflow: hidden;
+    transition: border-color var(--transition-fast);
 
     &.system-theme {
       background: linear-gradient(to right, #1a1a1a 50%, #f5f5f5 50%);
@@ -335,8 +345,8 @@ const handleLogout = async () => {
   }
 
   span {
-    font-size: 12px;
-    color: var(--tab-text);
+    font-size: var(--font-size-sm);
+    color: var(--textSecondary);
   }
 }
 </style>

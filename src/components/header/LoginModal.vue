@@ -94,15 +94,15 @@ const handleSubmit = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-index-modal);
 }
 
 .modal-container {
   background-color: var(--modalBg);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 
@@ -110,66 +110,69 @@ const handleSubmit = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: var(--spacing-md);
   border-bottom: 1px solid var(--borderColor);
 
   h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: var(--font-size-xl);
     font-weight: 600;
+    color: var(--textColor);
   }
 
   .close-button {
     background: transparent;
     border: none;
-    color: var(--tab-text);
-    font-size: 24px;
+    color: var(--textSecondary);
+    font-size: var(--font-size-2xl);
     cursor: pointer;
+    transition: color var(--transition-fast);
 
     &:hover {
-      color: var(--tab-active-text);
+      color: var(--textColor);
     }
   }
 }
 
 .modal-body {
-  padding: 16px;
+  padding: var(--spacing-md);
 
   .error-message {
-    margin-bottom: 16px;
-    padding: 10px;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
     background-color: rgba(220, 38, 38, 0.1);
-    color: #dc2626;
-    border-radius: 4px;
-    font-size: 14px;
+    color: var(--negativeColor);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-md);
   }
 
   .form-group {
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-md);
 
     label {
       display: block;
-      margin-bottom: 8px;
-      font-size: 14px;
-      color: var(--tab-text);
+      margin-bottom: var(--spacing-sm);
+      font-size: var(--font-size-md);
+      color: var(--textSecondary);
     }
 
     input {
       width: 100%;
-      padding: 10px 12px;
-      border-radius: 4px;
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--radius-sm);
       border: 1px solid var(--borderColor);
-      background-color: var( --inputBg);
-      color: var(--tab-active-text);
-      font-size: 14px;
+      background-color: var(--inputBg);
+      color: var(--textColor);
+      font-size: var(--font-size-md);
+      transition: border-color var(--transition-fast);
 
       &:focus {
         outline: none;
-        border-color: var(--button-primary);
+        border-color: var(--accentColor);
       }
 
       &::placeholder {
-        color: var(--tab-text);
+        color: var(--textSecondary);
       }
 
       &:disabled {
@@ -180,21 +183,22 @@ const handleSubmit = async () => {
   }
 
   .form-actions {
-    margin-top: 24px;
+    margin-top: var(--spacing-lg);
 
     .primary-button {
       width: 100%;
-      padding: 10px;
-      background-color: var(--button-primary);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background-color: var(--buttonBg);
       color: white;
       border: none;
-      border-radius: 4px;
-      font-size: 14px;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-md);
       font-weight: 500;
       cursor: pointer;
+      transition: background-color var(--transition-fast);
 
       &:hover:not(:disabled) {
-        background-color: var(--button-primary-hover);
+        background-color: var(--buttonHoverBg);
       }
 
       &:disabled {
@@ -208,15 +212,16 @@ const handleSubmit = async () => {
 .modal-footer {
   display: flex;
   justify-content: space-between;
-  padding: 16px;
+  padding: var(--spacing-md);
   border-top: 1px solid var(--borderColor);
 
   .text-button {
     background: transparent;
     border: none;
-    color: var(--button-primary);
-    font-size: 14px;
+    color: var(--accentColor);
+    font-size: var(--font-size-md);
     cursor: pointer;
+    transition: color var(--transition-fast);
 
     &:hover {
       text-decoration: underline;

@@ -199,17 +199,17 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-index-modal);
 }
 
 .settings-modal {
   background-color: var(--modalBg);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   width: 800px;
   height: 600px;
   max-width: 90vw;
   max-height: 90vh;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -219,24 +219,26 @@ defineEmits<{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: var(--spacing-md);
   border-bottom: 1px solid var(--borderColor);
 
   h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: var(--font-size-xl);
     font-weight: 600;
+    color: var(--textColor);
   }
 
   .close-button {
     background: transparent;
     border: none;
-    color: var(--tab-text);
-    font-size: 24px;
+    color: var(--textSecondary);
+    font-size: var(--font-size-2xl);
     cursor: pointer;
+    transition: color var(--transition-fast);
 
     &:hover {
-      color: var(--tab-active-text);
+      color: var(--textColor);
     }
   }
 }
@@ -256,43 +258,44 @@ defineEmits<{
     display: flex;
     align-items: center;
     width: 100%;
-    padding: 12px 16px;
+    padding: var(--spacing-sm) var(--spacing-md);
     background: transparent;
     border: none;
-    color: var(--tab-text);
+    color: var(--textSecondary);
     text-align: left;
     cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.05);
+      background-color: var(--hoverBg);
     }
 
     &.active {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: var(--tab-active-text);
+      background-color: var(--activeBg);
+      color: var(--textColor);
     }
 
     svg {
       width: 20px;
       height: 20px;
-      margin-right: 12px;
+      margin-right: var(--spacing-md);
     }
   }
 }
 
 .settings-main {
   flex: 1;
-  padding: 20px;
+  padding: var(--spacing-lg);
   overflow-y: auto;
 }
 
 .settings-section {
   h3 {
-    font-size: 14px;
+    font-size: var(--font-size-md);
     font-weight: 500;
-    color: var(--tab-text);
-    margin-bottom: 16px;
-    margin-top: 24px;
+    color: var(--textSecondary);
+    margin-bottom: var(--spacing-md);
+    margin-top: var(--spacing-lg);
 
     &:first-child {
       margin-top: 0;
@@ -301,7 +304,7 @@ defineEmits<{
 }
 
 .settings-option {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
 }
 
 .checkbox-container {
@@ -310,18 +313,19 @@ defineEmits<{
   cursor: pointer;
 
   input[type="checkbox"] {
-    margin-right: 8px;
+    margin-right: var(--spacing-sm);
   }
 
   .checkbox-label {
-    font-size: 14px;
+    font-size: var(--font-size-md);
+    color: var(--textColor);
   }
 }
 
 .theme-options {
   display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .theme-option {
@@ -334,16 +338,17 @@ defineEmits<{
 
   &.active {
     .theme-preview {
-      border: 2px solid var(--button-primary);
+      border: 2px solid var(--accentColor);
     }
   }
 
   .theme-preview {
     width: 80px;
     height: 50px;
-    border-radius: 4px;
-    margin-bottom: 8px;
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-sm);
     border: 1px solid var(--borderColor);
+    transition: border-color var(--transition-fast);
 
     &.system-theme {
       background: linear-gradient(to right, #1a1a1a 50%, #f5f5f5 50%);
@@ -359,36 +364,37 @@ defineEmits<{
   }
 
   span {
-    font-size: 12px;
-    color: var(--tab-text);
+    font-size: var(--font-size-sm);
+    color: var(--textSecondary);
   }
 }
 
 .download-path {
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
 
   .path-display {
     flex: 1;
-    padding: 8px 12px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
-    font-size: 14px;
-    color: var(--tab-text);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--inputBg);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-md);
+    color: var(--textSecondary);
   }
 
   .browse-button {
-    margin-left: 8px;
-    padding: 8px 16px;
+    margin-left: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
     background-color: transparent;
     border: 1px solid var(--borderColor);
-    border-radius: 4px;
-    color: var(--tab-active-text);
+    border-radius: var(--radius-sm);
+    color: var(--textColor);
     cursor: pointer;
+    transition: background-color var(--transition-fast);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.05);
+      background-color: var(--hoverBg);
     }
   }
 }
@@ -396,10 +402,10 @@ defineEmits<{
 .volume-control {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
 
   .volume-icon {
-    color: var(--tab-text);
+    color: var(--textSecondary);
   }
 
   .volume-slider {
@@ -415,7 +421,7 @@ defineEmits<{
       width: 16px;
       height: 16px;
       border-radius: 50%;
-      background: var(--tab-active-text);
+      background: var(--accentColor);
       cursor: pointer;
     }
   }
@@ -426,17 +432,17 @@ defineEmits<{
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 20px 0;
+  padding: var(--spacing-lg) 0;
 
   .app-logo {
     width: 80px;
     height: 80px;
     background-color: #000;
-    border-radius: 16px;
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-md);
 
     .logo-image {
       width: 60%;
@@ -445,49 +451,52 @@ defineEmits<{
   }
 
   h3 {
-    font-size: 18px;
+    font-size: var(--font-size-xl);
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: var(--spacing-sm);
+    color: var(--textColor);
   }
 
   .version-info {
-    font-size: 14px;
-    color: var(--tab-text);
-    margin-bottom: 24px;
+    font-size: var(--font-size-md);
+    color: var(--textSecondary);
+    margin-bottom: var(--spacing-lg);
   }
 
   .update-button {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 10px 20px;
-    background-color: rgba(255, 255, 255, 0.1);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background-color: var(--hoverBg);
     border: none;
-    border-radius: 4px;
-    color: var(--tab-active-text);
-    font-size: 14px;
+    border-radius: var(--radius-sm);
+    color: var(--textColor);
+    font-size: var(--font-size-md);
     cursor: pointer;
-    margin-bottom: 24px;
+    margin-bottom: var(--spacing-lg);
+    transition: background-color var(--transition-fast);
 
     &:hover {
-      background-color: rgba(255, 255, 255, 0.15);
+      background-color: var(--activeBg);
     }
 
     .update-icon {
-      margin-right: 8px;
+      margin-right: var(--spacing-sm);
     }
   }
 
   .about-links {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 24px;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
 
     .about-link {
-      color: var(--button-primary);
+      color: var(--accentColor);
       text-decoration: none;
-      font-size: 14px;
+      font-size: var(--font-size-md);
+      transition: color var(--transition-fast);
 
       &:hover {
         text-decoration: underline;
@@ -496,8 +505,8 @@ defineEmits<{
   }
 
   .copyright {
-    font-size: 12px;
-    color: var(--tab-text);
+    font-size: var(--font-size-sm);
+    color: var(--textSecondary);
   }
 }
 </style>
