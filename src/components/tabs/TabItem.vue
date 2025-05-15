@@ -15,17 +15,10 @@
 
 <script setup lang="ts">
 import CloseIcon from '../../assets/icons/CloseIcon.vue';
-
-interface TabProps {
-  id: string;
-  title: string;
-  component: string;
-  props?: Record<string, any>;
-  closable: boolean;
-}
+import {Tab} from "../../stores/tabStore";
 
 defineProps<{
-  tab: TabProps;
+  tab: Tab;
   active: boolean;
 }>();
 
