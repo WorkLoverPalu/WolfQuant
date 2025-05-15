@@ -131,6 +131,7 @@ const handleResetPassword = async () => {
 
   isResetting.value = true;
   error.value = '';
+  success.value = '';
 
   try {
     // 使用 store 的 resetPassword 方法
@@ -139,9 +140,7 @@ const handleResetPassword = async () => {
       verificationCode.value,
       newPassword.value
     );
-
     success.value = response.message;
-
     // 3秒后自动切换到登录页面
     setTimeout(() => {
       emit('login', pageId);

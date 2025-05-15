@@ -70,7 +70,7 @@ import { useUserStore } from '../../stores/userStore';
 
 const email = ref('123@qq.com');
 const verificationCode = ref('');
-const username = ref('natang');
+const username = ref('nantang');
 const password = ref('qwe123');
 const confirmPassword = ref('qwe123');
 const isLoading = ref(false);

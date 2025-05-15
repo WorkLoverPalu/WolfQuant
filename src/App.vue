@@ -35,7 +35,8 @@
       <RegisterModal v-if="showRegisterModal" @close="showRegisterModal = false" @login-success="handleLogin" />
 
       <!-- 忘记密码模态框 -->
-      <ForgotPasswordModal v-if="showForgotPasswordModal" @close="showForgotPasswordModal = false" />
+      <ForgotPasswordModal v-if="showForgotPasswordModal" @close="showForgotPasswordModal = false"
+      @login="openLoginModal" />
 
       <!-- 用户菜单 -->
       <UserMenu v-if="isUserMenuOpen && userStore.user" @close="isUserMenuOpen = false" @logout="userStore.logout"

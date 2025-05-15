@@ -196,7 +196,7 @@ pub fn verify_session(token: &str) -> Result<User, AuthError> {
         Err(_) => Err(AuthError::InvalidSession("会话不存在或已过期".to_string())),
     }
 }
-
+// 忘记密码
 pub fn reset_password_with_code(
     email: &str,
     verification_code: &str,
@@ -218,7 +218,7 @@ pub fn reset_password_with_code(
     let conn = get_connection_from_pool()?;
 
     // 检查邮箱是否存在
-    let user_id: String = conn
+    let user_id: i64 = conn
         .query_row(
             "SELECT id FROM users WHERE email = ?1",
             params![email],
@@ -244,7 +244,7 @@ pub fn reset_password_with_code(
     );
     Ok(())
 }
-
+// 登陆时间重置密码
 pub fn reset_password(token: &str, new_password: &str) -> Result<(), AuthError> {
     let config = Config::get();
 
@@ -259,7 +259,7 @@ pub fn reset_password(token: &str, new_password: &str) -> Result<(), AuthError> 
     let conn = get_connection_from_pool()?;
 
     // 查找令牌
-    let user_id: String = conn
+    let user_id: i64 = conn
         .query_row(
             "SELECT user_id FROM password_reset_tokens WHERE token = ?1 AND expires_at > ?2",
             params![token, Utc::now().timestamp()],

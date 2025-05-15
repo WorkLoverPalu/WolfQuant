@@ -44,7 +44,7 @@ impl From<rusqlite::Error> for AuthError {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorResponse {
-    pub error: String,
+    pub message: String,
     pub status: u16,
 }
 
@@ -64,7 +64,7 @@ impl From<AuthError> for ErrorResponse {
         };
 
         ErrorResponse {
-            error: message,
+            message: message,
             status,
         }
     }

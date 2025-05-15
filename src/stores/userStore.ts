@@ -169,25 +169,16 @@ export const useUserStore = defineStore("user", () => {
 
   // 重置密码
   async function resetPassword(email: string, code: string, newPassword: string) {
-    isLoading.value = true
-    error.value = null
 
-    try {
-      const response: any = await invoke('reset_password_command', {
-        request: {
-          email: email,
-          verification_code: code,
-          new_password: newPassword
-        }
-      })
-      return response
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "重置密码失败"
-      error.value = errorMessage
-      throw new Error(errorMessage)
-    } finally {
-      isLoading.value = false
-    }
+    const response: any = await invoke('auth_forgot_password_command', {
+      request: {
+        email: email,
+        verification_code: code,
+        new_password: newPassword,
+      },
+    })
+    return response
+
   }
 
   // 更新用户偏好设置
@@ -216,7 +207,6 @@ export const useUserStore = defineStore("user", () => {
     initUser,
     login,
     sendVerificationCode,
-    verifyResetPasswordCode,
     register,
     logout,
     resetPassword,
