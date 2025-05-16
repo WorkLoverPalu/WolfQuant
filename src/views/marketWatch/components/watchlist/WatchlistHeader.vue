@@ -29,21 +29,20 @@
         @click="$emit('openAssetTypeSettings', getCurrentAssetTypeId())"
         title="资产类型设置"
       >
-        <WalletIcon />
+        <Boxes />
       </button>
-
       <!-- 排序按钮 -->
       <div class="sort-dropdown">
         <button
           class="action-button"
-          @click="$emit('toggleSortMenu', !showSortMenu)"
+          @click="$emit('toggleSortMenu')"
           title="排序"
         >
           <SortAscIcon v-if="currentSort.includes('asc')" />
           <SortDescIcon v-else-if="currentSort.includes('desc')" />
-          <ListOrderedIcon v-else />
+          <ArrowDownUp v-else />
         </button>
-        <div v-if="showSortMenu" class="sort-menu">
+        <div v-show="showSortMenu" class="sort-menu">
           <button
             v-for="option in sortOptions"
             :key="option.value"
@@ -72,7 +71,15 @@
         @click="$emit('openPositionSettingsModal')"
         title="持仓设置"
       >
-        <SettingsIcon />
+        <WalletIcon />
+      </button>
+      <!-- 刷新 -->
+      <button
+        class="action-button"
+        @click="$emit('refresh')"
+        title="刷新"
+      >
+        <RefreshCcwDot />
       </button>
 
       <!-- 添加分组按钮 -->
@@ -89,14 +96,15 @@
 
 <script setup lang="ts">
 import {
-  ListOrderedIcon,
+  ArrowDownUp,
   SortAscIcon,
   SortDescIcon,
   LayoutGridIcon,
   ListIcon,
-  SettingsIcon,
   PlusIcon,
-  WalletIcon
+  WalletIcon,
+  Boxes,
+  RefreshCcwDot
 } from 'lucide-vue-next';
 import { AssetType } from '../../../../stores/assetStore';
 
@@ -118,7 +126,8 @@ const emit = defineEmits([
   'toggleChartView',
   'openPositionSettingsModal',
   'openAddGroupModal',
-  'openAssetTypeSettings'
+  'openAssetTypeSettings',
+  'refresh'
 ]);
 
 // 将资产类型代码映射到前端分类
@@ -146,6 +155,7 @@ const getCurrentAssetTypeId = (): number => {
   
   return 0;
 };
+
 </script>
 
 <style lang="scss" scoped>

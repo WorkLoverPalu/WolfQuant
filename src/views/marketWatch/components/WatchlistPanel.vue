@@ -100,8 +100,8 @@ const currentSort = ref('default');
 const showSortMenu = ref(false);
 
 // 切换排序菜单
-const toggleSortMenu = (bool: boolean) => {
-  showSortMenu.value = bool;
+const toggleSortMenu = () => {
+  showSortMenu.value = !showSortMenu.value;
 };
 
 // 设置排序方式
@@ -192,7 +192,7 @@ const getItemPosition = (symbol: string) => {
   // 查找商品当前价格
   let currentPrice = 0;
   const asset = assetStore.userAssets.find((asset) => asset.code === symbol);
-  
+
   if (asset && asset.current_price) {
     currentPrice = asset.current_price;
   } else {
@@ -322,7 +322,7 @@ const handleAssetAdded = (asset: Asset) => {
 // 打开添加分组弹窗
 const openAddGroupModal = (assetTypeId?: number) => {
   editingGroup.value = null;
-  
+
   // 如果指定了资产类型ID，创建一个临时的编辑组对象，只包含资产类型ID
   if (assetTypeId) {
     editingGroup.value = {
@@ -334,9 +334,9 @@ const openAddGroupModal = (assetTypeId?: number) => {
       updated_at: ''
     };
   }
-  
+
   showGroupModal.value = true;
-  
+
   // 关闭资产类型设置弹窗
   if (showAssetTypeSettingsModal.value) {
     showAssetTypeSettingsModal.value = false;
@@ -347,7 +347,7 @@ const openAddGroupModal = (assetTypeId?: number) => {
 const closeGroupModal = () => {
   showGroupModal.value = false;
   editingGroup.value = null;
-  
+
   // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
   if (selectedAssetTypeId.value) {
     showAssetTypeSettingsModal.value = true;
@@ -360,7 +360,7 @@ const handleGroupSaved = (group: UserGroup) => {
   if (!editingGroup.value || editingGroup.value.id === 0) {
     expandedGroups.value.push(group.id.toString());
   }
-  
+
   // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
   if (selectedAssetTypeId.value) {
     showAssetTypeSettingsModal.value = true;
@@ -374,7 +374,7 @@ const editGroup = (group: any) => {
   if (backendGroup) {
     editingGroup.value = backendGroup;
     showGroupModal.value = true;
-    
+
     // 如果是从资产类型设置弹窗打开的，关闭资产类型设置弹窗
     if (showAssetTypeSettingsModal.value) {
       showAssetTypeSettingsModal.value = false;
@@ -419,7 +419,7 @@ const deleteGroup = async (groupId: string | number) => {
 const openPositionEditModal = (asset: WatchlistItem) => {
   selectedAsset.value = asset;
   showPositionEditModal.value = true;
-  
+
   // 如果是从资产类型设置弹窗打开的，关闭资产类型设置弹窗
   if (showAssetTypeSettingsModal.value) {
     showAssetTypeSettingsModal.value = false;
@@ -430,7 +430,7 @@ const openPositionEditModal = (asset: WatchlistItem) => {
 const closePositionEditModal = () => {
   showPositionEditModal.value = false;
   selectedAsset.value = null;
-  
+
   // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
   if (selectedAssetTypeId.value) {
     showAssetTypeSettingsModal.value = true;
@@ -441,7 +441,7 @@ const closePositionEditModal = () => {
 const handlePositionSaved = (data: { symbol: string, position: any }) => {
   // 这里可以添加保存到后端的逻辑
   console.log('Position saved:', data);
-  
+
   // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
   if (selectedAssetTypeId.value) {
     showAssetTypeSettingsModal.value = true;
@@ -518,13 +518,6 @@ onMounted(async () => {
   } catch (err) {
     console.error('Failed to initialize watchlist:', err);
   }
-
-  // 点击外部关闭排序菜单
-  document.addEventListener('click', (e) => {
-    if (showSortMenu.value) {
-      showSortMenu.value = false;
-    }
-  });
 });
 </script>
 
