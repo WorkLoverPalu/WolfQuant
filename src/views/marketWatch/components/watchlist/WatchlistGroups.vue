@@ -129,13 +129,51 @@ import {
   TrashIcon
 } from 'lucide-vue-next';
 
+// 定义类型接口
+interface WatchlistItem {
+  symbol: string;
+  name: string;
+  price: string;
+  unit: string;
+  change: string;
+  changePercent: string;
+  volume?: string;
+  turnover?: string;
+}
+
+interface WatchlistGroup {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  items: WatchlistItem[];
+}
+
+interface Position {
+  cost: number;
+  amount: number;
+}
+
+interface GroupPosition {
+  total: number;
+  profit: number;
+  profitRate: number;
+}
+
+interface ItemPosition {
+  cost: number;
+  amount: number;
+  profit: number;
+  profitRate: number;
+}
+
 // 接收父组件传递的属性
-const props = defineProps({
-  groups: Array,
-  expandedGroups: Array,
-  showChartView: Boolean,
-  draggedGroup: String
-});
+const props = defineProps<{
+  groups: WatchlistGroup[];
+  expandedGroups: string[];
+  showChartView: boolean;
+  draggedGroup: string | null;
+}>();
 
 // 定义事件
 const emit = defineEmits([
@@ -151,17 +189,17 @@ const emit = defineEmits([
 ]);
 
 // 注入数据
-const positions = inject<Record<string, { cost: number; amount: number }>>('positions', {});
+const positions = inject<Record<string, Position>>('positions', {});
 
 // 获取符号图标
-const getSymbolIcon = (symbol) => {
+const getSymbolIcon = (symbol: string): string => {
   const firstChar = symbol.charAt(0);
   return firstChar;
 };
 
 // 获取符号类名
-const getSymbolClass = (symbol) => {
-  const symbolMap = {
+const getSymbolClass = (symbol: string): string => {
+  const symbolMap: Record<string, string> = {
     'SPX': 'symbol-spx',
     'NDQ': 'symbol-ndq',
     'DJI': 'symbol-dji',
@@ -177,7 +215,7 @@ const getSymbolClass = (symbol) => {
 };
 
 // 获取涨跌类名
-const getChangeClass = (change) => {
+const getChangeClass = (change: string): string => {
   if (change.startsWith('-')) {
     return 'negative';
   } else if (change.startsWith('+') || parseFloat(change.replace(',', '')) > 0) {
@@ -187,13 +225,13 @@ const getChangeClass = (change) => {
 };
 
 // 格式化数字
-const formatNumber = (num) => {
+const formatNumber = (num: number): string => {
   return num.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
 };
 
 // 获取单个商品的持仓信息
-const getItemPosition = (symbol) => {
-  const position = positions?.[symbol];
+const getItemPosition = (symbol: string): ItemPosition | null => {
+  const position = positions[symbol];
   if (!position || !position.amount) return null;
 
   // 查找商品当前价格
@@ -221,7 +259,7 @@ const getItemPosition = (symbol) => {
 };
 
 // 获取分组的持仓信息
-const getGroupPosition = (groupId) => {
+const getGroupPosition = (groupId: string): GroupPosition => {
   const group = props.groups.find(g => g.id === groupId);
   if (!group) return { total: 0, profit: 0, profitRate: 0 };
 

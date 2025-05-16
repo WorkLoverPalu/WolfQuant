@@ -3,7 +3,7 @@
     <!-- 左侧上部分 - 自选列表 -->
     <div class="left-top" :style="{ height: `${leftTopHeight}px` }">
       <!-- 顶部导航栏 -->
-      <WatchlistHeader :categories="assetStore.categories" :activeCategory="assetStore.activeCategory"
+      <WatchlistHeader :assetTypes="assetStore.assetTypes" :activeCategory="assetStore.activeCategory"
         :sortOptions="sortOptions" :currentSort="currentSort" :showSortMenu="showSortMenu"
         :showChartView="showChartView" @setActiveCategory="setActiveCategory" @toggleSortMenu="toggleSortMenu"
         @setSort="setSort" @toggleChartView="toggleChartView" @openPositionSettingsModal="openPositionSettingsModal"
@@ -79,8 +79,9 @@ const currentSort = ref('default');
 const showSortMenu = ref(false);
 
 // 切换排序菜单
-const toggleSortMenu = () => {
-  showSortMenu.value = !showSortMenu.value;
+const toggleSortMenu = (bool: any) => {
+  console.log("排序菜单", bool)
+  showSortMenu.value = bool;
 };
 
 // 设置排序方式
@@ -107,43 +108,17 @@ const convertAssetsToWatchlistItems = (assets: Asset[]): WatchlistItem[] => {
   return assets.map(asset => ({
     symbol: asset.code,
     name: asset.name,
-    price: asset.current_price.toFixed(2),
-    unit: 'USD', // 默认单位，可以根据资产类型调整
-    change: '0.00', // 这些数据可能需要从市场数据中获取
-    changePercent: '0.00%',
-    volume: '—',
-    turnover: '—'
+    price: asset.current_price ? asset.current_price.toFixed(2) : '0.00',
+    unit: asset.currency || 'USD', // 使用资产的货币单位，如果没有则默认USD
+    change: asset.price_change ? asset.price_change.toFixed(2) : '0.00',
+    changePercent: asset.price_change_percentage ? `${asset.price_change_percentage.toFixed(2)}%` : '0.00%',
+    volume: asset.volume || '—',
+    turnover: asset.turnover || '—'
   }));
 };
 
-// 将用户组和资产转换为前端分组格式
-const convertedGroups = computed(() => {
-  // 如果没有用户组数据，使用现有的市场数据分组
-  if (assetStore.userGroups.length === 0) {
-    return assetStore.filteredGroups;
-  }
-
-  // 将用户组转换为前端分组格式
-  return assetStore.userGroups.map((group: any) => {
-    // 查找该组下的所有资产
-    const groupAssets = assetStore.userAssets.filter((asset: any) => asset.group_id === group.id);
-
-    // 查找资产类型
-    const assetType = assetStore.assetTypes.find((type: any) => type.id === group.asset_type_id);
-    const category = assetType ? mapAssetTypeToCategory(assetType.code) : 'other';
-
-    return {
-      id: group.id.toString(),
-      name: group.name,
-      category,
-      description: group.description || '',
-      items: convertAssetsToWatchlistItems(groupAssets)
-    };
-  });
-});
-
-// 将资产类型映射到前端分类
-const mapAssetTypeToCategory = (assetTypeCode: string): string => {
+// 将资产类型代码映射到前端分类
+const mapAssetTypeToCategory = (assetTypeName: string): string => {
   const mapping: Record<string, string> = {
     'FUND': 'fund',
     'STOCK': 'stock',
@@ -151,8 +126,51 @@ const mapAssetTypeToCategory = (assetTypeCode: string): string => {
     'CRYPTO': 'crypto'
   };
 
-  return mapping[assetTypeCode.toUpperCase()] || 'other';
+  return mapping[assetTypeName] || 'other';
 };
+
+// 将用户组和资产转换为前端分组格式
+const convertedGroups = computed(() => {
+  // 如果没有用户组数据，返回空数组
+  if (!assetStore.userGroups || assetStore.userGroups.length === 0) {
+    return [];
+  }
+
+  // 按资产类型对用户组进行分组
+  const groupsByAssetType: Record<number, UserGroup[]> = {};
+  
+  assetStore.userGroups.forEach((group: UserGroup) => {
+    if (!groupsByAssetType[group.asset_type_id]) {
+      groupsByAssetType[group.asset_type_id] = [];
+    }
+    groupsByAssetType[group.asset_type_id].push(group);
+  });
+
+  // 将用户组转换为前端分组格式
+  const result = [];
+  
+  for (const assetTypeId in groupsByAssetType) {
+    const groups = groupsByAssetType[assetTypeId];
+    const assetType = assetStore.assetTypes.find((type: any) => type.id === parseInt(assetTypeId));
+    
+    if (assetType) {
+      for (const group of groups) {
+        // 查找该组下的所有资产
+        const groupAssets = assetStore.userAssets.filter((asset: any) => asset.group_id === group.id);
+        
+        result.push({
+          id: group.id.toString(),
+          name: group.name,
+          category: mapAssetTypeToCategory(group.asset_type_name),
+          description: group.description || '',
+          items: convertAssetsToWatchlistItems(groupAssets)
+        });
+      }
+    }
+  }
+
+  return result;
+});
 
 // 根据当前分类过滤分组
 const filteredGroups = computed(() => {
@@ -163,31 +181,39 @@ const filteredGroups = computed(() => {
 });
 
 // 获取单个商品的持仓信息
-const getItemPosition = (symbol: any) => {
+const getItemPosition = (symbol: string) => {
   const position = assetStore.positions[symbol];
   if (!position || !position.amount) return null;
 
   // 查找商品当前价格
   let currentPrice = 0;
-  for (const group of convertedGroups.value) {
-    const item = group.items.find((i: any) => i.symbol === symbol);
-    if (item) {
-      currentPrice = parseFloat(item.price.replace(',', ''));
-      break;
+  const asset = assetStore.userAssets.find((asset: any) => asset.code === symbol);
+  
+  if (asset && asset.current_price) {
+    currentPrice = asset.current_price;
+  } else {
+    // 如果在用户资产中找不到，尝试在所有分组中查找
+    for (const group of convertedGroups.value) {
+      const item = group.items.find((i: any) => i.symbol === symbol);
+      if (item) {
+        currentPrice = parseFloat(item.price.replace(',', ''));
+        break;
+      }
     }
   }
 
   if (!currentPrice) return null;
 
-  const cost = position.cost * position.amount / currentPrice;
-  const currentValue = position.amount;
+  const cost = position.cost * position.amount;
+  const currentValue = position.amount * currentPrice;
   const profit = currentValue - cost;
 
   return {
     cost,
     amount: position.amount,
+    currentValue,
     profit,
-    profitRate: (profit / cost) * 100
+    profitRate: cost > 0 ? (profit / cost) * 100 : 0
   };
 };
 
@@ -206,8 +232,8 @@ const sortedGroups = computed(() => {
         const changeB = parseFloat(b.changePercent.replace('%', '').replace('+', ''));
         return currentSort.value === 'change-asc' ? changeA - changeB : changeB - changeA;
       } else if (currentSort.value.startsWith('position')) {
-        const posA = getItemPosition(a.symbol)?.amount || 0;
-        const posB = getItemPosition(b.symbol)?.amount || 0;
+        const posA = getItemPosition(a.symbol)?.currentValue || 0;
+        const posB = getItemPosition(b.symbol)?.currentValue || 0;
         return currentSort.value === 'position-asc' ? posA - posB : posB - posA;
       }
       return 0;
@@ -445,7 +471,7 @@ onMounted(async () => {
     transform: translate(-50%, -50%);
     width: 30px;
     height: 1px;
-    background-color: var( --resizerColor);
+    background-color: var(--resizerColor);
   }
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="market-watchlist" :class="{ 'light-theme': themeStore.currentTheme }">
+  <div class="market-watchlist">
     <div class="watchlist-container">
       <!-- 左侧面板 -->
       <WatchlistPanel :activeCategory="activeCategory" :leftPanelWidth="leftPanelWidth" :leftTopHeight="leftTopHeight"
@@ -30,9 +30,6 @@ import ChartPanel from './components/ChartPanel.vue';
 import SymbolModal from './components/SymbolModal.vue';
 import GroupModal from './components/GroupModal.vue';
 import PositionModal from './components/PositionModal.vue';
-
-import { useThemeStore } from "../../stores/themeStore";
-const themeStore = useThemeStore();
 
 
 // 当前激活的分类
