@@ -79,7 +79,7 @@
             <div class="column change-percent-column">涨跌%</div>
             <div class="column position-column">持仓金额</div>
             <div class="column profit-column">收益</div>
-            <div class="column action-column"></div>
+            <div class="column action-column">操作</div>
           </div>
 
           <!-- 列表内容 -->
@@ -96,7 +96,7 @@
                   </div>
                 </div>
               </div>
-              <div class="column price-column" @click="$emit('selectSymbol', item)">
+              <div class="column price-column " @click="$emit('selectSymbol', item)">
                 {{ item.price }}
                 <span class="unit">{{ item.unit }}</span>
               </div>
@@ -427,6 +427,7 @@ const getGroupPosition = (groupId: string): GroupPosition => {
   border-bottom: 1px solid var(--borderColor);
   font-size: 11px;
   color: var(--textSecondary);
+  width: 100%;
 }
 
 /* 列表内容 */
@@ -453,6 +454,8 @@ const getGroupPosition = (groupId: string): GroupPosition => {
   padding: 8px 12px;
   border-bottom: 1px solid var(--borderColor);
   font-size: 12px;
+  width: 100%;
+  justify-content: space-between;
 
   &:last-child {
     border-bottom: none;
@@ -463,34 +466,48 @@ const getGroupPosition = (groupId: string): GroupPosition => {
   }
 }
 
-/* 列宽设置 */
+/* 列宽设置 - 使用百分比布局 */
 .column {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+  align-items: center;
+  display: flex;
 }
 
 .symbol-column {
-  flex: 1;
+  width: 30%;
   min-width: 120px;
 }
 
-.price-column,
-.change-column,
-.change-percent-column {
-  width: 60px;
+.price-column {
+  width: 12%;
   text-align: right;
 }
 
-.position-column,
+.change-column {
+  width: 10%;
+  text-align: right;
+}
+
+.change-percent-column {
+  width: 10%;
+  text-align: right;
+}
+
+.position-column {
+  width: 15%;
+  text-align: right;
+}
+
 .profit-column {
-  width: 70px;
+  width: 15%;
   text-align: right;
 }
 
 .action-column {
-  width: 32px;
+  width: 8%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -512,6 +529,7 @@ const getGroupPosition = (groupId: string): GroupPosition => {
   margin-right: 8px;
   font-size: 10px;
   color: white;
+  flex-shrink: 0;
 
   &.symbol-spx {
     background-color: #e91e63;
@@ -557,17 +575,25 @@ const getGroupPosition = (groupId: string): GroupPosition => {
 .symbol-details {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .symbol-code {
   font-size: 13px;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .symbol-name {
   font-size: 11px;
   color: var(--textSecondary);
   margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 价格单位 */

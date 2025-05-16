@@ -189,9 +189,7 @@ const editGroup = (group: UserGroup) => {
 
 // 确认删除分组
 const confirmDeleteGroup = (groupId: number) => {
-    if (confirm('确定要删除此分组吗？')) {
-        emit('deleteGroup', groupId);
-    }
+    emit('deleteGroup', groupId);
 };
 
 // 编辑持仓

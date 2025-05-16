@@ -7,7 +7,7 @@
         :sortOptions="sortOptions" :currentSort="currentSort" :showSortMenu="showSortMenu"
         :showChartView="showChartView" @setActiveCategory="setActiveCategory" @toggleSortMenu="toggleSortMenu"
         @setSort="setSort" @toggleChartView="toggleChartView" @openPositionSettingsModal="openPositionSettingsModal"
-        @openAddGroupModal="openAddGroupModal" @openAssetTypeSettings="openAssetTypeSettings" />
+        @openAddGroupModal="openAddGroupModal" @openAssetTypeSettings="openAssetTypeSettings" @refresh="getData" />
 
       <!-- 分组列表 -->
       <WatchlistGroups :groups="sortedGroups" :expandedGroups="expandedGroups" :showChartView="showChartView"
@@ -39,10 +39,14 @@
   <AssetTypeSettingsModal v-if="showAssetTypeSettingsModal && selectedAssetTypeId" :show="showAssetTypeSettingsModal"
     :assetTypeId="selectedAssetTypeId" @close="closeAssetTypeSettingsModal" @openAddGroup="openAddGroupModal"
     @editGroup="editGroup" @deleteGroup="confirmDeleteGroup" @editPosition="openPositionEditModal" />
+
+  <!-- 确认删除弹窗 -->
+  <ConfirmDialog v-if="showDeleteConfirm" :show="showDeleteConfirm" title="删除确认" message="确定要删除此分组吗？删除后无法恢复。"
+    confirmText="删除" cancelText="取消" :danger="true" @confirm="handleDeleteConfirm" @cancel="cancelDeleteConfirm" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, provide } from 'vue';
+import { ref, computed, onMounted, provide,onBeforeMount ,} from 'vue';
 import { useAssetStore } from '../../../stores/assetStore';
 import { useUserStore } from '../../../stores/userStore';
 import WatchlistHeader from './watchlist/WatchlistHeader.vue';
@@ -52,6 +56,7 @@ import GroupModal from './GroupModal.vue';
 import AddAssetModal from './watchlist/AddAssetModal.vue';
 import PositionEditModal from './watchlist/PositionEditModal.vue';
 import AssetTypeSettingsModal from './watchlist/AssetTypeSettingsModal.vue';
+import ConfirmDialog from '../../../components/dialog/ConfirmDialog.vue';
 import type { UserGroup, Asset, WatchlistItem } from '../../../stores/assetStore';
 
 // 接收父组件传递的属性
@@ -81,10 +86,12 @@ const showGroupModal = ref(false);
 const showPositionModal = ref(false);
 const showPositionEditModal = ref(false);
 const showAssetTypeSettingsModal = ref(false);
+const showDeleteConfirm = ref(false);
 const editingGroup = ref<UserGroup | null>(null);
 const selectedGroupId = ref<number | null>(null);
 const selectedAsset = ref<WatchlistItem | null>(null);
 const selectedAssetTypeId = ref<number | null>(null);
+const groupToDelete = ref<string | number | null>(null);
 
 // 排序选项
 const sortOptions = [
@@ -100,8 +107,8 @@ const currentSort = ref('default');
 const showSortMenu = ref(false);
 
 // 切换排序菜单
-const toggleSortMenu = () => {
-  showSortMenu.value = !showSortMenu.value;
+const toggleSortMenu = (bool: boolean) => {
+  showSortMenu.value = bool;
 };
 
 // 设置排序方式
@@ -296,7 +303,7 @@ const handleDragEnd = () => {
 const handleDrop = (event: DragEvent, targetGroupId: string) => {
   if (!draggedGroup.value || draggedGroup.value === targetGroupId) return;
 
-  // 这里可以实现组的重新排序，但需要与后端 API ���接
+  // 这里可以实现组的重新排序，但需要与后端 API 对接
   // 目前仅在前端进行视觉上的排序
   draggedGroup.value = null;
 };
@@ -322,19 +329,6 @@ const handleAssetAdded = (asset: Asset) => {
 // 打开添加分组弹窗
 const openAddGroupModal = (assetTypeId?: number) => {
   editingGroup.value = null;
-
-  // 如果指定了资产类型ID，创建一个临时的编辑组对象，只包含资产类型ID
-  if (assetTypeId) {
-    editingGroup.value = {
-      id: 0,
-      user_id: '',
-      name: '',
-      asset_type_id: assetTypeId,
-      created_at: '',
-      updated_at: ''
-    };
-  }
-
   showGroupModal.value = true;
 
   // 关闭资产类型设置弹窗
@@ -369,8 +363,11 @@ const handleGroupSaved = (group: UserGroup) => {
 
 // 编辑分组
 const editGroup = (group: any) => {
+
   // 查找对应的后端分组数据
-  const backendGroup = assetStore.userGroups.find((g) => g.id.toString() === group.id);
+  const backendGroup = assetStore.userGroups.find((g) => g.id === group.id);
+
+  console.log("分组编辑", backendGroup, group, assetStore.userGroups)
   if (backendGroup) {
     editingGroup.value = backendGroup;
     showGroupModal.value = true;
@@ -382,11 +379,26 @@ const editGroup = (group: any) => {
   }
 };
 
-// 确认删除分组
+// 确认删除分组 - 显示自定义确认对话框
 const confirmDeleteGroup = (groupId: string | number) => {
-  if (confirm('确定要删除此分组吗？')) {
-    deleteGroup(groupId);
+  console.log("确认要删除分组吗?");
+  groupToDelete.value = groupId;
+  showDeleteConfirm.value = true;
+};
+
+// 处理确认删除
+const handleDeleteConfirm = () => {
+  if (groupToDelete.value !== null) {
+    deleteGroup(groupToDelete.value);
   }
+  showDeleteConfirm.value = false;
+  groupToDelete.value = null;
+};
+
+// 取消删除
+const cancelDeleteConfirm = () => {
+  showDeleteConfirm.value = false;
+  groupToDelete.value = null;
 };
 
 // 删除分组
@@ -496,12 +508,12 @@ const startResizeHorizontal = (e: MouseEvent) => {
   e.preventDefault();
 };
 
+
+
 // 提供数据给子组件
 provide('selectedSymbol', selectedSymbol);
 provide('positions', assetStore.positions);
-
-// 初始化
-onMounted(async () => {
+const getData = async () => {
   // 加载资产类型和用户分组
   try {
     await assetStore.initAssetData();
@@ -518,6 +530,10 @@ onMounted(async () => {
   } catch (err) {
     console.error('Failed to initialize watchlist:', err);
   }
+}
+// 初始化
+onBeforeMount(() => {
+  getData();
 });
 </script>
 

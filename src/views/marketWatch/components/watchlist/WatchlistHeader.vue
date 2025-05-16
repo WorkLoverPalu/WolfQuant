@@ -2,20 +2,13 @@
   <div class="watchlist-header">
     <!-- 左侧分类选项 -->
     <div class="category-tabs">
-      <button
-        v-for="type in assetTypes"
-        :key="type.id"
-        class="category-tab"
+      <button v-for="type in assetTypes" :key="type.id" class="category-tab"
         :class="{ active: activeCategory === mapAssetTypeToCategory(type.name) }"
-        @click="$emit('setActiveCategory', mapAssetTypeToCategory(type.name))"
-      >
+        @click="$emit('setActiveCategory', mapAssetTypeToCategory(type.name))">
         {{ type.description || type.name }}
       </button>
-      <button
-        class="category-tab"
-        :class="{ active: activeCategory === 'all' }"
-        @click="$emit('setActiveCategory', 'all')"
-      >
+      <button class="category-tab" :class="{ active: activeCategory === 'all' }"
+        @click="$emit('setActiveCategory', 'all')">
         全部
       </button>
     </div>
@@ -23,71 +16,43 @@
     <!-- 右侧操作按钮 -->
     <div class="header-actions">
       <!-- 资产类型设置按钮 -->
-      <button
-        v-if="activeCategory !== 'all'"
-        class="action-button"
-        @click="$emit('openAssetTypeSettings', getCurrentAssetTypeId())"
-        title="资产类型设置"
-      >
+      <button v-if="activeCategory !== 'all'" class="action-button"
+        @click="$emit('openAssetTypeSettings', getCurrentAssetTypeId())" title="资产类型设置">
         <Boxes />
       </button>
       <!-- 排序按钮 -->
       <div class="sort-dropdown">
-        <button
-          class="action-button"
-          @click="$emit('toggleSortMenu')"
-          title="排序"
-        >
+        <button class="action-button" @click="$emit('toggleSortMenu')" title="排序">
           <SortAscIcon v-if="currentSort.includes('asc')" />
           <SortDescIcon v-else-if="currentSort.includes('desc')" />
           <ArrowDownUp v-else />
         </button>
         <div v-show="showSortMenu" class="sort-menu">
-          <button
-            v-for="option in sortOptions"
-            :key="option.value"
-            class="sort-option"
-            :class="{ active: currentSort === option.value }"
-            @click="$emit('setSort', option.value)"
-          >
+          <button v-for="option in sortOptions" :key="option.value" class="sort-option"
+            :class="{ active: currentSort === option.value }" @click="$emit('setSort', option.value)">
             {{ option.label }}
           </button>
         </div>
       </div>
 
       <!-- 视图切换按钮 -->
-      <button
-        class="action-button"
-        @click="$emit('toggleChartView')"
-        :title="showChartView ? '切换到列表视图' : '切换到图表视图'"
-      >
+      <button class="action-button" @click="$emit('toggleChartView')" :title="showChartView ? '切换到列表视图' : '切换到图表视图'">
         <LayoutGridIcon v-if="!showChartView" />
         <ListIcon v-else />
       </button>
 
       <!-- 持仓设置按钮 -->
-      <button
-        class="action-button"
-        @click="$emit('openPositionSettingsModal')"
-        title="持仓设置"
-      >
+      <button class="action-button" @click="$emit('openPositionSettingsModal')" title="持仓设置">
         <WalletIcon />
       </button>
-      <!-- 刷新 -->
-      <button
-        class="action-button"
-        @click="$emit('refresh')"
-        title="刷新"
-      >
-        <RefreshCcwDot />
+
+      <!-- 刷新按钮 - 添加旋转动画和禁用状态 -->
+      <button class="action-button" @click="handleRefresh" title="刷新" :disabled="isRefreshing">
+        <RefreshCcwDot :class="{ 'rotate-animation': isRefreshing }" />
       </button>
 
       <!-- 添加分组按钮 -->
-      <button
-        class="action-button add-button"
-        @click="$emit('openAddGroupModal')"
-        title="添加分组"
-      >
+      <button class="action-button add-button" @click="$emit('openAddGroupModal')" title="添加分组">
         <PlusIcon />
       </button>
     </div>
@@ -95,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import {
   ArrowDownUp,
   SortAscIcon,
@@ -116,6 +82,7 @@ const props = defineProps<{
   currentSort: string;
   showSortMenu: boolean;
   showChartView: boolean;
+  isRefreshing?: boolean; // 添加刷新状态属性
 }>();
 
 // 定义事件
@@ -129,6 +96,20 @@ const emit = defineEmits([
   'openAssetTypeSettings',
   'refresh'
 ]);
+
+// 本地刷新状态
+const isRefreshing = ref(props.isRefreshing || false);
+
+// 处理刷新按钮点击
+const handleRefresh = () => {
+  if (isRefreshing.value) return; // 如果正在刷新，不执行任何操作
+
+  isRefreshing.value = true;
+  emit('refresh');
+  setTimeout(() => {
+    isRefreshing.value = false;
+  }, 3000);
+};
 
 // 将资产类型代码映射到前端分类
 const mapAssetTypeToCategory = (assetTypeName: string): string => {
@@ -145,17 +126,16 @@ const mapAssetTypeToCategory = (assetTypeName: string): string => {
 // 获取当前资产类型ID
 const getCurrentAssetTypeId = (): number => {
   if (props.activeCategory === 'all') return 0;
-  
+
   // 根据当前激活的分类找到对应的资产类型ID
   for (const type of props.assetTypes) {
     if (mapAssetTypeToCategory(type.name) === props.activeCategory) {
       return type.id;
     }
   }
-  
+
   return 0;
 };
-
 </script>
 
 <style lang="scss" scoped>
@@ -175,15 +155,15 @@ const getCurrentAssetTypeId = (): number => {
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 4px;
-  
+
   &::-webkit-scrollbar {
     height: 2px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: var(--scrollbarThumb);
     border-radius: 1px;
@@ -200,12 +180,12 @@ const getCurrentAssetTypeId = (): number => {
   color: var(--textSecondary);
   cursor: pointer;
   white-space: nowrap;
-  
+
   &:hover {
     background-color: var(--hover-bg);
     color: var(--textColor);
   }
-  
+
   &.active {
     background-color: var(--accentColor);
     color: white;
@@ -229,24 +209,48 @@ const getCurrentAssetTypeId = (): number => {
   border: none;
   color: var(--textSecondary);
   cursor: pointer;
-  
+
   &:hover {
     background-color: var(--hover-bg);
     color: var(--textColor);
   }
-  
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+
   svg {
     width: 18px;
     height: 18px;
   }
-  
+
   &.add-button {
     background-color: var(--accentColor);
     color: white;
-    
+
     &:hover {
       background-color: var(--accentColorHover);
     }
+  }
+}
+
+/* 旋转动画 */
+.rotate-animation {
+  animation: rotate 1.5s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -277,11 +281,11 @@ const getCurrentAssetTypeId = (): number => {
   font-size: 13px;
   color: var(--textColor);
   cursor: pointer;
-  
+
   &:hover {
     background-color: var(--hover-bg);
   }
-  
+
   &.active {
     color: var(--accentColor);
     font-weight: 500;
