@@ -24,8 +24,12 @@
   </div>
 
   <!-- 添加分组弹窗 -->
-  <ShowGroupModal v-if="showGroupModal" :show="showGroupModal" :editingGroup="editingGroup" @close="closeGroupModal"
+  <GroupModal v-if="showGroupModal" :show="showGroupModal" :editingGroup="editingGroup" @close="closeGroupModal"
     @saved="handleGroupSaved" />
+
+  <!-- 添加资产弹窗 -->
+  <AddAssetModal v-if="showAddSymbolModal && selectedGroupId" :show="showAddSymbolModal" :groupId="selectedGroupId"
+    @close="closeAddSymbolModal" @added="handleAssetAdded" />
 </template>
 
 <script setup lang="ts">
@@ -35,7 +39,8 @@ import { useUserStore } from '../../../stores/userStore';
 import WatchlistHeader from './watchlist/WatchlistHeader.vue';
 import WatchlistGroups from './watchlist/WatchlistGroups.vue';
 import WatchlistTools from './watchlist/WatchlistTools.vue';
-import ShowGroupModal from './GroupModal.vue';
+import GroupModal from './GroupModal.vue';
+import AddAssetModal from './watchlist/AddAssetModal.vue';
 import type { UserGroup, Asset, WatchlistItem } from '../../../stores/assetStore';
 
 // 接收父组件传递的属性
@@ -64,6 +69,7 @@ const showAddSymbolModal = ref(false);
 const showGroupModal = ref(false);
 const showPositionModal = ref(false);
 const editingGroup = ref<UserGroup | null>(null);
+const selectedGroupId = ref<number | null>(null);
 
 // 排序选项
 const sortOptions = [
@@ -79,13 +85,12 @@ const currentSort = ref('default');
 const showSortMenu = ref(false);
 
 // 切换排序菜单
-const toggleSortMenu = (bool: any) => {
-  console.log("排序菜单", bool)
+const toggleSortMenu = (bool: boolean) => {
   showSortMenu.value = bool;
 };
 
 // 设置排序方式
-const setSort = (sortValue: any) => {
+const setSort = (sortValue: string) => {
   currentSort.value = sortValue;
   showSortMenu.value = false;
 };
@@ -99,7 +104,7 @@ const toggleChartView = () => {
 };
 
 // 设置激活分类
-const setActiveCategory = (categoryId: any) => {
+const setActiveCategory = (categoryId: string) => {
   assetStore.setActiveCategory(categoryId);
 };
 
@@ -109,11 +114,11 @@ const convertAssetsToWatchlistItems = (assets: Asset[]): WatchlistItem[] => {
     symbol: asset.code,
     name: asset.name,
     price: asset.current_price ? asset.current_price.toFixed(2) : '0.00',
-    unit: asset.currency || 'USD', // 使用资产的货币单位，如果没有则默认USD
-    change: asset.price_change ? asset.price_change.toFixed(2) : '0.00',
-    changePercent: asset.price_change_percentage ? `${asset.price_change_percentage.toFixed(2)}%` : '0.00%',
-    volume: asset.volume || '—',
-    turnover: asset.turnover || '—'
+    unit: 'USD', // 默认单位，可以根据资产类型调整
+    change: '0.00', // 这些数据可能需要从市场数据中获取
+    changePercent: '0.00%',
+    volume: '—',
+    turnover: '—'
   }));
 };
 
@@ -136,40 +141,24 @@ const convertedGroups = computed(() => {
     return [];
   }
 
-  // 按资产类型对用户组进行分组
-  const groupsByAssetType: Record<number, UserGroup[]> = {};
-  
-  assetStore.userGroups.forEach((group: UserGroup) => {
-    if (!groupsByAssetType[group.asset_type_id]) {
-      groupsByAssetType[group.asset_type_id] = [];
-    }
-    groupsByAssetType[group.asset_type_id].push(group);
-  });
-
   // 将用户组转换为前端分组格式
-  const result = [];
-  
-  for (const assetTypeId in groupsByAssetType) {
-    const groups = groupsByAssetType[assetTypeId];
-    const assetType = assetStore.assetTypes.find((type: any) => type.id === parseInt(assetTypeId));
-    
-    if (assetType) {
-      for (const group of groups) {
-        // 查找该组下的所有资产
-        const groupAssets = assetStore.userAssets.filter((asset: any) => asset.group_id === group.id);
-        
-        result.push({
-          id: group.id.toString(),
-          name: group.name,
-          category: mapAssetTypeToCategory(group.asset_type_name),
-          description: group.description || '',
-          items: convertAssetsToWatchlistItems(groupAssets)
-        });
-      }
-    }
-  }
+  return assetStore.userGroups.map((group) => {
+    // 查找该组下的所有资产
+    const groupAssets = assetStore.userAssets.filter((asset) => asset.group_id === group.id);
 
-  return result;
+    // 查找资产类型
+    const assetType = assetStore.assetTypes.find((type) => type.id === group.asset_type_id);
+    const assetTypeName = assetType ? assetType.name : 'OTHER';
+    const category = mapAssetTypeToCategory(assetTypeName);
+
+    return {
+      id: group.id.toString(),
+      name: group.name,
+      category,
+      description: group.description || '',
+      items: convertAssetsToWatchlistItems(groupAssets)
+    };
+  });
 });
 
 // 根据当前分类过滤分组
@@ -177,7 +166,7 @@ const filteredGroups = computed(() => {
   if (assetStore.activeCategory === 'all') {
     return convertedGroups.value;
   }
-  return convertedGroups.value.filter((group: any) => group.category === assetStore.activeCategory);
+  return convertedGroups.value.filter((group) => group.category === assetStore.activeCategory);
 });
 
 // 获取单个商品的持仓信息
@@ -187,14 +176,14 @@ const getItemPosition = (symbol: string) => {
 
   // 查找商品当前价格
   let currentPrice = 0;
-  const asset = assetStore.userAssets.find((asset: any) => asset.code === symbol);
+  const asset = assetStore.userAssets.find((asset) => asset.code === symbol);
   
   if (asset && asset.current_price) {
     currentPrice = asset.current_price;
   } else {
     // 如果在用户资产中找不到，尝试在所有分组中查找
     for (const group of convertedGroups.value) {
-      const item = group.items.find((i: any) => i.symbol === symbol);
+      const item = group.items.find((i) => i.symbol === symbol);
       if (item) {
         currentPrice = parseFloat(item.price.replace(',', ''));
         break;
@@ -225,7 +214,7 @@ const sortedGroups = computed(() => {
     return filtered;
   }
 
-  return filtered.map((group: any) => {
+  return filtered.map((group) => {
     const sortedItems = [...group.items].sort((a, b) => {
       if (currentSort.value.startsWith('change')) {
         const changeA = parseFloat(a.changePercent.replace('%', '').replace('+', ''));
@@ -250,7 +239,7 @@ const sortedGroups = computed(() => {
 const expandedGroups = ref<string[]>([]);
 
 // 切换分组展开/折叠
-const toggleGroup = (groupId: any) => {
+const toggleGroup = (groupId: string) => {
   const index = expandedGroups.value.indexOf(groupId);
   if (index === -1) {
     expandedGroups.value.push(groupId);
@@ -263,15 +252,15 @@ const toggleGroup = (groupId: any) => {
 const selectedSymbol = ref<WatchlistItem | null>(null);
 
 // 选择商品
-const selectSymbol = (item: any) => {
+const selectSymbol = (item: WatchlistItem) => {
   selectedSymbol.value = item;
   assetStore.selectSymbol(item);
 };
 
 // 拖拽排序相关
-const draggedGroup = ref(null);
+const draggedGroup = ref<string | null>(null);
 
-const handleDragStart = (event: any, groupId: any) => {
+const handleDragStart = (event: DragEvent, groupId: string) => {
   draggedGroup.value = groupId;
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
@@ -279,7 +268,7 @@ const handleDragStart = (event: any, groupId: any) => {
   }
 };
 
-const handleDragOver = (event: any, groupId: any) => {
+const handleDragOver = (event: DragEvent, groupId: string) => {
   if (event.dataTransfer) {
     event.dataTransfer.dropEffect = 'move';
   }
@@ -289,7 +278,7 @@ const handleDragEnd = () => {
   draggedGroup.value = null;
 };
 
-const handleDrop = (event: any, targetGroupId: any) => {
+const handleDrop = (event: DragEvent, targetGroupId: string) => {
   if (!draggedGroup.value || draggedGroup.value === targetGroupId) return;
 
   // 这里可以实现组的重新排序，但需要与后端 API 对接
@@ -298,8 +287,21 @@ const handleDrop = (event: any, targetGroupId: any) => {
 };
 
 // 打开添加商品弹窗
-const openAddSymbolModal = (groupId: any) => {
+const openAddSymbolModal = (groupId: string) => {
+  selectedGroupId.value = parseInt(groupId);
   showAddSymbolModal.value = true;
+};
+
+// 关闭添加商品弹窗
+const closeAddSymbolModal = () => {
+  showAddSymbolModal.value = false;
+  selectedGroupId.value = null;
+};
+
+// 处理资产添加
+const handleAssetAdded = (asset: Asset) => {
+  // 刷新资产列表
+  assetStore.fetchUserAssets(undefined, asset.group_id);
 };
 
 // 打开添加分组弹窗
@@ -316,9 +318,6 @@ const closeGroupModal = () => {
 
 // 处理分组保存
 const handleGroupSaved = (group: UserGroup) => {
-  // 刷新分组列表
-  assetStore.fetchUserGroups();
-
   // 如果是新建的分组，添加到展开列表
   if (!editingGroup.value) {
     expandedGroups.value.push(group.id.toString());
@@ -328,7 +327,7 @@ const handleGroupSaved = (group: UserGroup) => {
 // 编辑分组
 const editGroup = (group: any) => {
   // 查找对应的后端分组数据
-  const backendGroup = assetStore.userGroups.find((g: any) => g.id.toString() === group.id);
+  const backendGroup = assetStore.userGroups.find((g) => g.id.toString() === group.id);
   if (backendGroup) {
     editingGroup.value = backendGroup;
     showGroupModal.value = true;
@@ -336,14 +335,14 @@ const editGroup = (group: any) => {
 };
 
 // 确认删除分组
-const confirmDeleteGroup = (groupId: any) => {
+const confirmDeleteGroup = (groupId: string) => {
   if (confirm('确定要删除此分组吗？')) {
     deleteGroup(groupId);
   }
 };
 
 // 删除分组
-const deleteGroup = async (groupId: any) => {
+const deleteGroup = async (groupId: string) => {
   try {
     // 将字符串 ID 转换为数字
     const numericId = parseInt(groupId);
@@ -372,11 +371,11 @@ const openPositionSettingsModal = () => {
 };
 
 // 开始水平调整大小（左侧上下拖动）
-const startResizeHorizontal = (e: any) => {
+const startResizeHorizontal = (e: MouseEvent) => {
   const isResizingHorizontal = ref(false);
   isResizingHorizontal.value = true;
 
-  const handleMouseMove = (e: any) => {
+  const handleMouseMove = (e: MouseEvent) => {
     if (isResizingHorizontal.value) {
       // 获取左侧面板的位置信息
       const leftPanel = document.querySelector('.left-panel');
@@ -404,6 +403,7 @@ const startResizeHorizontal = (e: any) => {
 
 // 提供数据给子组件
 provide('selectedSymbol', selectedSymbol);
+provide('positions', assetStore.positions);
 
 // 初始化
 onMounted(async () => {

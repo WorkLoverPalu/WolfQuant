@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { inject } from 'vue';
+import { inject, computed } from 'vue';
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -128,6 +128,7 @@ import {
   EditIcon,
   TrashIcon
 } from 'lucide-vue-next';
+import { useAssetStore } from '../../../../stores/assetStore';
 
 // 定义类型接口
 interface WatchlistItem {
@@ -188,6 +189,9 @@ const emit = defineEmits([
   'handleDrop'
 ]);
 
+// 使用 store
+const assetStore = useAssetStore();
+
 // 注入数据
 const positions = inject<Record<string, Position>>('positions', {});
 
@@ -246,8 +250,8 @@ const getItemPosition = (symbol: string): ItemPosition | null => {
 
   if (!currentPrice) return null;
 
-  const cost = position.cost * position.amount / currentPrice;
-  const currentValue = position.amount;
+  const cost = position.cost * position.amount;
+  const currentValue = position.amount * currentPrice;
   const profit = currentValue - cost;
 
   return {
@@ -663,5 +667,6 @@ const getGroupPosition = (groupId: string): GroupPosition => {
     width: 14px;
     height: 14px;
   }
+  
 }
 </style>
