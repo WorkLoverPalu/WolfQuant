@@ -1,82 +1,151 @@
 <template>
   <div class="watchlist-header">
+    <!-- 左侧分类选项 -->
     <div class="category-tabs">
-      <button v-for="category in assetTypes" :key="category.id" class="category-tab"
-        :class="{ active: activeCategory === category.id }" @click="$emit('setActiveCategory', category.id)">
-        {{ category.description }}
+      <button
+        v-for="type in assetTypes"
+        :key="type.id"
+        class="category-tab"
+        :class="{ active: activeCategory === mapAssetTypeToCategory(type.name) }"
+        @click="$emit('setActiveCategory', mapAssetTypeToCategory(type.name))"
+      >
+        {{ type.description || type.name }}
+      </button>
+      <button
+        class="category-tab"
+        :class="{ active: activeCategory === 'all' }"
+        @click="$emit('setActiveCategory', 'all')"
+      >
+        全部
       </button>
     </div>
 
-    <div class="header-actions" @click.stop="">
-      <button class="action-button" @click="$emit('openAddGroupModal')" title="新增分组">
-        <PlusIcon class="icon-small" />
+    <!-- 右侧操作按钮 -->
+    <div class="header-actions">
+      <!-- 资产类型设置按钮 -->
+      <button
+        v-if="activeCategory !== 'all'"
+        class="action-button"
+        @click="$emit('openAssetTypeSettings', getCurrentAssetTypeId())"
+        title="资产类型设置"
+      >
+        <WalletIcon />
       </button>
 
+      <!-- 排序按钮 -->
       <div class="sort-dropdown">
-        <button class="sort-button" @click="toggleSortMenu" title="排序选项">
-          <ArrowUpDownIcon class="icon-small" />
-          <ChevronDownIcon class="icon-tiny" />
+        <button
+          class="action-button"
+          @click="$emit('toggleSortMenu', !showSortMenu)"
+          title="排序"
+        >
+          <SortAscIcon v-if="currentSort.includes('asc')" />
+          <SortDescIcon v-else-if="currentSort.includes('desc')" />
+          <ListOrderedIcon v-else />
         </button>
         <div v-if="showSortMenu" class="sort-menu">
-          <button v-for="option in sortOptions" :key="option.value" class="sort-option"
-            :class="{ active: currentSort === option.value }" @click="$emit('setSort', option.value)">
+          <button
+            v-for="option in sortOptions"
+            :key="option.value"
+            class="sort-option"
+            :class="{ active: currentSort === option.value }"
+            @click="$emit('setSort', option.value)"
+          >
             {{ option.label }}
           </button>
         </div>
       </div>
 
-      <button class="action-button" @click="$emit('toggleChartView')" title="切换视图">
-        <BarChartIcon v-if="!showChartView" class="icon-small" />
-        <ListIcon v-else class="icon-small" />
+      <!-- 视图切换按钮 -->
+      <button
+        class="action-button"
+        @click="$emit('toggleChartView')"
+        :title="showChartView ? '切换到列表视图' : '切换到图表视图'"
+      >
+        <LayoutGridIcon v-if="!showChartView" />
+        <ListIcon v-else />
       </button>
 
-      <button class="action-button" @click="$emit('openPositionSettingsModal')" title="持仓设置">
-        <WalletIcon class="icon-small" />
+      <!-- 持仓设置按钮 -->
+      <button
+        class="action-button"
+        @click="$emit('openPositionSettingsModal')"
+        title="持仓设置"
+      >
+        <SettingsIcon />
+      </button>
+
+      <!-- 添加分组按钮 -->
+      <button
+        class="action-button add-button"
+        @click="$emit('openAddGroupModal')"
+        title="添加分组"
+      >
+        <PlusIcon />
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
 import {
-  PlusIcon,
-  ArrowUpDownIcon,
-  ChevronDownIcon,
-  BarChartIcon,
+  ListOrderedIcon,
+  SortAscIcon,
+  SortDescIcon,
+  LayoutGridIcon,
   ListIcon,
+  SettingsIcon,
+  PlusIcon,
   WalletIcon
 } from 'lucide-vue-next';
-
-
-import type { AssetType } from "../../../../stores/assetStore";
+import { AssetType } from '../../../../stores/assetStore';
 
 // 接收父组件传递的属性
-const props = defineProps({
-  assetTypes: Array,
-  activeCategory: String,
-  sortOptions: Array,
-  currentSort: String,
-  showChartView: Boolean,
-  showSortMenu: Boolean
-});
+const props = defineProps<{
+  assetTypes: AssetType[];
+  activeCategory: string;
+  sortOptions: { value: string; label: string }[];
+  currentSort: string;
+  showSortMenu: boolean;
+  showChartView: boolean;
+}>();
 
 // 定义事件
 const emit = defineEmits([
   'setActiveCategory',
+  'toggleSortMenu',
   'setSort',
   'toggleChartView',
   'openPositionSettingsModal',
   'openAddGroupModal',
-  'toggleSortMenu'
+  'openAssetTypeSettings'
 ]);
 
+// 将资产类型代码映射到前端分类
+const mapAssetTypeToCategory = (assetTypeName: string): string => {
+  const mapping: Record<string, string> = {
+    'FUND': 'fund',
+    'STOCK': 'stock',
+    'GOLD': 'gold',
+    'CRYPTO': 'crypto'
+  };
 
-const toggleSortMenu = () => {
-  emit("toggleSortMenu",!props.showSortMenu);
+  return mapping[assetTypeName] || 'other';
 };
 
-
+// 获取当前资产类型ID
+const getCurrentAssetTypeId = (): number => {
+  if (props.activeCategory === 'all') return 0;
+  
+  // 根据当前激活的分类找到对应的资产类型ID
+  for (const type of props.assetTypes) {
+    if (mapAssetTypeToCategory(type.name) === props.activeCategory) {
+      return type.id;
+    }
+  }
+  
+  return 0;
+};
 </script>
 
 <style lang="scss" scoped>
@@ -85,47 +154,63 @@ const toggleSortMenu = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
-  height: 48px;
-  background-color: var(--headerBg);
+  padding: 12px 16px;
   border-bottom: 1px solid var(--borderColor);
-  flex-shrink: 0;
+  background-color: var(--headerBg);
 }
 
+/* 分类选项卡 */
 .category-tabs {
   display: flex;
   gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  
+  &::-webkit-scrollbar {
+    height: 2px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbarThumb);
+    border-radius: 1px;
+  }
 }
 
 .category-tab {
   padding: 6px 12px;
-  border: none;
-  background: transparent;
-  color: var(--textSecondary);
-  font-size: 13px;
-  cursor: pointer;
   border-radius: 4px;
-
+  font-size: 13px;
+  font-weight: 500;
+  background-color: transparent;
+  border: none;
+  color: var(--textSecondary);
+  cursor: pointer;
+  white-space: nowrap;
+  
   &:hover {
     background-color: var(--hover-bg);
     color: var(--textColor);
   }
-
+  
   &.active {
-    background-color: var(--activeBg);
-    color: var(--textColor);
-    font-weight: 500;
+    background-color: var(--accentColor);
+    color: white;
   }
 }
 
+/* 右侧操作按钮 */
 .header-actions {
   display: flex;
   gap: 4px;
 }
 
 .action-button {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -134,20 +219,24 @@ const toggleSortMenu = () => {
   border: none;
   color: var(--textSecondary);
   cursor: pointer;
-
+  
   &:hover {
     background-color: var(--hover-bg);
     color: var(--textColor);
   }
-
-  .icon-small {
-    width: 16px;
-    height: 16px;
+  
+  svg {
+    width: 18px;
+    height: 18px;
   }
-
-  .icon-tiny {
-    width: 14px;
-    height: 14px;
+  
+  &.add-button {
+    background-color: var(--accentColor);
+    color: white;
+    
+    &:hover {
+      background-color: var(--accentColorHover);
+    }
   }
 }
 
@@ -156,33 +245,14 @@ const toggleSortMenu = () => {
   position: relative;
 }
 
-.sort-button {
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  color: var(--textSecondary);
-  cursor: pointer;
-
-  &:hover {
-    background-color: var(--hover-bg);
-    color: var(--textColor);
-  }
-}
-
 .sort-menu {
   position: absolute;
   top: 100%;
   right: 0;
-  width: 150px;
+  width: 140px;
   background-color: var(--cardBg);
-  border: 1px solid var(--borderColor);
   border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 10;
   margin-top: 4px;
   overflow: hidden;
@@ -194,16 +264,16 @@ const toggleSortMenu = () => {
   text-align: left;
   background: transparent;
   border: none;
-  color: var(--textColor);
   font-size: 13px;
+  color: var(--textColor);
   cursor: pointer;
-
+  
   &:hover {
     background-color: var(--hover-bg);
   }
-
+  
   &.active {
-    background-color: var(--activeBg);
+    color: var(--accentColor);
     font-weight: 500;
   }
 }

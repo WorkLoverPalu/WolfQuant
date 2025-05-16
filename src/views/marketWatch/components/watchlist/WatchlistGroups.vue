@@ -35,8 +35,8 @@
       <div v-if="expandedGroups.includes(group.id)" class="group-content">
         <!-- 走势图视图 -->
         <div v-if="showChartView" class="chart-view">
-          <div v-for="item in group.items" :key="item.symbol" class="chart-item" @click="$emit('selectSymbol', item)">
-            <div class="chart-header">
+          <div v-for="item in group.items" :key="item.symbol" class="chart-item">
+            <div class="chart-header" @click="$emit('selectSymbol', item)">
               <div class="symbol-info">
                 <div class="symbol-icon" :class="getSymbolClass(item.symbol)">
                   {{ getSymbolIcon(item.symbol) }}
@@ -51,9 +51,20 @@
                 <div class="price-change">{{ item.changePercent }}</div>
               </div>
             </div>
-            <div class="chart-container">
+            <div class="chart-container" @click="$emit('selectSymbol', item)">
               <!-- 模拟走势图 -->
               <div class="mini-chart" :class="getChangeClass(item.change)"></div>
+            </div>
+            <div class="chart-footer">
+              <div class="position-info" v-if="getItemPosition(item.symbol)">
+                <div class="position-value">¥{{ formatNumber(getItemPosition(item.symbol).amount) }}</div>
+                <div class="position-profit" :class="getItemPosition(item.symbol).profitRate >= 0 ? 'positive' : 'negative'">
+                  {{ getItemPosition(item.symbol).profitRate >= 0 ? '+' : '' }}{{ getItemPosition(item.symbol).profitRate.toFixed(2) }}%
+                </div>
+              </div>
+              <button class="edit-position-button" @click="$emit('editPosition', item)" title="编辑持仓">
+                <WalletIcon />
+              </button>
             </div>
           </div>
         </div>
@@ -68,12 +79,13 @@
             <div class="column change-percent-column">涨跌%</div>
             <div class="column position-column">持仓金额</div>
             <div class="column profit-column">收益</div>
+            <div class="column action-column"></div>
           </div>
 
           <!-- 列表内容 -->
           <div class="list-content">
-            <div v-for="item in group.items" :key="item.symbol" class="list-item" @click="$emit('selectSymbol', item)">
-              <div class="column symbol-column">
+            <div v-for="item in group.items" :key="item.symbol" class="list-item">
+              <div class="column symbol-column" @click="$emit('selectSymbol', item)">
                 <div class="symbol-info">
                   <div class="symbol-icon" :class="getSymbolClass(item.symbol)">
                     {{ getSymbolIcon(item.symbol) }}
@@ -84,23 +96,28 @@
                   </div>
                 </div>
               </div>
-              <div class="column price-column">
+              <div class="column price-column" @click="$emit('selectSymbol', item)">
                 {{ item.price }}
                 <span class="unit">{{ item.unit }}</span>
               </div>
-              <div class="column change-column" :class="getChangeClass(item.change)">
+              <div class="column change-column" :class="getChangeClass(item.change)" @click="$emit('selectSymbol', item)">
                 {{ item.change }}
               </div>
-              <div class="column change-percent-column" :class="getChangeClass(item.changePercent)">
+              <div class="column change-percent-column" :class="getChangeClass(item.changePercent)" @click="$emit('selectSymbol', item)">
                 {{ item.changePercent }}
               </div>
-              <div class="column position-column">
+              <div class="column position-column" @click="$emit('selectSymbol', item)">
                 {{ getItemPosition(item.symbol) ? '¥' + formatNumber(getItemPosition(item.symbol).amount) : '—' }}
               </div>
               <div class="column profit-column" :class="getItemPosition(item.symbol) && getItemPosition(item.symbol).profit > 0 ? 'positive' :
-                getItemPosition(item.symbol) && getItemPosition(item.symbol).profit < 0 ? 'negative' : ''">
+                getItemPosition(item.symbol) && getItemPosition(item.symbol).profit < 0 ? 'negative' : ''" @click="$emit('selectSymbol', item)">
                 {{ getItemPosition(item.symbol) ? (getItemPosition(item.symbol).profit > 0 ? '+' : '') +
                   formatNumber(getItemPosition(item.symbol).profit) : '—' }}
+              </div>
+              <div class="column action-column">
+                <button class="edit-position-button" @click="$emit('editPosition', item)" title="编辑持仓">
+                  <WalletIcon />
+                </button>
               </div>
             </div>
 
@@ -120,13 +137,14 @@
 </template>
 
 <script setup lang="ts">
-import { inject, computed } from 'vue';
+import { inject, onMounted } from 'vue';
 import {
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
   EditIcon,
-  TrashIcon
+  TrashIcon,
+  WalletIcon
 } from 'lucide-vue-next';
 import { useAssetStore } from '../../../../stores/assetStore';
 
@@ -153,6 +171,10 @@ interface WatchlistGroup {
 interface Position {
   cost: number;
   amount: number;
+  investmentType?: "daily" | "weekly" | "monthly";
+  dayOfWeek?: number;
+  dayOfMonth?: number;
+  investmentAmount?: number;
 }
 
 interface GroupPosition {
@@ -186,7 +208,8 @@ const emit = defineEmits([
   'handleDragStart',
   'handleDragOver',
   'handleDragEnd',
-  'handleDrop'
+  'handleDrop',
+  'editPosition'
 ]);
 
 // 使用 store
@@ -258,7 +281,7 @@ const getItemPosition = (symbol: string): ItemPosition | null => {
     cost,
     amount: position.amount,
     profit,
-    profitRate: (profit / cost) * 100
+    profitRate: cost > 0 ? (profit / cost) * 100 : 0
   };
 };
 
@@ -430,7 +453,6 @@ const getGroupPosition = (groupId: string): GroupPosition => {
   padding: 8px 12px;
   border-bottom: 1px solid var(--borderColor);
   font-size: 12px;
-  cursor: pointer;
 
   &:last-child {
     border-bottom: none;
@@ -446,6 +468,7 @@ const getGroupPosition = (groupId: string): GroupPosition => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .symbol-column {
@@ -464,6 +487,13 @@ const getGroupPosition = (groupId: string): GroupPosition => {
 .profit-column {
   width: 70px;
   text-align: right;
+}
+
+.action-column {
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 符号信息 */
@@ -603,6 +633,47 @@ const getGroupPosition = (groupId: string): GroupPosition => {
   padding: 8px;
 }
 
+.chart-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-top: 1px solid var(--borderColor);
+}
+
+.position-info {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+}
+
+.position-value {
+  font-weight: 500;
+}
+
+.edit-position-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--textSecondary);
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--hover-bg);
+    color: var(--textColor);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .mini-chart {
   width: 100%;
   height: 100%;
@@ -667,6 +738,5 @@ const getGroupPosition = (groupId: string): GroupPosition => {
     width: 14px;
     height: 14px;
   }
-  
 }
 </style>

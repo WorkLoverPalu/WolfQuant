@@ -7,14 +7,14 @@
         :sortOptions="sortOptions" :currentSort="currentSort" :showSortMenu="showSortMenu"
         :showChartView="showChartView" @setActiveCategory="setActiveCategory" @toggleSortMenu="toggleSortMenu"
         @setSort="setSort" @toggleChartView="toggleChartView" @openPositionSettingsModal="openPositionSettingsModal"
-        @openAddGroupModal="openAddGroupModal" />
+        @openAddGroupModal="openAddGroupModal" @openAssetTypeSettings="openAssetTypeSettings" />
 
       <!-- 分组列表 -->
       <WatchlistGroups :groups="sortedGroups" :expandedGroups="expandedGroups" :showChartView="showChartView"
         :draggedGroup="draggedGroup" @toggleGroup="toggleGroup" @selectSymbol="selectSymbol"
         @openAddSymbolModal="openAddSymbolModal" @editGroup="editGroup" @deleteGroup="confirmDeleteGroup"
         @handleDragStart="handleDragStart" @handleDragOver="handleDragOver" @handleDragEnd="handleDragEnd"
-        @handleDrop="handleDrop" />
+        @handleDrop="handleDrop" @editPosition="openPositionEditModal" />
     </div>
 
     <!-- 左侧下部分 - 工具栏 -->
@@ -30,6 +30,15 @@
   <!-- 添加资产弹窗 -->
   <AddAssetModal v-if="showAddSymbolModal && selectedGroupId" :show="showAddSymbolModal" :groupId="selectedGroupId"
     @close="closeAddSymbolModal" @added="handleAssetAdded" />
+
+  <!-- 持仓编辑弹窗 -->
+  <PositionEditModal v-if="showPositionEditModal && selectedAsset" :show="showPositionEditModal" :asset="selectedAsset"
+    @close="closePositionEditModal" @saved="handlePositionSaved" />
+
+  <!-- 资产类型设置弹窗 -->
+  <AssetTypeSettingsModal v-if="showAssetTypeSettingsModal && selectedAssetTypeId" :show="showAssetTypeSettingsModal"
+    :assetTypeId="selectedAssetTypeId" @close="closeAssetTypeSettingsModal" @openAddGroup="openAddGroupModal"
+    @editGroup="editGroup" @deleteGroup="confirmDeleteGroup" @editPosition="openPositionEditModal" />
 </template>
 
 <script setup lang="ts">
@@ -41,6 +50,8 @@ import WatchlistGroups from './watchlist/WatchlistGroups.vue';
 import WatchlistTools from './watchlist/WatchlistTools.vue';
 import GroupModal from './GroupModal.vue';
 import AddAssetModal from './watchlist/AddAssetModal.vue';
+import PositionEditModal from './watchlist/PositionEditModal.vue';
+import AssetTypeSettingsModal from './watchlist/AssetTypeSettingsModal.vue';
 import type { UserGroup, Asset, WatchlistItem } from '../../../stores/assetStore';
 
 // 接收父组件传递的属性
@@ -68,8 +79,12 @@ const userStore = useUserStore();
 const showAddSymbolModal = ref(false);
 const showGroupModal = ref(false);
 const showPositionModal = ref(false);
+const showPositionEditModal = ref(false);
+const showAssetTypeSettingsModal = ref(false);
 const editingGroup = ref<UserGroup | null>(null);
 const selectedGroupId = ref<number | null>(null);
+const selectedAsset = ref<WatchlistItem | null>(null);
+const selectedAssetTypeId = ref<number | null>(null);
 
 // 排序选项
 const sortOptions = [
@@ -281,7 +296,7 @@ const handleDragEnd = () => {
 const handleDrop = (event: DragEvent, targetGroupId: string) => {
   if (!draggedGroup.value || draggedGroup.value === targetGroupId) return;
 
-  // 这里可以实现组的重新排序，但需要与后端 API 对接
+  // 这里可以实现组的重新排序，但需要与后端 API ���接
   // 目前仅在前端进行视觉上的排序
   draggedGroup.value = null;
 };
@@ -305,22 +320,50 @@ const handleAssetAdded = (asset: Asset) => {
 };
 
 // 打开添加分组弹窗
-const openAddGroupModal = () => {
+const openAddGroupModal = (assetTypeId?: number) => {
   editingGroup.value = null;
+  
+  // 如果指定了资产类型ID，创建一个临时的编辑组对象，只包含资产类型ID
+  if (assetTypeId) {
+    editingGroup.value = {
+      id: 0,
+      user_id: '',
+      name: '',
+      asset_type_id: assetTypeId,
+      created_at: '',
+      updated_at: ''
+    };
+  }
+  
   showGroupModal.value = true;
+  
+  // 关闭资产类型设置弹窗
+  if (showAssetTypeSettingsModal.value) {
+    showAssetTypeSettingsModal.value = false;
+  }
 };
 
 // 关闭分组弹窗
 const closeGroupModal = () => {
   showGroupModal.value = false;
   editingGroup.value = null;
+  
+  // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
+  if (selectedAssetTypeId.value) {
+    showAssetTypeSettingsModal.value = true;
+  }
 };
 
 // 处理分组保存
 const handleGroupSaved = (group: UserGroup) => {
   // 如果是新建的分组，添加到展开列表
-  if (!editingGroup.value) {
+  if (!editingGroup.value || editingGroup.value.id === 0) {
     expandedGroups.value.push(group.id.toString());
+  }
+  
+  // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
+  if (selectedAssetTypeId.value) {
+    showAssetTypeSettingsModal.value = true;
   }
 };
 
@@ -331,21 +374,26 @@ const editGroup = (group: any) => {
   if (backendGroup) {
     editingGroup.value = backendGroup;
     showGroupModal.value = true;
+    
+    // 如果是从资产类型设置弹窗打开的，关闭资产类型设置弹窗
+    if (showAssetTypeSettingsModal.value) {
+      showAssetTypeSettingsModal.value = false;
+    }
   }
 };
 
 // 确认删除分组
-const confirmDeleteGroup = (groupId: string) => {
+const confirmDeleteGroup = (groupId: string | number) => {
   if (confirm('确定要删除此分组吗？')) {
     deleteGroup(groupId);
   }
 };
 
 // 删除分组
-const deleteGroup = async (groupId: string) => {
+const deleteGroup = async (groupId: string | number) => {
   try {
     // 将字符串 ID 转换为数字
-    const numericId = parseInt(groupId);
+    const numericId = typeof groupId === 'string' ? parseInt(groupId) : groupId;
     if (isNaN(numericId)) {
       console.error('Invalid group ID:', groupId);
       return;
@@ -355,14 +403,61 @@ const deleteGroup = async (groupId: string) => {
     await assetStore.deleteUserGroup(numericId);
 
     // 从展开列表中移除
-    const expandedIndex = expandedGroups.value.indexOf(groupId);
-    if (expandedIndex !== -1) {
-      expandedGroups.value.splice(expandedIndex, 1);
+    if (typeof groupId === 'string') {
+      const expandedIndex = expandedGroups.value.indexOf(groupId);
+      if (expandedIndex !== -1) {
+        expandedGroups.value.splice(expandedIndex, 1);
+      }
     }
   } catch (err) {
     console.error('Failed to delete group:', err);
     alert('删除分组失败');
   }
+};
+
+// 打开持仓编辑弹窗
+const openPositionEditModal = (asset: WatchlistItem) => {
+  selectedAsset.value = asset;
+  showPositionEditModal.value = true;
+  
+  // 如果是从资产类型设置弹窗打开的，关闭资产类型设置弹窗
+  if (showAssetTypeSettingsModal.value) {
+    showAssetTypeSettingsModal.value = false;
+  }
+};
+
+// 关闭持仓编辑弹窗
+const closePositionEditModal = () => {
+  showPositionEditModal.value = false;
+  selectedAsset.value = null;
+  
+  // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
+  if (selectedAssetTypeId.value) {
+    showAssetTypeSettingsModal.value = true;
+  }
+};
+
+// 处理持仓保存
+const handlePositionSaved = (data: { symbol: string, position: any }) => {
+  // 这里可以添加保存到后端的逻辑
+  console.log('Position saved:', data);
+  
+  // 如果是从资产类型设置弹窗打开的，重新打开资产类型设置弹窗
+  if (selectedAssetTypeId.value) {
+    showAssetTypeSettingsModal.value = true;
+  }
+};
+
+// 打开资产类型设置弹窗
+const openAssetTypeSettings = (assetTypeId: number) => {
+  selectedAssetTypeId.value = assetTypeId;
+  showAssetTypeSettingsModal.value = true;
+};
+
+// 关闭资产类型设置弹窗
+const closeAssetTypeSettingsModal = () => {
+  showAssetTypeSettingsModal.value = false;
+  selectedAssetTypeId.value = null;
 };
 
 // 打开持仓设置弹窗
