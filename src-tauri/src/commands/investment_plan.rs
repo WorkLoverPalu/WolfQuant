@@ -10,6 +10,7 @@ use crate::services::investment_plan::{
 use tauri::command;
 use log::{info, error};
 
+/// 创建定投计划
 #[command]
 pub async fn plan_create_investment_plan_command(request: CreateInvestmentPlanRequest) -> Result<InvestmentPlan, ErrorResponse> {
     info!("Create investment plan request received for user: {}", request.user_id);
@@ -34,6 +35,7 @@ pub async fn plan_create_investment_plan_command(request: CreateInvestmentPlanRe
     }
 }
 
+/// 修改定投计划
 #[command]
 pub async fn plan_update_investment_plan_command(request: UpdateInvestmentPlanRequest) -> Result<InvestmentPlan, ErrorResponse> {
     info!("Update investment plan request received for plan: {}", request.id);
@@ -58,7 +60,7 @@ pub async fn plan_update_investment_plan_command(request: UpdateInvestmentPlanRe
         },
     }
 }
-
+/// 删除定投
 #[command]
 pub async fn plan_delete_investment_plan_command(request: DeleteInvestmentPlanRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Delete investment plan request received for plan: {}", request.id);
@@ -77,6 +79,7 @@ pub async fn plan_delete_investment_plan_command(request: DeleteInvestmentPlanRe
     }
 }
 
+/// 获取用户所有的定投
 #[command]
 pub async fn plan_get_user_investment_plans_command(
     user_id: i64,
@@ -96,6 +99,7 @@ pub async fn plan_get_user_investment_plans_command(
     }
 }
 
+/// 指定定投
 #[command]
 pub async fn plan_execute_due_investment_plans_command() -> Result<MessageResponse, ErrorResponse> {
     info!("Execute due investment plans request received");

@@ -365,7 +365,7 @@ const handleGroupSaved = (group: UserGroup) => {
 const editGroup = (group: any) => {
 
   // 查找对应的后端分组数据
-  const backendGroup = assetStore.userGroups.find((g) => g.id === group.id);
+  const backendGroup = assetStore.userGroups.find((g) => g.id.toString() === group.id.toString());
 
   console.log("分组编辑", backendGroup, group, assetStore.userGroups)
   if (backendGroup) {
