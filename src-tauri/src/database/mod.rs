@@ -353,6 +353,8 @@ fn generate_default_schemas(schema_dir: &Path) -> Result<(), AuthError> {
             code TEXT NOT NULL,
             name TEXT NOT NULL,
             current_price REAL,
+            position_amount REAL DEFAULT 0,
+            position_cost REAL DEFAULT 0,
             last_updated INTEGER,
             created_at INTEGER NOT NULL,
             updated_at INTEGER NOT NULL,
