@@ -278,30 +278,6 @@ export const useInvestmentPlanStore = defineStore('investmentPlan', {
             }
         },
 
-        // Execute due investment plans
-        async executeDueInvestmentPlans(): Promise<MessageResponse> {
-            this.loading = true
-            this.error = null
-
-            try {
-                const response = await invoke<MessageResponse>('plan_execute_due_investment_plans_command')
-                this.message = response.message
-
-                // Refresh the plans after execution
-                if (this.investmentPlans.length > 0 && this.investmentPlans[0].user_id) {
-                    await this.getUserInvestmentPlans(this.investmentPlans[0].user_id)
-                }
-
-                return response
-            } catch (err) {
-                this.error = err as Error
-                console.error('Failed to execute due investment plans:', err)
-                throw err
-            } finally {
-                this.loading = false
-            }
-        },
-
         // Clear any error or message
         clearNotifications(): void {
             this.error = null
