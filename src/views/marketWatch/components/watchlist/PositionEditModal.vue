@@ -119,6 +119,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { XIcon, LoaderIcon } from 'lucide-vue-next';
 import { useAssetStore, WatchlistItem } from '../../../../stores/assetStore';
+import { useInvestmentPlanStore } from '../../../../stores/investmentPlan';
+import { useUserStore } from '../../../../stores/userStore';
 
 const props = defineProps<{
     show: boolean;
@@ -128,6 +130,8 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'saved']);
 
 const assetStore = useAssetStore();
+const investmentPlanStore = useInvestmentPlanStore();
+const userStore = useUserStore();
 const loading = ref(false);
 
 // 持仓数据
@@ -140,18 +144,54 @@ const positionData = ref({
     investmentAmount: 0
 });
 
+// 获取资产ID
+const getAssetId = computed(() => {
+    const asset = assetStore.userAssets.find(a => a.code === props.asset.symbol);
+    return asset ? asset.id : null;
+});
+
+// 获取现有定投计划
+const existingPlan = computed(() => {
+    if (!getAssetId.value) return null;
+    const plans = investmentPlanStore.getPlansByAssetCode(props.asset.symbol);
+    return plans.length > 0 ? plans[0] : null;
+});
+
 // 初始化持仓数据
-onMounted(() => {
+onMounted(async () => {
     const position = assetStore.positions[props.asset.symbol];
-    if (position) {
+    
+    // 如果没有持仓数据，尝试从资产中获取
+    if (!position) {
+        const asset = assetStore.userAssets.find(a => a.code === props.asset.symbol);
+        if (asset && asset.position_amount !== null && asset.position_cost !== null) {
+            positionData.value = {
+                cost: asset.position_cost,
+                amount: asset.position_amount,
+                investmentType: 'none',
+                dayOfWeek: 1,
+                dayOfMonth: 1,
+                investmentAmount: 0
+            };
+        }
+    } else {
         positionData.value = {
-            cost: position.cost,
-            amount: position.amount,
+            cost: position.cost || 0,
+            amount: position.amount || 0,
             investmentType: position.investmentType || 'none',
             dayOfWeek: position.dayOfWeek || 1,
             dayOfMonth: position.dayOfMonth || 1,
             investmentAmount: position.investmentAmount || 0
         };
+    }
+    
+    // 加载定投计划
+    try {
+        if (getAssetId.value) {
+            await investmentPlanStore.getUserInvestmentPlans(userStore.user?.id, getAssetId.value);
+        }
+    } catch (err) {
+        console.error('Failed to load investment plans:', err);
     }
 });
 
@@ -205,8 +245,77 @@ const formatNumber = (num: number): string => {
 const handleSubmit = async () => {
     try {
         loading.value = true;
+        
+        // 1. 更新资产持仓数据
+        const asset = assetStore.userAssets.find(a => a.code === props.asset.symbol);
+        if (asset) {
+            await assetStore.updateAsset(
+                asset.id,
+                asset.name,
+                asset.group_id,
+                asset.current_price || undefined,
+                positionData.value.amount,
+                positionData.value.cost
+            );
+        }
+        
+        // 2. 处理定投计划
+        if (positionData.value.investmentType !== 'none') {
+            // 如果选择了定投，创建或更新定投计划
+            const userId = userStore.user?.id;
+            if (!userId || !getAssetId.value) {
+                throw new Error('用户ID或资产ID不存在');
+            }
+            
+            const frequency = investmentPlanStore.mapTypeToFrequency(positionData.value.investmentType);
+            const dayOfWeek = positionData.value.investmentType === 'weekly' ? parseInt(positionData.value.dayOfWeek.toString()) : null;
+            const dayOfMonth = positionData.value.investmentType === 'monthly' ? parseInt(positionData.value.dayOfMonth.toString()) : null;
+            
+            if (existingPlan.value) {
+                // 更新现有计划
+                await investmentPlanStore.updateInvestmentPlan({
+                    id: existingPlan.value.id,
+                    userId,
+                    name: `${props.asset.name}定投计划`,
+                    frequency,
+                    dayOfWeek,
+                    dayOfMonth,
+                    amount: positionData.value.investmentAmount,
+                    isActive: true
+                });
+            } else {
+                // 创建新计划
+                await investmentPlanStore.createInvestmentPlan({
+                    userId,
+                    assetId: getAssetId.value,
+                    name: `${props.asset.name}定投计划`,
+                    frequency,
+                    dayOfWeek,
+                    dayOfMonth,
+                    amount: positionData.value.investmentAmount
+                });
+            }
+        } else if (existingPlan.value) {
+            // 如果选择了不定投，但存在定投计划，则停用或删除定投计划
+            const userId = userStore.user?.id;
+            if (!userId) {
+                throw new Error('用户ID不存在');
+            }
+            
+            // 选择停用而不是删除，以便用户可以重新激活
+            await investmentPlanStore.updateInvestmentPlan({
+                id: existingPlan.value.id,
+                userId,
+                name: existingPlan.value.name,
+                frequency: existingPlan.value.frequency,
+                dayOfWeek: existingPlan.value.day_of_week,
+                dayOfMonth: existingPlan.value.day_of_month,
+                amount: existingPlan.value.amount,
+                isActive: false
+            });
+        }
 
-        // 更新持仓数据
+        // 3. 更新前端状态
         assetStore.positions[props.asset.symbol] = {
             cost: positionData.value.cost,
             amount: positionData.value.amount,
@@ -216,9 +325,6 @@ const handleSubmit = async () => {
             investmentAmount: positionData.value.investmentType !== 'none' ? positionData.value.investmentAmount : undefined
         };
 
-        // 这里可以添加保存到后端的逻辑
-        // await savePositionToBackend(props.asset.symbol, positionData.value);
-
         emit('saved', {
             symbol: props.asset.symbol,
             position: assetStore.positions[props.asset.symbol]
@@ -226,6 +332,7 @@ const handleSubmit = async () => {
         emit('close');
     } catch (err) {
         console.error('Failed to save position:', err);
+        alert('保存失败: ' + (err instanceof Error ? err.message : String(err)));
     } finally {
         loading.value = false;
     }

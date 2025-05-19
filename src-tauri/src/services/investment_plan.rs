@@ -315,7 +315,13 @@ pub fn get_user_investment_plans(
 ) -> Result<Vec<InvestmentPlan>, AuthError> {
     let conn = get_connection_from_pool()?;
 
-    let mut query = if let Some(a_id) = asset_id {
+    // 如果 asset_id 为 Some(0)，视为查询所有类型
+    let effective_asset_id = match asset_id {
+        Some(0) => None,
+        other => other,
+    };
+
+    let mut query = if let Some(a_id) = effective_asset_id {
         conn.prepare(
             "SELECT p.id, p.user_id, p.asset_id, a.name, a.code, p.name, p.frequency, 
                     p.day_of_week, p.day_of_month, p.amount, p.is_active, 
@@ -337,7 +343,7 @@ pub fn get_user_investment_plans(
         )?
     };
 
-    let plans = if let Some(a_id) = asset_id {
+    let plans = if let Some(a_id) = effective_asset_id {
         query
             .query_map(params![user_id, a_id], |row| {
                 Ok(InvestmentPlan {

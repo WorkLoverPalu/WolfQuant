@@ -363,15 +363,13 @@ pub fn create_asset(
         code: code.to_string(),
         name: name.to_string(),
         current_price,
+        position_amount:None,
+        position_cost:None,
         last_updated: current_price.map(|_| now),
         created_at: now,
         updated_at: now,
-        total_amount: None,
-        total_cost: None,
-        daily_change: None,
-        daily_change_percent: None,
-        total_profit: None,
-        total_profit_percent: None,
+        total_profit:None,
+        total_profit_percent:None,
     };
     
     info!("Asset created: {} ({}) for user: {}", name, code, user_id);
@@ -384,11 +382,13 @@ pub fn update_asset(
     group_id: Option<i64>,
     name: &str,
     current_price: Option<f64>,
+    position_amount: Option<f64>,
+    position_cost: Option<f64>,
 ) -> Result<Asset, AuthError> {
     let conn = get_connection_from_pool()?;
     let now = Utc::now().timestamp();
     
-    // 检查资产是否存在且属于该用户
+    // Check if asset exists and belongs to the user
     let asset_exists: bool = conn.query_row(
         "SELECT 1 FROM assets WHERE id = ?1 AND user_id = ?2",
         params![id, user_id],
@@ -399,14 +399,14 @@ pub fn update_asset(
         return Err(AuthError::InvalidCredentials("资产不存在或无权限".to_string()));
     }
     
-    // 获取资产类型
+    // Get asset type
     let asset_type_id: i64 = conn.query_row(
         "SELECT asset_type_id FROM assets WHERE id = ?1",
         params![id],
         |row| row.get(0),
     )?;
     
-    // 如果指定了分组，检查分组是否存在且属于该用户
+    // If group is specified, check if it exists and belongs to the user
     if let Some(gid) = group_id {
         let group_valid: bool = conn.query_row(
             "SELECT 1 FROM user_groups 
@@ -420,36 +420,39 @@ pub fn update_asset(
         }
     }
     
-    // 更新资产
+    // Update asset with new position fields
     conn.execute(
         "UPDATE assets 
-         SET group_id = ?1, name = ?2, current_price = ?3, last_updated = ?4, updated_at = ?5 
-         WHERE id = ?6",
+         SET group_id = ?1, name = ?2, current_price = ?3, position_amount = ?4, position_cost = ?5, 
+         last_updated = ?6, updated_at = ?7 
+         WHERE id = ?8",
         params![
             group_id,
             name,
             current_price,
+            position_amount,
+            position_cost,
             current_price.map(|_| now),
             now,
             id
         ],
     )?;
     
-    // 获取资产信息
+    // Get asset information
     let code: String = conn.query_row(
         "SELECT code FROM assets WHERE id = ?1",
         params![id],
         |row| row.get(0),
     )?;
     
-    // 获取资产类型名称
+    // Get asset type name
     let asset_type_name: String = conn.query_row(
         "SELECT name FROM asset_types WHERE id = ?1",
         params![asset_type_id],
         |row| row.get(0),
     )?;
     
-    // 获取分组名称
+    // Get group name
     let group_name: Option<String> = if let Some(gid) = group_id {
         conn.query_row(
             "SELECT name FROM user_groups WHERE id = ?1",
@@ -476,19 +479,42 @@ pub fn update_asset(
         code,
         name: name.to_string(),
         current_price,
+        position_amount,
+        position_cost,
         last_updated: current_price.map(|_| now),
         created_at,
         updated_at: now,
-        total_amount: None,
-        total_cost: None,
-        daily_change: None,
-        daily_change_percent: None,
-        total_profit: None,
-        total_profit_percent: None,
+        total_profit: calculate_profit(current_price, position_amount, position_cost),
+        total_profit_percent: calculate_profit_percent(current_price, position_amount, position_cost),
     };
     
     info!("Asset updated: {} for user: {}", name, user_id);
     Ok(asset)
+}
+fn calculate_profit(
+    current_price: Option<f64>, 
+    position_amount: Option<f64>, 
+    position_cost: Option<f64>
+) -> Option<f64> {
+    match (current_price, position_amount, position_cost) {
+        (Some(price), Some(amount), Some(cost)) => {
+            Some(price * amount - cost * amount)
+        },
+        _ => None
+    }
+}
+
+fn calculate_profit_percent(
+    current_price: Option<f64>, 
+    position_amount: Option<f64>, 
+    position_cost: Option<f64>
+) -> Option<f64> {
+    match (current_price, position_amount, position_cost) {
+        (Some(price), Some(amount), Some(cost)) if cost > 0.0 && amount > 0.0 => {
+            Some((price - cost) / cost * 100.0)
+        },
+        _ => None
+    }
 }
 
 pub fn delete_asset(id: i64, user_id: i64) -> Result<(), AuthError> {
@@ -583,7 +609,7 @@ pub fn get_user_assets(
     let query = format!(
         "SELECT 
             a.id, a.user_id, a.group_id, g.name, a.asset_type_id, t.name, 
-            a.code, a.name, a.current_price, a.last_updated, a.created_at, a.updated_at,
+            a.code, a.name, a.current_price,a.position_amount,a.position_cost, a.last_updated, a.created_at, a.updated_at,
             (SELECT SUM(CASE WHEN transaction_type = 'BUY' THEN amount ELSE -amount END) 
              FROM transactions WHERE asset_id = a.id) as total_amount,
             (SELECT SUM(CASE WHEN transaction_type = 'BUY' THEN total_cost ELSE -total_cost END) 
@@ -599,12 +625,9 @@ pub fn get_user_assets(
     let assets = stmt.query_map(rusqlite::params_from_iter(params), |row| {
         let id: i64 = row.get(0)?;
         let current_price: Option<f64> = row.get(8)?;
-        let total_amount: Option<f64> = row.get(12)?;
-        let total_cost: Option<f64> = row.get(13)?;
-        
-        // 计算盈亏
-        let (daily_change, daily_change_percent, total_profit, total_profit_percent) = 
-            calculate_asset_performance(&conn, id, current_price, total_amount, total_cost)?;
+        let position_amount: Option<f64> = row.get(9)?;
+        let position_cost: Option<f64> = row.get(10)?;
+
         
         Ok(Asset {
             id,
@@ -616,15 +639,13 @@ pub fn get_user_assets(
             code: row.get(6)?,
             name: row.get(7)?,
             current_price,
-            last_updated: row.get(9)?,
-            created_at: row.get(10)?,
-            updated_at: row.get(11)?,
-            total_amount,
-            total_cost,
-            daily_change,
-            daily_change_percent,
-            total_profit,
-            total_profit_percent,
+            position_amount,
+            position_cost,
+            last_updated: row.get(11)?,
+            created_at: row.get(12)?,
+            updated_at: row.get(13)?,
+            total_profit:calculate_profit(current_price, position_amount, position_cost),
+            total_profit_percent:calculate_profit_percent(current_price, position_amount, position_cost),
         })
     })?
     .collect::<Result<Vec<_>, _>>()
@@ -636,6 +657,7 @@ pub fn get_user_assets(
     Ok(assets)
 }
 
+// 暂时放弃
 fn calculate_asset_performance(
     conn: &Connection,
     asset_id: i64,

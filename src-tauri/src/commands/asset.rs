@@ -137,6 +137,8 @@ pub async fn asset_update_asset_command(request: UpdateAssetRequest) -> Result<A
         request.group_id,
         &request.name,
         request.current_price,
+        request.position_amount,
+        request.position_cost,
     ) {
         Ok(asset) => {
             info!("Asset updated successfully: {}", asset.name);

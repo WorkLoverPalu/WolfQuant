@@ -109,17 +109,15 @@ pub struct Asset {
     pub asset_type_name: String,
     pub code: String,
     pub name: String,
-    pub current_price: Option<f64>,
+    pub current_price: Option<f64>,//当前价格
+    pub position_amount: Option<f64>,//持仓数量
+    pub position_cost: Option<f64>,//持仓成本
     pub last_updated: Option<i64>,
     pub created_at: i64,
     pub updated_at: i64,
     // 计算字段
-    pub total_amount: Option<f64>,
-    pub total_cost: Option<f64>,
-    pub daily_change: Option<f64>,
-    pub daily_change_percent: Option<f64>,
-    pub total_profit: Option<f64>,
-    pub total_profit_percent: Option<f64>,
+    pub total_profit: Option<f64>,//总利润
+    pub total_profit_percent: Option<f64>,//总利润百分比
 }
 
 // 新增的交易记录模型
@@ -257,6 +255,8 @@ pub struct UpdateAssetRequest {
     pub group_id: Option<i64>,
     pub name: String,
     pub current_price: Option<f64>,
+    pub position_amount: Option<f64>,
+    pub position_cost: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

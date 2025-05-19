@@ -48,7 +48,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, provide,onBeforeMount ,} from 'vue';
 import { useAssetStore } from '../../../stores/assetStore';
-import { useUserStore } from '../../../stores/userStore';
 import WatchlistHeader from './watchlist/WatchlistHeader.vue';
 import WatchlistGroups from './watchlist/WatchlistGroups.vue';
 import WatchlistTools from './watchlist/WatchlistTools.vue';
@@ -58,7 +57,7 @@ import PositionEditModal from './watchlist/PositionEditModal.vue';
 import AssetTypeSettingsModal from './watchlist/AssetTypeSettingsModal.vue';
 import ConfirmDialog from '../../../components/dialog/ConfirmDialog.vue';
 import type { UserGroup, Asset, WatchlistItem } from '../../../stores/assetStore';
-
+import {useInvestmentPlanStore} from "../../../stores/investmentPlan"
 // 接收父组件传递的属性
 const props = defineProps({
   leftPanelWidth: {
@@ -78,7 +77,7 @@ const emit = defineEmits([
 
 // 使用 store
 const assetStore = useAssetStore();
-const userStore = useUserStore();
+const investmentPlanStore=useInvestmentPlanStore();
 
 // 模态框状态
 const showAddSymbolModal = ref(false);
@@ -517,6 +516,10 @@ const getData = async () => {
   // 加载资产类型和用户分组
   try {
     await assetStore.initAssetData();
+    let currwntAsset=assetStore.assetTypes.filter(ele=>{
+      return ele.name==assetStore.activeCategory
+    });
+    await investmentPlanStore.getUserInvestmentPlans( Number(currwntAsset[0]?.id) || 0)
 
     // 初始化展开的分组
     if (assetStore.userGroups.length > 0) {
