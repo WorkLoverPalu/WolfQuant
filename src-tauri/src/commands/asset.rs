@@ -1,3 +1,6 @@
+/**
+ * 资产
+ */
 use crate::error::auth::ErrorResponse;
 use crate::models::{
     AssetType, UserGroup, Asset, CreateGroupRequest, UpdateGroupRequest, DeleteGroupRequest,

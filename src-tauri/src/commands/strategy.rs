@@ -1,3 +1,6 @@
+/**
+ * 策略
+ */
 use crate::error::auth::ErrorResponse;
 use crate::models::{
     InvestmentStrategy, StrategyApplication, BacktestResult, CreateInvestmentStrategyRequest,
