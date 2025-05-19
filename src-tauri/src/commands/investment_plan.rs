@@ -15,7 +15,7 @@ use tauri::http::request;
 
 /// 创建定投计划
 #[command]
-pub async fn plan_save_investment_plan(
+pub async fn plan_save_investment_plan_command(
     request: SaveInvestmentPlanRequest,
 ) -> Result<InvestmentPlan, ErrorResponse> {
     info!(
@@ -112,5 +112,26 @@ pub async fn plan_execute_due_investment_plans_command() -> Result<MessageRespon
             error!("Failed to execute due investment plans: {}", err);
             Err(err.into())
         }
+    }
+}
+
+
+/// 获取当天需要执行的定投计划
+#[command]
+pub async fn plan_get_today_investment_plans_command(
+    user_id: i64,
+    asset_type_id: i64,
+) -> Result<Vec<InvestmentPlan>, ErrorResponse> {
+    info!("Get today's investment plans request received for user: {}", user_id);
+    
+    match get_today_investment_plans(user_id, asset_type_id) {
+        Ok(plans) => {
+            info!("Retrieved {} investment plans for today for user: {}", plans.len(), user_id);
+            Ok(plans)
+        },
+        Err(err) => {
+            error!("Failed to get today's investment plans: {}", err);
+            Err(err.into())
+        },
     }
 }

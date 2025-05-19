@@ -1,6 +1,3 @@
-/**
- * 定投计划
- */
 use crate::database::get_connection_from_pool;
 use crate::error::auth::AuthError;
 use crate::models::InvestmentPlan;
@@ -603,4 +600,107 @@ fn calculate_next_execution(
         }
         _ => Err(AuthError::InvalidCredentials("无效的定投频率".to_string())),
     }
+}
+
+/**
+ * @dev 获取当天需要执行的定投计划
+ * @param user_id 用户ID
+ * @param asset_type_id 资产类型ID，如果为0则查询所有类型
+ * @return 当天需要执行的定投计划列表
+ */
+pub fn get_today_investment_plans(
+    user_id: i64,
+    asset_type_id: i64,
+) -> Result<Vec<InvestmentPlan>, AuthError> {
+    let conn = get_connection_from_pool()?;
+    let now = Utc::now();
+    let today_start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().timestamp();
+    let today_end = now
+        .date_naive()
+        .and_hms_opt(23, 59, 59)
+        .unwrap()
+        .timestamp();
+
+    // 构建查询SQL
+    let mut sql = String::from(
+        "SELECT p.id, p.user_id, p.asset_id, a.name, a.code, p.name, p.frequency, 
+                p.day_of_week, p.day_of_month, p.amount, p.is_active, 
+                p.last_executed, p.next_execution, p.created_at, p.updated_at
+         FROM investment_plans p
+         JOIN assets a ON p.asset_id = a.id
+         WHERE p.user_id = ?1
+         AND p.is_active = 1
+         AND p.next_execution >= ?2
+         AND p.next_execution <= ?3",
+    );
+
+    // 如果指定了资产类型且不为0，则添加资产类型过滤条件
+    if asset_type_id > 0 {
+        sql.push_str(" AND a.asset_type_id = ?4");
+    }
+
+    sql.push_str(" ORDER BY p.next_execution ASC");
+
+    let mut stmt = conn.prepare(&sql)?;
+
+    // 执行查询，根据是否有资产类型过滤条件使用不同的参数
+    let plans = if asset_type_id > 0 {
+        stmt.query_map(
+            params![user_id, today_start, today_end, asset_type_id],
+            |row| {
+                Ok(InvestmentPlan {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    asset_id: row.get(2)?,
+                    asset_name: row.get(3)?,
+                    asset_code: row.get(4)?,
+                    name: row.get(5)?,
+                    frequency: row.get(6)?,
+                    day_of_week: row.get(7)?,
+                    day_of_month: row.get(8)?,
+                    amount: row.get(9)?,
+                    is_active: row.get(10)?,
+                    last_executed: row.get(11)?,
+                    next_execution: row.get(12)?,
+                    created_at: row.get(13)?,
+                    updated_at: row.get(14)?,
+                })
+            },
+        )?
+    } else {
+        stmt.query_map(params![user_id, today_start, today_end], |row| {
+            Ok(InvestmentPlan {
+                id: row.get(0)?,
+                user_id: row.get(1)?,
+                asset_id: row.get(2)?,
+                asset_name: row.get(3)?,
+                asset_code: row.get(4)?,
+                name: row.get(5)?,
+                frequency: row.get(6)?,
+                day_of_week: row.get(7)?,
+                day_of_month: row.get(8)?,
+                amount: row.get(9)?,
+                is_active: row.get(10)?,
+                last_executed: row.get(11)?,
+                next_execution: row.get(12)?,
+                created_at: row.get(13)?,
+                updated_at: row.get(14)?,
+            })
+        })?
+    };
+
+    // 收集结果
+    let plans = plans.collect::<Result<Vec<_>, _>>().map_err(|e| {
+        error!("Failed to fetch today's investment plans: {}", e);
+        AuthError::DatabaseError(format!("获取今日定投计划失败: {}", e))
+    })?;
+
+    // 记录日志
+    info!(
+        "Retrieved {} investment plans for today for user: {}",
+        plans.len(),
+        user_id
+    );
+
+    Ok(plans)
 }

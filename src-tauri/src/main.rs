@@ -39,11 +39,11 @@ use commands::asset::{
 };
 //定投计划
 use commands::investment_plan::{
-    plan_create_investment_plan_command,
-    plan_update_investment_plan_command,
+    plan_save_investment_plan_command,
     plan_delete_investment_plan_command,
     plan_get_user_investment_plans_command,
     plan_execute_due_investment_plans_command,
+    plan_get_today_investment_plans_command,
 };
 fn main() {
     // 加载配置
@@ -90,8 +90,8 @@ fn main() {
             asset_delete_asset_command,
             asset_get_user_assets_command,
             //定投计划
-            plan_create_investment_plan_command,
-            plan_update_investment_plan_command,
+            plan_save_investment_plan_command,
+            plan_get_today_investment_plans_command,
             plan_delete_investment_plan_command,
             plan_get_user_investment_plans_command,
             plan_execute_due_investment_plans_command,

@@ -1,5 +1,32 @@
 /**
  * 数据更新模块
+ *
+ * 本模块提供与资产价格、价格历史、交易提醒和投资组合摘要相关的数据操作函数。
+ *
+ * 包含的主要功能有：
+ * - 更新单个或批量资产价格，并同步价格历史记录。
+ * - 查询资产的价格历史数据，支持按时间范围筛选。
+ * - 创建、标记已读和获取用户的交易提醒（如买卖信号等）。
+ * - 获取用户投资组合的汇总信息，包括各类资产的市值、成本、收益、日收益等。
+ *
+ * 主要函数说明：
+ * - `update_asset_price(asset_id, price, date)`: 更新指定资产的当前价格及价格历史。
+ * - `update_asset_price_batch(asset_prices)`: 批量更新多个资产的价格及价格历史。
+ * - `get_asset_price_history(asset_id, start_date, end_date)`: 获取指定资产在时间区间内的价格历史。
+ * - `create_trade_alert(user_id, asset_id, strategy_id, alert_type, message)`: 为用户创建交易提醒。
+ * - `mark_alert_read(id, user_id)`: 标记指定交易提醒为已读。
+ * - `get_user_trade_alerts(user_id, is_read, limit)`: 获取用户的交易提醒列表，可按已读状态和数量限制筛选。
+ * - `get_portfolio_summary(user_id)`: 获取用户投资组合的汇总信息和各资产类型的统计摘要。
+ *
+ * 错误处理：
+ * - 所有函数均返回 `Result<T, AuthError>`，对数据库操作和权限校验进行统一错误处理。
+ *
+ * 依赖说明：
+ * - 依赖 `rusqlite` 进行数据库操作，`chrono` 处理时间，`log` 记录日志。
+ * - 依赖项目内的 `models`、`database`、`error` 等模块。
+ *
+ * 功能补充：
+ * - 查询当天的定投计划详情，可以根据资产类型查询，如果是0则查询所有计划
  */
 use crate::database::get_connection_from_pool;
 use crate::error::auth::AuthError;
@@ -637,3 +664,4 @@ pub fn get_portfolio_summary(user_id: i64) -> Result<PortfolioSummary, AuthError
 
     Ok(summary)
 }
+
