@@ -13,6 +13,8 @@ pub enum EventType {
     Order,
     Trade,
     Error,
+    ImportProgress,
+    ImportCompleted,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,7 +32,12 @@ pub enum EventData {
     Order(Order),
     Trade(Order),
     Error(String),
+    ImportProgress(ImportTask),
+    ImportCompleted(ImportTask),
 }
+
+
+
 
 pub type EventCallback = Box<dyn Fn(&Event) + Send + Sync>;
 
