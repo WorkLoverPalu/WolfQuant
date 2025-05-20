@@ -1,3 +1,39 @@
+/// `Engine` 结构体是交易系统的核心组件，负责协调主流程。
+/// 它管理适配器、策略、事件总线、数据仓库、投资组合和数据导入任务。
+///
+/// # 字段说明
+/// - `config`：引擎配置。
+/// - `event_bus`：事件总线，用于事件的发布与订阅。
+/// - `repository`：数据库仓库，负责数据持久化。
+/// - `adapters`：已注册的市场适配器，按资产类型和数据源区分。
+/// - `strategies`：已注册的交易策略。
+/// - `portfolio`：投资组合，管理订单和持仓。
+/// - `running`：引擎运行状态标志。
+/// - `importer`：数据导入器，处理历史数据导入任务。
+///
+/// # 方法说明
+/// - `new`：使用指定配置初始化引擎实例。
+/// - `register_adapter`：注册指定资产类型和数据源的市场适配器。
+/// - `register_strategy`：按名称注册交易策略。
+/// - `get_event_bus`：获取事件总线的克隆。
+/// - `get_repository`：获取数据仓库的克隆。
+/// - `start_market_data`：启动指定适配器的市场数据流。
+/// - `stop`：停止引擎运行。
+/// - `import_historical_data`：导入指定标的的历史K线数据并保存到数据库。
+/// - `run_strategy`：在历史K线数据上运行指定策略。
+/// - `start_import`：启动新的历史数据导入任务。
+/// - `get_import_task`：根据ID获取导入任务。
+/// - `get_import_tasks`：获取所有导入任务。
+/// - `get_available_data`：获取已导入数据的列表。
+///
+/// # 示例
+/// ```rust
+/// let config = Config::default();
+/// let mut engine = Engine::new(config).await.unwrap();
+/// engine.register_adapter("crypto", "binance").unwrap();
+/// engine.register_strategy("my_strategy", Box::new(MyStrategy::new()));
+/// engine.start_market_data("BTCUSDT", "crypto", "binance").await.unwrap();
+/// ```
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

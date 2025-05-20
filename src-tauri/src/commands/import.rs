@@ -1,12 +1,12 @@
-// src/commands/import.rs
+
 use chrono::{DateTime, Utc};
 use tauri::{command, State};
 
-use crate::core::Engine;
-use crate::import::{ImportTask, AvailableData};
+use crate::core::engine::Engine;
+use crate::models::import::{ImportTask, AvailableData};
 
 #[command]
-pub async fn start_import(
+pub async fn import_start(
     asset_type: String,
     symbol: String,
     source: String,
@@ -27,7 +27,7 @@ pub async fn start_import(
 }
 
 #[command]
-pub async fn get_import_task(
+pub async fn import_get_task(
     id: String,
     engine: State<'_, Engine>,
 ) -> Result<Option<ImportTask>, String> {
@@ -35,14 +35,14 @@ pub async fn get_import_task(
 }
 
 #[command]
-pub async fn get_import_tasks(
+pub async fn import_get_tasks(
     engine: State<'_, Engine>,
 ) -> Result<Vec<ImportTask>, String> {
     engine.get_import_tasks().await
 }
 
 #[command]
-pub async fn get_available_data(
+pub async fn import_get_available_data(
     engine: State<'_, Engine>,
 ) -> Result<Vec<AvailableData>, String> {
     engine.get_available_data().await
