@@ -39,18 +39,13 @@ use commands::asset::{
 };
 //定投计划
 use commands::investment_plan::{
+    plan_delete_investment_plan_command, plan_execute_due_investment_plans_command,
+    plan_get_today_investment_plans_command, plan_get_user_investment_plans_command,
     plan_save_investment_plan_command,
-    plan_delete_investment_plan_command,
-    plan_get_user_investment_plans_command,
-    plan_execute_due_investment_plans_command,
-    plan_get_today_investment_plans_command,
 };
 // 数据导入
 use commands::import::{
-    import_start,
-    import_get_task,
-    import_get_tasks,
-    import_get_available_data,
+    import_get_available_data, import_get_task, import_get_tasks, import_start,
 };
 fn main() {
     // 加载配置
@@ -102,7 +97,6 @@ fn main() {
             plan_delete_investment_plan_command,
             plan_get_user_investment_plans_command,
             plan_execute_due_investment_plans_command,
-
             //数据导入
             import_start,
             import_get_task,
