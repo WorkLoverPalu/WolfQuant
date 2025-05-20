@@ -106,7 +106,7 @@ pub struct UpdateStrategyRequest {
 }
 
 /// 策略接口，所有策略实现都需要实现这个trait
-pub trait Strategy {
+pub trait IStrategy {
     /// 初始化策略
     fn init(&self) -> Result<(), String>;
     
