@@ -1,7 +1,5 @@
-pub mod config;
-pub mod event;
 pub mod engine;
+pub mod event;
 
-pub use config::Config;
-pub use event::{Event, EventBus, EventData, EventType};
 pub use engine::Engine;
+pub use event::{Event, EventBus, EventData, EventType};

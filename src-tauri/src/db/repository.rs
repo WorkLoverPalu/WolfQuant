@@ -1,0 +1,623 @@
+use chrono::{DateTime, Duration, Utc};
+use sqlx::sqlite::SqlitePool;
+use std::collections::HashSet;
+use std::path::Path;
+
+use crate::db::models::{CandleModel, DatasetInfo, ImportStatus, ImportTask, ProductModel};
+use crate::market::{Candle, Product};
+
+impl Repository {
+    pub async fn new(db_path: &str) -> Result<Self, String> {
+        // 确保目录存在
+        if let Some(parent) = Path::new(db_path).parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create directory: {}", e))?;
+            }
+        }
+
+        let pool = SqlitePool::connect(db_path)
+            .await
+            .map_err(|e| format!("Failed to connect to database: {}", e))?;
+
+        // 初始化数据库
+        Self::init_db(&pool).await?;
+
+        Ok(Self { pool })
+    }
+    // 初始化数据库时添加导入任务表
+    async fn init_db(pool: &SqlitePool) -> Result<(), String> {
+        // 创建产品表
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                name TEXT NOT NULL,
+                asset_type TEXT NOT NULL,
+                source TEXT NOT NULL,
+                UNIQUE(symbol, source)
+            )",
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| format!("Failed to create products table: {}", e))?;
+
+        // 创建K线表
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS candles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                symbol TEXT NOT NULL,
+                source TEXT NOT NULL,
+                timestamp DATETIME NOT NULL,
+                open REAL NOT NULL,
+                high REAL NOT NULL,
+                low REAL NOT NULL,
+                close REAL NOT NULL,
+                volume REAL NOT NULL,
+                UNIQUE(symbol, source, timestamp)
+            )",
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| format!("Failed to create candles table: {}", e))?;
+
+        // 创建导入任务表
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS import_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                asset_type TEXT NOT NULL,
+                source TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                start_time DATETIME NOT NULL,
+                end_time DATETIME NOT NULL,
+                interval TEXT NOT NULL,
+                status TEXT NOT NULL,
+                progress REAL NOT NULL,
+                error TEXT,
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL,
+                completed_at DATETIME
+            )",
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| format!("Failed to create import_tasks table: {}", e))?;
+
+        // 创建K线表索引以提高查询性能
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_candles_symbol_source_timestamp 
+             ON candles (symbol, source, timestamp)",
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| format!("Failed to create candles index: {}", e))?;
+
+        Ok(())
+    }
+
+    // 产品相关方法
+
+    pub async fn save_product(&self, product: &Product) -> Result<i64, String> {
+        let result = sqlx::query(
+            "INSERT INTO products (symbol, name, asset_type, source)
+             VALUES (?, ?, ?, ?)
+             ON CONFLICT(symbol, source) DO UPDATE SET
+             name = excluded.name,
+             asset_type = excluded.asset_type",
+        )
+        .bind(&product.symbol)
+        .bind(&product.name)
+        .bind(&product.asset_type)
+        .bind(&product.source)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to save product: {}", e))?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    pub async fn save_products(&self, products: &[Product]) -> Result<(), String> {
+        for product in products {
+            self.save_product(product).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn get_product(&self, symbol: &str, source: &str) -> Result<Option<Product>, String> {
+        let model = sqlx::query_as::<_, ProductModel>(
+            "SELECT * FROM products WHERE symbol = ? AND source = ?",
+        )
+        .bind(symbol)
+        .bind(source)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to get product: {}", e))?;
+
+        Ok(model.map(|m| m.into()))
+    }
+
+    pub async fn get_products_by_type(&self, asset_type: &str) -> Result<Vec<Product>, String> {
+        let models =
+            sqlx::query_as::<_, ProductModel>("SELECT * FROM products WHERE asset_type = ?")
+                .bind(asset_type)
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| format!("Failed to get products: {}", e))?;
+
+        Ok(models.into_iter().map(|m| m.into()).collect())
+    }
+
+    pub async fn get_products_by_source(&self, source: &str) -> Result<Vec<Product>, String> {
+        let models = sqlx::query_as::<_, ProductModel>("SELECT * FROM products WHERE source = ?")
+            .bind(source)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to get products: {}", e))?;
+
+        Ok(models.into_iter().map(|m| m.into()).collect())
+    }
+
+    // K线相关方法
+
+    pub async fn save_candle(&self, candle: &Candle) -> Result<i64, String> {
+        let result = sqlx::query(
+            "INSERT INTO candles (symbol, source, timestamp, open, high, low, close, volume)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(symbol, source, timestamp) DO UPDATE SET
+             open = excluded.open,
+             high = excluded.high,
+             low = excluded.low,
+             close = excluded.close,
+             volume = excluded.volume",
+        )
+        .bind(&candle.symbol)
+        .bind(&candle.source)
+        .bind(candle.timestamp)
+        .bind(candle.open)
+        .bind(candle.high)
+        .bind(candle.low)
+        .bind(candle.close)
+        .bind(candle.volume)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to save candle: {}", e))?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    pub async fn save_candles(&self, candles: &[Candle]) -> Result<(), String> {
+        for candle in candles {
+            self.save_candle(candle).await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn get_candles(
+        &self,
+        symbol: &str,
+        source: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+    ) -> Result<Vec<Candle>, String> {
+        let models = sqlx::query_as::<_, CandleModel>(
+            "SELECT * FROM candles
+             WHERE symbol = ? AND source = ? AND timestamp BETWEEN ? AND ?
+             ORDER BY timestamp ASC",
+        )
+        .bind(symbol)
+        .bind(source)
+        .bind(start_time)
+        .bind(end_time)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to get candles: {}", e))?;
+
+        Ok(models.into_iter().map(|m| m.into()).collect())
+    }
+
+    pub async fn get_latest_candle(
+        &self,
+        symbol: &str,
+        source: &str,
+    ) -> Result<Option<Candle>, String> {
+        let model = sqlx::query_as::<_, CandleModel>(
+            "SELECT * FROM candles
+             WHERE symbol = ? AND source = ?
+             ORDER BY timestamp DESC
+             LIMIT 1",
+        )
+        .bind(symbol)
+        .bind(source)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to get latest candle: {}", e))?;
+
+        Ok(model.map(|m| m.into()))
+    }
+    // 创建导入任务
+    pub async fn create_import_task(
+        &self,
+        asset_type: &str,
+        source: &str,
+        symbol: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        interval: &str,
+    ) -> Result<i64, String> {
+        let now = Utc::now();
+
+        let result = sqlx::query(
+            "INSERT INTO import_tasks (
+                asset_type, source, symbol, start_time, end_time, interval,
+                status, progress, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(asset_type)
+        .bind(source)
+        .bind(symbol)
+        .bind(start_time)
+        .bind(end_time)
+        .bind(interval)
+        .bind("pending")
+        .bind(0.0)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to create import task: {}", e))?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    // 更新导入任务状态
+    pub async fn update_import_task_status(
+        &self,
+        task_id: i64,
+        status: ImportStatus,
+        progress: f64,
+        error: Option<&str>,
+    ) -> Result<(), String> {
+        let now = Utc::now();
+        let status_str = match status {
+            ImportStatus::Pending => "pending",
+            ImportStatus::InProgress => "in_progress",
+            ImportStatus::Completed => "completed",
+            ImportStatus::Failed => "failed",
+        };
+
+        let completed_at = if status == ImportStatus::Completed || status == ImportStatus::Failed {
+            Some(now)
+        } else {
+            None
+        };
+
+        sqlx::query(
+            "UPDATE import_tasks 
+             SET status = ?, progress = ?, error = ?, updated_at = ?, completed_at = ?
+             WHERE id = ?",
+        )
+        .bind(status_str)
+        .bind(progress)
+        .bind(error)
+        .bind(now)
+        .bind(completed_at)
+        .bind(task_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to update import task: {}", e))?;
+
+        Ok(())
+    }
+
+    // 获取导入任务
+    pub async fn get_import_task(&self, task_id: i64) -> Result<Option<ImportTask>, String> {
+        let task = sqlx::query_as::<_, ImportTask>("SELECT * FROM import_tasks WHERE id = ?")
+            .bind(task_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to get import task: {}", e))?;
+
+        Ok(task)
+    }
+
+    // 获取所有导入任务
+    pub async fn get_import_tasks(&self) -> Result<Vec<ImportTask>, String> {
+        let tasks =
+            sqlx::query_as::<_, ImportTask>("SELECT * FROM import_tasks ORDER BY created_at DESC")
+                .fetch_all(&self.pool)
+                .await
+                .map_err(|e| format!("Failed to get import tasks: {}", e))?;
+
+        Ok(tasks)
+    }
+
+    // 获取可用数据集信息
+    pub async fn get_available_datasets(&self) -> Result<Vec<DatasetInfo>, String> {
+        let datasets = sqlx::query_as::<_, DatasetInfo>(
+            "SELECT 
+                c.asset_type, 
+                c.source, 
+                c.symbol, 
+                p.name,
+                MIN(c.timestamp) as min_timestamp, 
+                MAX(c.timestamp) as max_timestamp,
+                COUNT(*) as candle_count,
+                GROUP_CONCAT(DISTINCT c.interval) as intervals
+             FROM candles c
+             LEFT JOIN products p ON c.symbol = p.symbol AND c.source = p.source
+             GROUP BY c.asset_type, c.source, c.symbol
+             ORDER BY c.asset_type, c.source, c.symbol",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to get available datasets: {}", e))?;
+
+        Ok(datasets)
+    }
+
+    // 检查数据集是否存在
+    pub async fn check_dataset_exists(
+        &self,
+        symbol: &str,
+        source: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+    ) -> Result<bool, String> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM candles 
+             WHERE symbol = ? AND source = ? 
+             AND timestamp BETWEEN ? AND ?",
+        )
+        .bind(symbol)
+        .bind(source)
+        .bind(start_time)
+        .bind(end_time)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to check dataset: {}", e))?;
+
+        Ok(count.0 > 0)
+    }
+
+    // 扩展 Candle 模型以包含 interval 字段
+    pub async fn save_candle_with_interval(
+        &self,
+        candle: &Candle,
+        interval: &str,
+    ) -> Result<i64, String> {
+        let result = sqlx::query(
+            "INSERT INTO candles (symbol, source, asset_type, timestamp, open, high, low, close, volume, interval)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(symbol, source, timestamp, interval) DO UPDATE SET
+             open = excluded.open,
+             high = excluded.high,
+             low = excluded.low,
+             close = excluded.close,
+             volume = excluded.volume"
+        )
+        .bind(&candle.symbol)
+        .bind(&candle.source)
+        .bind(&candle.asset_type)
+        .bind(candle.timestamp)
+        .bind(candle.open)
+        .bind(candle.high)
+        .bind(candle.low)
+        .bind(candle.close)
+        .bind(candle.volume)
+        .bind(interval)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to save candle: {}", e))?;
+
+        Ok(result.last_insert_rowid())
+    }
+
+    // 批量保存带有间隔的K线数据
+    pub async fn save_candles_with_interval(
+        &self,
+        candles: &[Candle],
+        interval: &str,
+    ) -> Result<(), String> {
+        // 使用事务批量插入以提高性能
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| format!("Failed to start transaction: {}", e))?;
+
+        for candle in candles {
+            sqlx::query(
+                "INSERT INTO candles (symbol, source, asset_type, timestamp, open, high, low, close, volume, interval)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON CONFLICT(symbol, source, timestamp, interval) DO UPDATE SET
+                 open = excluded.open,
+                 high = excluded.high,
+                 low = excluded.low,
+                 close = excluded.close,
+                 volume = excluded.volume"
+            )
+            .bind(&candle.symbol)
+            .bind(&candle.source)
+            .bind(&candle.asset_type)
+            .bind(candle.timestamp)
+            .bind(candle.open)
+            .bind(candle.high)
+            .bind(candle.low)
+            .bind(candle.close)
+            .bind(candle.volume)
+            .bind(interval)
+            .execute(&mut tx)
+            .await
+            .map_err(|e| format!("Failed to save candle in batch: {}", e))?;
+        }
+
+        tx.commit()
+            .await
+            .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+
+        Ok(())
+    }
+
+    // 获取带有间隔的K线数据
+    pub async fn get_candles_with_interval(
+        &self,
+        symbol: &str,
+        source: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+        interval: &str,
+    ) -> Result<Vec<Candle>, String> {
+        let models = sqlx::query_as::<_, CandleModel>(
+            "SELECT * FROM candles
+             WHERE symbol = ? AND source = ? AND interval = ? AND timestamp BETWEEN ? AND ?
+             ORDER BY timestamp ASC",
+        )
+        .bind(symbol)
+        .bind(source)
+        .bind(interval)
+        .bind(start_time)
+        .bind(end_time)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to get candles: {}", e))?;
+
+        Ok(models.into_iter().map(|m| m.into()).collect())
+    }
+}
+
+// 导入任务相关方法
+pub async fn init_import_tasks_table(&self) -> Result<(), String> {
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS import_tasks (
+            id TEXT PRIMARY KEY,
+            asset_type TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            source TEXT NOT NULL,
+            start_time DATETIME NOT NULL,
+            end_time DATETIME NOT NULL,
+            interval TEXT NOT NULL,
+            status TEXT NOT NULL,
+            progress REAL NOT NULL,
+            error TEXT,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL,
+            completed_at DATETIME,
+            total_candles INTEGER,
+            imported_candles INTEGER NOT NULL
+        )",
+    )
+    .execute(&self.pool)
+    .await
+    .map_err(|e| format!("Failed to create import_tasks table: {}", e))?;
+
+    Ok(())
+}
+
+pub async fn save_import_task(&self, task: &ImportTask) -> Result<(), String> {
+    let model: ImportTaskModel = task.clone().into();
+
+    sqlx::query(
+        "INSERT INTO import_tasks 
+         (id, asset_type, symbol, source, start_time, end_time, interval, status, progress, error, 
+          created_at, updated_at, completed_at, total_candles, imported_candles)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+         status = excluded.status,
+         progress = excluded.progress,
+         error = excluded.error,
+         updated_at = excluded.updated_at,
+         completed_at = excluded.completed_at,
+         total_candles = excluded.total_candles,
+         imported_candles = excluded.imported_candles",
+    )
+    .bind(&model.id)
+    .bind(&model.asset_type)
+    .bind(&model.symbol)
+    .bind(&model.source)
+    .bind(model.start_time)
+    .bind(model.end_time)
+    .bind(&model.interval)
+    .bind(&model.status)
+    .bind(model.progress)
+    .bind(&model.error)
+    .bind(model.created_at)
+    .bind(model.updated_at)
+    .bind(model.completed_at)
+    .bind(model.total_candles)
+    .bind(model.imported_candles)
+    .execute(&self.pool)
+    .await
+    .map_err(|e| format!("Failed to save import task: {}", e))?;
+
+    Ok(())
+}
+
+pub async fn get_import_task(&self, id: &str) -> Result<Option<ImportTask>, String> {
+    let model = sqlx::query_as::<_, ImportTaskModel>("SELECT * FROM import_tasks WHERE id = ?")
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to get import task: {}", e))?;
+
+    Ok(model.map(|m| m.into()))
+}
+
+pub async fn get_import_tasks(&self) -> Result<Vec<ImportTask>, String> {
+    let models =
+        sqlx::query_as::<_, ImportTaskModel>("SELECT * FROM import_tasks ORDER BY created_at DESC")
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| format!("Failed to get import tasks: {}", e))?;
+
+    Ok(models.into_iter().map(|m| m.into()).collect())
+}
+
+pub async fn get_available_data(&self) -> Result<Vec<AvailableData>, String> {
+    let rows = sqlx::query(
+        "SELECT 
+            c.asset_type, 
+            c.symbol, 
+            p.name, 
+            c.source, 
+            MIN(c.timestamp) as start_time, 
+            MAX(c.timestamp) as end_time, 
+            COUNT(*) as candle_count,
+            GROUP_CONCAT(DISTINCT c.interval) as intervals
+         FROM candles c
+         LEFT JOIN products p ON c.symbol = p.symbol AND c.source = p.source
+         GROUP BY c.asset_type, c.symbol, c.source",
+    )
+    .fetch_all(&self.pool)
+    .await
+    .map_err(|e| format!("Failed to get available data: {}", e))?;
+
+    let mut available_data = Vec::new();
+
+    for row in rows {
+        let asset_type: String = row.get("asset_type");
+        let symbol: String = row.get("symbol");
+        let name: Option<String> = row.get("name");
+        let source: String = row.get("source");
+        let start_time: DateTime<Utc> = row.get("start_time");
+        let end_time: DateTime<Utc> = row.get("end_time");
+        let candle_count: i64 = row.get("candle_count");
+        let intervals_str: String = row.get("intervals");
+
+        let intervals: Vec<String> = intervals_str.split(',').map(|s| s.to_string()).collect();
+
+        available_data.push(AvailableData {
+            asset_type,
+            symbol,
+            name,
+            source,
+            start_time,
+            end_time,
+            candle_count: candle_count as usize,
+            intervals,
+        });
+    }
+
+    Ok(available_data)
+}
