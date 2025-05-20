@@ -1,3 +1,33 @@
+/// `SinaFundAdapter` 是一个实现了 `MarketAdapter` trait 的适配器，用于从新浪财经获取基金数据。
+/// 提供了检测连接、获取基金列表、获取最新净值（NAV）以及获取历史净值（日K线）的功能。
+///
+/// # 功能
+/// - 连接新浪财经基金相关API接口。
+/// - 支持获取可用基金（产品）列表。
+/// - 获取指定基金代码的最新净值（NAV）。
+/// - 获取指定日期区间内的基金历史日净值数据（蜡烛图）。
+///
+/// # 示例
+/// ```rust
+/// let adapter = SinaFundAdapter::new();
+/// let products = adapter.get_products().await?;
+/// let ticker = adapter.get_ticker("000001").await?;
+/// let candles = adapter.get_candles("000001", start, end, "1d").await?;
+/// ```
+///
+/// # 注意事项
+/// - 仅支持日级别的K线数据（interval参数会被忽略）。
+/// - `get_products` 仅返回硬编码的示例数据，实际应用需对接真实接口。
+/// - 所有网络操作均为异步，需要在异步运行时环境下调用。
+///
+/// # 错误处理
+/// - 网络请求失败、响应格式错误或缺少必要字段时会返回 `Err(String)`。
+///
+/// # 依赖
+/// - `reqwest` 用于HTTP请求。
+/// - `chrono` 用于日期时间处理。
+/// - `serde_json` 用于JSON解析。
+/// - `async_trait` 用于异步trait支持。
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use reqwest::Client;

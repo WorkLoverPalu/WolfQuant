@@ -1,9 +1,49 @@
+/// 用于与币安（Binance）加密货币交易所 API 交互的适配器。
+///
+/// # 概述
+/// `BinanceAdapter` 实现了 `MarketAdapter` trait，提供以下功能：
+/// - 检查与币安 API 的连接。
+/// - 获取所有可交易的产品（交易对）。
+/// - 获取指定交易对的最新行情（价格、24 小时统计）。
+/// - 下载历史 K 线（蜡烛图）数据。
+///
+/// # 字段说明
+/// - `client`：用于发起 HTTP 请求的 Reqwest 客户端。
+/// - `base_url`：币安 API 的基础 URL。
+/// - `api_key`：可选的 API Key（当前未用到，仅为扩展预留）。
+/// - `api_secret`：可选的 API Secret（当前未用到，仅为扩展预留）。
+///
+/// # 已实现方法
+/// - `new(api_key, api_secret)`：构造新的适配器实例。
+/// - `name()`：返回适配器名称（"binance"）。
+/// - `asset_type()`：返回资产类型（"crypto"）。
+/// - `check_connection()`：检查币安 API 是否可达。
+/// - `get_products()`：获取所有当前处于“TRADING”状态的交易对。
+/// - `get_ticker(symbol)`：获取指定交易对的最新价格及 24 小时统计数据。
+/// - `get_candles(symbol, start_time, end_time, interval)`：下载指定交易对和周期的历史 K 线数据。
+///
+/// # 错误处理
+/// 所有异步方法均返回 `Result<T, String>`，错误信息会描述失败原因（如网络问题、解析失败、API 响应异常等）。
+///
+/// # 依赖库
+/// - `reqwest`：HTTP 请求。
+/// - `serde` 和 `serde_json`：JSON 解析。
+/// - `chrono`：日期与时间处理。
+/// - `async_trait`：异步 trait 支持。
+///
+/// # 示例
+/// ```rust
+/// let adapter = BinanceAdapter::new(None, None);
+/// let products = adapter.get_products().await?;
+/// let ticker = adapter.get_ticker("BTCUSDT").await?;
+/// let candles = adapter.get_candles("BTCUSDT", start, end, "1h").await?;
+/// ```
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
+//
 use crate::market::{Candle, MarketAdapter, Product, Ticker};
 
 pub struct BinanceAdapter {

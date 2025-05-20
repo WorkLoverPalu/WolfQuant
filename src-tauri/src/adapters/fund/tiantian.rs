@@ -1,4 +1,32 @@
-use async_trait::async_trait;
+/// `TiantianFundAdapter` 是 `MarketAdapter` trait 的一个实现，用于与天天基金进行交互。
+///
+/// # 主要功能
+/// - 获取基金产品列表
+/// - 获取基金最新净值（Ticker）
+/// - 获取基金历史净值（K线/Candle）
+/// - 检查与天天基金服务器的连接
+///
+/// # 字段
+/// - `client`: Reqwest HTTP 客户端，用于发送网络请求
+/// - `base_url`: 天天基金的基础 URL
+///
+/// # 用法示例
+/// ```rust
+/// let adapter = TiantianFundAdapter::new();
+/// let products = adapter.get_products().await?;
+/// let ticker = adapter.get_ticker("000001").await?;
+/// let candles = adapter.get_candles("000001", start, end, "1d").await?;
+/// ```
+///
+/// # 注意事项
+/// - 天天基金的历史净值数据只支持日线
+/// - 返回的部分数据为字符串类型，需要进行解析
+/// - ticker 接口返回的是 JSONP 格式，需要提取 JSON 部分
+///
+/// # 依赖
+/// - `reqwest` 用于 HTTP 请求
+/// - `serde` 和 `serde_json` 用于数据反序列化
+/// - `chrono` 用于时间处理
 use chrono::{DateTime, TimeZone, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -54,7 +82,7 @@ impl TiantianFundAdapter {
             base_url: "https://fundgz.1234567.com.cn".to_string(),
         }
     }
-    
+
     fn parse_date(&self, date_str: &str) -> Result<DateTime<Utc>, String> {
         let date_format = "%Y-%m-%d";
         chrono::NaiveDate::parse_from_str(date_str, date_format)
@@ -68,18 +96,23 @@ impl MarketAdapter for TiantianFundAdapter {
     fn name(&self) -> &str {
         "tiantian"
     }
-    
+
     fn asset_type(&self) -> &str {
         "fund"
     }
-    
+
     async fn check_connection(&self) -> Result<bool, String> {
-        match self.client.get(&format!("{}/js/ping", self.base_url)).send().await {
+        match self
+            .client
+            .get(&format!("{}/js/ping", self.base_url))
+            .send()
+            .await
+        {
             Ok(_) => Ok(true),
             Err(e) => Err(format!("Connection failed: {}", e)),
         }
     }
-    
+
     async fn get_products(&self) -> Result<Vec<Product>, String> {
         // 实际实现中，我们需要从天天基金获取基金列表
         // 这里为了简化，返回一些示例数据
@@ -97,38 +130,43 @@ impl MarketAdapter for TiantianFundAdapter {
                 source: "tiantian".to_string(),
             },
         ];
-        
+
         Ok(products)
     }
-    
+
     async fn get_ticker(&self, symbol: &str) -> Result<Ticker, String> {
         let url = format!("{}/js/{}.js", self.base_url, symbol);
-        
-        let response = self.client.get(&url)
+
+        let response = self
+            .client
+            .get(&url)
             .send()
             .await
             .map_err(|e| format!("Failed to fetch ticker: {}", e))?;
-        
-        let text = response.text()
+
+        let text = response
+            .text()
             .await
             .map_err(|e| format!("Failed to read response: {}", e))?;
-        
+
         // 天天基金返回的是 jsonp 格式，需要提取 JSON 部分
         let json_start = text.find('{').ok_or("Invalid response format")?;
         let json_end = text.rfind('}').ok_or("Invalid response format")?;
         let json_str = &text[json_start..=json_end];
-        
+
         let fund_data: TiantianFundResponse = serde_json::from_str(json_str)
             .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
-        let price = fund_data.price.parse::<f64>()
+
+        let price = fund_data
+            .price
+            .parse::<f64>()
             .map_err(|e| format!("Failed to parse price: {}", e))?;
-        
+
         let now = Utc::now();
-        
+
         Ok(Ticker::new(symbol.to_string(), price, now))
     }
-    
+
     async fn get_candles(
         &self,
         symbol: &str,
@@ -139,45 +177,50 @@ impl MarketAdapter for TiantianFundAdapter {
         // 天天基金只提供日级别的数据，忽略 interval 参数
         let start_date = start_time.format("%Y-%m-%d").to_string();
         let end_date = end_time.format("%Y-%m-%d").to_string();
-        
+
         let url = format!(
             "http://api.fund.eastmoney.com/f10/lsjz?fundCode={}&pageIndex=1&pageSize=100&startDate={}&endDate={}",
             symbol, start_date, end_date
         );
-        
-        let response = self.client.get(&url)
+
+        let response = self
+            .client
+            .get(&url)
             .header("Referer", "http://fundf10.eastmoney.com/")
             .send()
             .await
             .map_err(|e| format!("Failed to fetch historical data: {}", e))?;
-        
-        let json: Value = response.json()
+
+        let json: Value = response
+            .json()
             .await
             .map_err(|e| format!("Failed to parse response: {}", e))?;
-        
+
         let data = &json["Data"]["LSJZList"];
-        
+
         if !data.is_array() {
             return Err("Invalid response format".to_string());
         }
-        
+
         let mut candles = Vec::new();
-        
+
         for item in data.as_array().unwrap() {
             let date_str = item["FSRQ"].as_str().ok_or("Missing date")?;
             let nav_str = item["DWJZ"].as_str().ok_or("Missing NAV")?;
-            
+
             let timestamp = self.parse_date(date_str)?;
-            let nav = nav_str.parse::<f64>().map_err(|e| format!("Invalid NAV: {}", e))?;
-            
+            let nav = nav_str
+                .parse::<f64>()
+                .map_err(|e| format!("Invalid NAV: {}", e))?;
+
             // 基金只有净值，没有开高低收，所以我们用相同的值
             let candle = Candle::new(timestamp, nav, nav, nav, nav, 0.0);
             candles.push(candle);
         }
-        
+
         // 按时间排序
         candles.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-        
+
         Ok(candles)
     }
 }

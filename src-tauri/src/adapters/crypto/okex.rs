@@ -1,3 +1,50 @@
+/// OKEx 加密货币交易所 API 适配器。
+///
+/// # 概述
+///
+/// `OkexAdapter` 实现了 `MarketAdapter` trait，提供以下异步方法：
+/// - 检查 API 连通性
+/// - 获取可交易产品（现货）
+/// - 获取指定交易对的最新行情
+/// - 获取指定交易对的历史 K 线（OHLCV）数据
+///
+/// # 字段说明
+/// - `client`：用于 HTTP 请求的 `reqwest::Client` 实例
+/// - `base_url`：OKEx API 的基础 URL
+/// - `api_key`：可选的 API key（当前未用到，仅为扩展预留）
+/// - `api_secret`：可选的 API secret（当前未用到，仅为扩展预留）
+///
+/// # 方法
+/// - `new(api_key, api_secret)`：构造新的 `OkexAdapter` 实例
+///
+/// # Trait 实现：`MarketAdapter`
+/// - `name()`：返回适配器名称（"okex"）
+/// - `asset_type()`：返回资产类型（"crypto"）
+/// - `check_connection()`：检测 API 是否可用
+/// - `get_products()`：获取现货可交易产品列表
+/// - `get_ticker(symbol)`：获取指定交易对的最新行情
+/// - `get_candles(symbol, start_time, end_time, interval)`：获取指定交易对的历史 K 线数据
+///
+/// # 说明
+/// - 所有 API 请求均为异步
+/// - 错误通过 `Result<T, String>` 返回
+/// - 当前仅支持现货产品
+/// - K 线数据按时间正序返回（从旧到新）
+/// - 周期字符串会自动映射为 OKEx 格式
+///
+/// # 依赖
+/// - `async_trait` 用于异步 trait 方法
+/// - `chrono` 处理时间
+/// - `reqwest` 发送 HTTP 请求
+/// - `serde` 和 `serde_json` 解析 JSON
+///
+/// # 示例
+/// ```rust
+/// let adapter = OkexAdapter::new(None, None);
+/// let products = adapter.get_products().await?;
+/// let ticker = adapter.get_ticker("BTC-USDT").await?;
+/// let candles = adapter.get_candles("BTC-USDT", start, end, "1h").await?;
+/// ```
 use async_trait::async_trait;
 use chrono::{DateTime, TimeZone, Utc};
 use reqwest::Client;
