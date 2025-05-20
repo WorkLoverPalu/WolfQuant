@@ -644,49 +644,36 @@ pub fn get_today_investment_plans(
     let mut stmt = conn.prepare(&sql)?;
 
     // 执行查询，根据是否有资产类型过滤条件使用不同的参数
+    let investment_plan_mapper = |row: &rusqlite::Row| {
+        Ok(InvestmentPlan {
+            id: row.get(0)?,
+            user_id: row.get(1)?,
+            asset_id: row.get(2)?,
+            asset_name: row.get(3)?,
+            asset_code: row.get(4)?,
+            name: row.get(5)?,
+            frequency: row.get(6)?,
+            day_of_week: row.get(7)?,
+            day_of_month: row.get(8)?,
+            amount: row.get(9)?,
+            is_active: row.get(10)?,
+            last_executed: row.get(11)?,
+            next_execution: row.get(12)?,
+            created_at: row.get(13)?,
+            updated_at: row.get(14)?,
+        })
+    };
+
     let plans = if asset_type_id > 0 {
         stmt.query_map(
             params![user_id, today_start, today_end, asset_type_id],
-            |row| {
-                Ok(InvestmentPlan {
-                    id: row.get(0)?,
-                    user_id: row.get(1)?,
-                    asset_id: row.get(2)?,
-                    asset_name: row.get(3)?,
-                    asset_code: row.get(4)?,
-                    name: row.get(5)?,
-                    frequency: row.get(6)?,
-                    day_of_week: row.get(7)?,
-                    day_of_month: row.get(8)?,
-                    amount: row.get(9)?,
-                    is_active: row.get(10)?,
-                    last_executed: row.get(11)?,
-                    next_execution: row.get(12)?,
-                    created_at: row.get(13)?,
-                    updated_at: row.get(14)?,
-                })
-            },
+            investment_plan_mapper,
         )?
     } else {
-        stmt.query_map(params![user_id, today_start, today_end], |row| {
-            Ok(InvestmentPlan {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                asset_id: row.get(2)?,
-                asset_name: row.get(3)?,
-                asset_code: row.get(4)?,
-                name: row.get(5)?,
-                frequency: row.get(6)?,
-                day_of_week: row.get(7)?,
-                day_of_month: row.get(8)?,
-                amount: row.get(9)?,
-                is_active: row.get(10)?,
-                last_executed: row.get(11)?,
-                next_execution: row.get(12)?,
-                created_at: row.get(13)?,
-                updated_at: row.get(14)?,
-            })
-        })?
+        stmt.query_map(
+            params![user_id, today_start, today_end],
+            investment_plan_mapper,
+        )?
     };
 
     // 收集结果

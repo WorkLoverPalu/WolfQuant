@@ -7,6 +7,9 @@ use std::path::{Path, PathBuf};
 
 // 导入各个模块的表结构
 mod asset_tables;
+mod backtester_tables;
+mod candles_tables;
+mod importer_tables;
 mod transaction_tables;
 mod user_tables;
 
@@ -22,6 +25,9 @@ pub fn load_all_schemas() -> Result<HashMap<String, String>, AuthError> {
     schemas.extend(user_tables::get_schemas());
     schemas.extend(asset_tables::get_schemas());
     schemas.extend(transaction_tables::get_schemas());
+    schemas.extend(backtester_tables::get_schemas());
+    schemas.extend(candles_tables::get_schemas());
+    schemas.extend(importer_tables::get_schemas());
 
     // 可以在这里添加更多模块的表结构
 

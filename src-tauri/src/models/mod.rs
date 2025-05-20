@@ -11,6 +11,8 @@ pub mod price_history;
 pub mod trade_alert;
 pub mod portfolio;
 pub mod import;
+pub mod candle;
+pub mod ticker;
 
 // 重新导出所有类型，以便可以直接从 models 模块访问
 pub use user::*;
@@ -25,3 +27,5 @@ pub use price_history::*;
 pub use trade_alert::*;
 pub use portfolio::*;
 pub use import::*;
+pub use candle::*;
+pub use ticker::*;
