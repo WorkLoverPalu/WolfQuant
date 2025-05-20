@@ -1,173 +1,210 @@
-/**
- * 策略
- */
-use crate::error::auth::ErrorResponse;
-use crate::models::{
-    InvestmentStrategy, StrategyApplication, BacktestResult, CreateInvestmentStrategyRequest,
-    UpdateInvestmentStrategyRequest, DeleteInvestmentStrategyRequest, ApplyStrategyRequest,
-    RemoveStrategyApplicationRequest, BacktestStrategyRequest, MessageResponse,
+use tauri::{command, State, AppHandle};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+use crate::services::strategy_service::StrategyService;
+use crate::models::strategy::{
+    Strategy, StrategyVersion, StrategyTag, StrategyRating,
+    StrategyApplication, CreateStrategyRequest, UpdateStrategyRequest
 };
-use crate::services::strategy::{
-    create_investment_strategy, update_investment_strategy, delete_investment_strategy,
-    get_user_investment_strategies, apply_strategy, remove_strategy_application,
-    get_user_strategy_applications, backtest_strategy,
-};
-use tauri::command;
-use log::{info, error};
 
-#[command]
-pub async fn create_investment_strategy_command(request: CreateInvestmentStrategyRequest) -> Result<InvestmentStrategy, ErrorResponse> {
-    info!("Create investment strategy request received for user: {}", request.user_id);
-    
-    match create_investment_strategy(
-        request.user_id,
-        &request.name,
-        request.description.as_deref(),
-        &request.strategy_type,
-        &request.parameters,
-    ) {
-        Ok(strategy) => {
-            info!("Investment strategy created successfully: {}", strategy.name);
-            Ok(strategy)
-        },
-        Err(err) => {
-            error!("Failed to create investment strategy: {}", err);
-            Err(err.into())
-        },
-    }
+#[derive(Debug, Deserialize)]
+pub struct RateStrategyParams {
+    pub strategy_id: i64,
+    pub rating: i32,
+    pub comment: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ApplyStrategyParams {
+    pub strategy_id: i64,
+    pub asset_id: i64,
 }
 
 #[command]
-pub async fn update_investment_strategy_command(request: UpdateInvestmentStrategyRequest) -> Result<InvestmentStrategy, ErrorResponse> {
-    info!("Update investment strategy request received for strategy: {}", request.id);
+pub fn create_strategy(
+    request: CreateStrategyRequest,
+    app_handle: AppHandle,
+) -> Result<i64, String> {
+    // 获取当前用户ID
+    let user_id = 1; // 从应用状态获取当前用户ID
     
-    match update_investment_strategy(
-        request.id,
-        request.user_id,
-        &request.name,
-        request.description.as_deref(),
-        &request.parameters,
-    ) {
-        Ok(strategy) => {
-            info!("Investment strategy updated successfully: {}", strategy.name);
-            Ok(strategy)
-        },
-        Err(err) => {
-            error!("Failed to update investment strategy: {}", err);
-            Err(err.into())
-        },
-    }
+    // 创建策略服务
+    let strategy_service = StrategyService::new();
+    
+    // 创建策略
+    strategy_service.create_strategy(user_id, request)
 }
 
 #[command]
-pub async fn delete_investment_strategy_command(request: DeleteInvestmentStrategyRequest) -> Result<MessageResponse, ErrorResponse> {
-    info!("Delete investment strategy request received for strategy: {}", request.id);
-    
-    match delete_investment_strategy(request.id, request.user_id) {
-        Ok(_) => {
-            info!("Investment strategy deleted successfully: {}", request.id);
-            Ok(MessageResponse {
-                message: "投资策略删除成功".to_string(),
-            })
-        },
-        Err(err) => {
-            error!("Failed to delete investment strategy: {}", err);
-            Err(err.into())
-        },
-    }
+pub fn update_strategy(
+    request: UpdateStrategyRequest,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.update_strategy(user_id, request)
 }
 
 #[command]
-pub async fn get_user_investment_strategies_command(user_id: i64) -> Result<Vec<InvestmentStrategy>, ErrorResponse> {
-    info!("Get user investment strategies request received for user: {}", user_id);
-    
-    match get_user_investment_strategies(user_id) {
-        Ok(strategies) => {
-            info!("Retrieved {} investment strategies for user: {}", strategies.len(), user_id);
-            Ok(strategies)
-        },
-        Err(err) => {
-            error!("Failed to get user investment strategies: {}", err);
-            Err(err.into())
-        },
-    }
+pub fn delete_strategy(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.delete_strategy(user_id, strategy_id)
 }
 
 #[command]
-pub async fn apply_strategy_command(request: ApplyStrategyRequest) -> Result<StrategyApplication, ErrorResponse> {
-    info!("Apply strategy request received for user: {}", request.user_id);
-    
-    match apply_strategy(
-        request.user_id,
-        request.strategy_id,
-        request.asset_id,
-    ) {
-        Ok(application) => {
-            info!("Strategy applied successfully: {} to {}", application.strategy_name, application.asset_name);
-            Ok(application)
-        },
-        Err(err) => {
-            error!("Failed to apply strategy: {}", err);
-            Err(err.into())
-        },
-    }
+pub fn get_strategy(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<Strategy, String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.get_strategy(strategy_id)
 }
 
 #[command]
-pub async fn remove_strategy_application_command(request: RemoveStrategyApplicationRequest) -> Result<MessageResponse, ErrorResponse> {
-    info!("Remove strategy application request received for application: {}", request.id);
-    
-    match remove_strategy_application(request.id, request.user_id) {
-        Ok(_) => {
-            info!("Strategy application removed successfully: {}", request.id);
-            Ok(MessageResponse {
-                message: "策略应用移除成功".to_string(),
-            })
-        },
-        Err(err) => {
-            error!("Failed to remove strategy application: {}", err);
-            Err(err.into())
-        },
-    }
+pub fn get_user_strategies(
+    app_handle: AppHandle,
+) -> Result<Vec<Strategy>, String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.get_user_strategies(user_id)
 }
 
 #[command]
-pub async fn get_user_strategy_applications_command(
-    user_id: i64,
-    asset_id: Option<i64>,
-) -> Result<Vec<StrategyApplication>, ErrorResponse> {
-    info!("Get user strategy applications request received for user: {}", user_id);
-    
-    match get_user_strategy_applications(user_id, asset_id) {
-        Ok(applications) => {
-            info!("Retrieved {} strategy applications for user: {}", applications.len(), user_id);
-            Ok(applications)
-        },
-        Err(err) => {
-            error!("Failed to get user strategy applications: {}", err);
-            Err(err.into())
-        },
-    }
+pub fn get_public_strategies(
+    page: usize,
+    page_size: usize,
+    app_handle: AppHandle,
+) -> Result<Vec<Strategy>, String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.get_public_strategies(page, page_size)
 }
 
 #[command]
-pub async fn backtest_strategy_command(request: BacktestStrategyRequest) -> Result<BacktestResult, ErrorResponse> {
-    info!("Backtest strategy request received for user: {}", request.user_id);
-    
-    match backtest_strategy(
-        request.user_id,
-        request.strategy_id,
-        request.asset_id,
-        request.start_date,
-        request.end_date,
-    ) {
-        Ok(result) => {
-            info!("Strategy backtest completed successfully");
-            Ok(result)
-        },
-        Err(err) => {
-            error!("Failed to backtest strategy: {}", err);
-            Err(err.into())
-        },
-    }
+pub fn get_strategy_versions(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<Vec<StrategyVersion>, String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.get_strategy_versions(strategy_id)
+}
+
+#[command]
+pub fn add_strategy_tag(
+    strategy_id: i64,
+    tag_name: String,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.add_strategy_tag(strategy_id, &tag_name)
+}
+
+#[command]
+pub fn remove_strategy_tag(
+    strategy_id: i64,
+    tag_name: String,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.remove_strategy_tag(strategy_id, &tag_name)
+}
+
+#[command]
+pub fn get_strategy_tags(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<Vec<StrategyTag>, String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.get_strategy_tags(strategy_id)
+}
+
+#[command]
+pub fn favorite_strategy(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.favorite_strategy(user_id, strategy_id)
+}
+
+#[command]
+pub fn unfavorite_strategy(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.unfavorite_strategy(user_id, strategy_id)
+}
+
+#[command]
+pub fn get_user_favorite_strategies(
+    app_handle: AppHandle,
+) -> Result<Vec<Strategy>, String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.get_user_favorite_strategies(user_id)
+}
+
+#[command]
+pub fn rate_strategy(
+    params: RateStrategyParams,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.rate_strategy(user_id, params.strategy_id, params.rating, params.comment)
+}
+
+#[command]
+pub fn get_strategy_ratings(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<Vec<StrategyRating>, String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.get_strategy_ratings(strategy_id)
+}
+
+#[command]
+pub fn get_strategy_average_rating(
+    strategy_id: i64,
+    app_handle: AppHandle,
+) -> Result<Option<f64>, String> {
+    let strategy_service = StrategyService::new();
+    strategy_service.get_strategy_average_rating(strategy_id)
+}
+
+#[command]
+pub fn apply_strategy_to_asset(
+    params: ApplyStrategyParams,
+    app_handle: AppHandle,
+) -> Result<i64, String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.apply_strategy_to_asset(user_id, params.strategy_id, params.asset_id)
+}
+
+#[command]
+pub fn deactivate_strategy_application(
+    application_id: i64,
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.deactivate_strategy_application(user_id, application_id)
+}
+
+#[command]
+pub fn get_asset_strategies(
+    asset_id: i64,
+    app_handle: AppHandle,
+) -> Result<Vec<StrategyApplication>, String> {
+    let user_id = 1; // 从应用状态获取当前用户ID
+    let strategy_service = StrategyService::new();
+    strategy_service.get_asset_strategies(user_id, asset_id)
 }

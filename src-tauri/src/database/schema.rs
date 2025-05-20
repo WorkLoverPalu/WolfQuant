@@ -12,6 +12,7 @@ mod candles_tables;
 mod importer_tables;
 mod transaction_tables;
 mod user_tables;
+mod strategy_tables; // 新增策略表结构
 
 /// 加载所有模块的表结构
 pub fn load_all_schemas() -> Result<HashMap<String, String>, AuthError> {
@@ -28,6 +29,7 @@ pub fn load_all_schemas() -> Result<HashMap<String, String>, AuthError> {
     schemas.extend(backtester_tables::get_schemas());
     schemas.extend(candles_tables::get_schemas());
     schemas.extend(importer_tables::get_schemas());
+    schemas.extend(strategy_tables::get_schemas()); // 新增策略表结构
 
     // 可以在这里添加更多模块的表结构
 

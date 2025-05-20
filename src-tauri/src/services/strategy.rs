@@ -1,1215 +1,982 @@
-/**
- * 策略
- */
-use crate::database::get_connection_from_pool;
-use crate::error::auth::AuthError;
-use crate::models::{
-    BacktestResult, InvestmentStrategy, PerformancePoint, StrategyApplication, Transaction,
-};
 use chrono::Utc;
-use log::{error, info};
-use rusqlite::params;
-use serde_json::{self, Value};
+use log::{info, error};
+use serde_json::{json, Value};
+use crate::error::auth::AuthError;
+use crate::database::get_connection_from_pool;
+use crate::models::strategy::{
+    Strategy, StrategyType, StrategyVersion, StrategyTag, StrategyRating,
+    StrategyApplication, CreateStrategyRequest, UpdateStrategyRequest
+};
+use crate::models::candle::Candle;
+use crate::models::trading::OrderSignal;
+use std::collections::HashMap;
 
-pub fn create_investment_strategy(
-    user_id: i64,
-    name: &str,
-    description: Option<&str>,
-    strategy_type: &str,
-    parameters: &str,
-) -> Result<InvestmentStrategy, AuthError> {
-    let conn = get_connection_from_pool()?;
-    let now = Utc::now().timestamp();
+/// 策略服务，负责管理交易策略
+pub struct StrategyService;
 
-    // 验证策略类型
-    match strategy_type {
-        "MACD" | "RSI" | "MOVING_AVERAGE" | "CUSTOM" => {}
-        _ => return Err(AuthError::InvalidCredentials("无效的策略类型".to_string())),
+impl StrategyService {
+    /// 创建新的策略服务实例
+    pub fn new() -> Self {
+        Self {}
     }
-
-    // 验证参数是否为有效的JSON
-    if let Err(e) = serde_json::from_str::<Value>(parameters) {
-        return Err(AuthError::InvalidCredentials(format!(
-            "无效的策略参数: {}",
-            e
-        )));
+    
+    /// 创建新策略
+    pub fn create_strategy(
+        &self,
+        user_id: i64,
+        request: CreateStrategyRequest,
+    ) -> Result<i64, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let now = Utc::now().timestamp();
+        
+        // 验证策略参数是否有效
+        self.validate_strategy_parameters(&request.strategy_type, &request.parameters)?;
+        
+        // 插入策略记录
+        let strategy_id = conn.execute(
+            "INSERT INTO strategies (
+                user_id, name, description, strategy_type, parameters,
+                is_public, is_active, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            rusqlite::params![
+                user_id,
+                request.name,
+                request.description,
+                request.strategy_type,
+                request.parameters,
+                request.is_public,
+                true, // 默认激活
+                now,
+                now
+            ],
+        ).map_err(|e| format!("Failed to create strategy: {}", e))?;
+        
+        let strategy_id = conn.last_insert_rowid();
+        
+        // 创建初始版本
+        conn.execute(
+            "INSERT INTO strategy_versions (
+                strategy_id, version, parameters, description, created_at
+            ) VALUES (?, ?, ?, ?, ?)",
+            rusqlite::params![
+                strategy_id,
+                1, // 初始版本为1
+                request.parameters,
+                request.description,
+                now
+            ],
+        ).map_err(|e| format!("Failed to create strategy version: {}", e))?;
+        
+        info!("Created new strategy: {} (ID: {})", request.name, strategy_id);
+        
+        Ok(strategy_id)
     }
-
-    // 检查是否已存在同名策略
-    let strategy_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM investment_strategies WHERE user_id = ?1 AND name = ?2",
-            params![user_id, name],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if strategy_exists {
-        return Err(AuthError::InvalidCredentials("已存在同名策略".to_string()));
+    
+    /// 更新策略
+    pub fn update_strategy(
+        &self,
+        user_id: i64,
+        request: UpdateStrategyRequest,
+    ) -> Result<(), String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        // 检查策略是否存在且属于该用户
+        let strategy = self.get_strategy(request.id)?;
+        if strategy.user_id != user_id {
+            return Err("You don't have permission to update this strategy".to_string());
+        }
+        
+        // 验证策略参数是否有效
+        self.validate_strategy_parameters(&strategy.strategy_type.to_str(), &request.parameters)?;
+        
+        let now = Utc::now().timestamp();
+        
+        // 开始事务
+        let tx = conn.transaction()
+            .map_err(|e| format!("Failed to start transaction: {}", e))?;
+        
+        // 更新策略
+        tx.execute(
+            "UPDATE strategies SET
+                name = ?, description = ?, parameters = ?,
+                is_public = ?, updated_at = ?
+             WHERE id = ? AND user_id = ?",
+            rusqlite::params![
+                request.name,
+                request.description,
+                request.parameters,
+                request.is_public,
+                now,
+                request.id,
+                user_id
+            ],
+        ).map_err(|e| format!("Failed to update strategy: {}", e))?;
+        
+        // 获取当前最高版本号
+        let current_version: i32 = tx.query_row(
+            "SELECT MAX(version) FROM strategy_versions WHERE strategy_id = ?",
+            rusqlite::params![request.id],
+            |row| row.get(0),
+        ).map_err(|e| format!("Failed to get current version: {}", e))?;
+        
+        // 创建新版本
+        tx.execute(
+            "INSERT INTO strategy_versions (
+                strategy_id, version, parameters, description, created_at
+            ) VALUES (?, ?, ?, ?, ?)",
+            rusqlite::params![
+                request.id,
+                current_version + 1,
+                request.parameters,
+                request.description,
+                now
+            ],
+        ).map_err(|e| format!("Failed to create strategy version: {}", e))?;
+        
+        // 提交事务
+        tx.commit().map_err(|e| format!("Failed to commit transaction: {}", e))?;
+        
+        info!("Updated strategy: {} (ID: {})", request.name, request.id);
+        
+        Ok(())
     }
-
-    // 创建策略
-    conn.execute(
-        "INSERT INTO investment_strategies (user_id, name, description, strategy_type, parameters, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        params![
-            user_id,
-            name,
-            description,
-            strategy_type,
-            parameters,
-            now,
-            now
-        ],
-    )?;
-
-    let strategy_id = conn.last_insert_rowid();
-
-    let strategy = InvestmentStrategy {
-        id: strategy_id,
-        user_id: user_id,
-        name: name.to_string(),
-        description: description.map(|s| s.to_string()),
-        strategy_type: strategy_type.to_string(),
-        parameters: parameters.to_string(),
-        created_at: now,
-        updated_at: now,
-    };
-
-    info!(
-        "Investment strategy created: {} for user: {}",
-        name, user_id
-    );
-    Ok(strategy)
-}
-
-pub fn update_investment_strategy(
-    id: i64,
-    user_id: i64,
-    name: &str,
-    description: Option<&str>,
-    parameters: &str,
-) -> Result<InvestmentStrategy, AuthError> {
-    let conn = get_connection_from_pool()?;
-    let now = Utc::now().timestamp();
-
-    // 检查策略是否存在且属于该用户
-    let (strategy_type, created_at): (String, i64) = conn.query_row(
-        "SELECT strategy_type, created_at FROM investment_strategies WHERE id = ?1 AND user_id = ?2",
-        params![id, user_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    ).map_err(|_| AuthError::InvalidCredentials("策略不存在或无权限".to_string()))?;
-
-    // 验证参数是否为有效的JSON
-    if let Err(e) = serde_json::from_str::<Value>(parameters) {
-        return Err(AuthError::InvalidCredentials(format!(
-            "无效的策略参数: {}",
-            e
-        )));
+    
+    /// 删除策略
+    pub fn delete_strategy(
+        &self,
+        user_id: i64,
+        strategy_id: i64,
+    ) -> Result<(), String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        // 检查策略是否存在且属于该用户
+        let strategy = self.get_strategy(strategy_id)?;
+        if strategy.user_id != user_id {
+            return Err("You don't have permission to delete this strategy".to_string());
+        }
+        
+        // 删除策略（级联删除会自动删除相关记录）
+        conn.execute(
+            "DELETE FROM strategies WHERE id = ? AND user_id = ?",
+            rusqlite::params![strategy_id, user_id],
+        ).map_err(|e| format!("Failed to delete strategy: {}", e))?;
+        
+        info!("Deleted strategy: {} (ID: {})", strategy.name, strategy_id);
+        
+        Ok(())
     }
-
-    // 检查是否已存在同名策略
-    let same_name_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM investment_strategies 
-         WHERE user_id = ?1 AND name = ?2 AND id != ?3",
-            params![user_id, name, id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if same_name_exists {
-        return Err(AuthError::InvalidCredentials("已存在同名策略".to_string()));
+    
+    /// 获取策略
+    pub fn get_strategy(
+        &self,
+        strategy_id: i64,
+    ) -> Result<Strategy, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let strategy = conn.query_row(
+            "SELECT id, user_id, name, description, strategy_type, parameters,
+                    is_public, is_active, created_at, updated_at
+             FROM strategies WHERE id = ?",
+            rusqlite::params![strategy_id],
+            |row| {
+                Ok(Strategy {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    description: row.get(3)?,
+                    strategy_type: StrategyType::from_str(&row.get::<_, String>(4)?),
+                    parameters: row.get(5)?,
+                    is_public: row.get(6)?,
+                    is_active: row.get(7)?,
+                    created_at: Utc.timestamp(row.get::<_, i64>(8)?, 0),
+                    updated_at: Utc.timestamp(row.get::<_, i64>(9)?, 0),
+                })
+            },
+        ).map_err(|e| format!("Failed to get strategy: {}", e))?;
+        
+        Ok(strategy)
     }
-
-    // 更新策略
-    conn.execute(
-        "UPDATE investment_strategies 
-         SET name = ?1, description = ?2, parameters = ?3, updated_at = ?4
-         WHERE id = ?5",
-        params![name, description, parameters, now, id],
-    )?;
-
-    let strategy = InvestmentStrategy {
-        id,
-        user_id: user_id,
-        name: name.to_string(),
-        description: description.map(|s| s.to_string()),
-        strategy_type,
-        parameters: parameters.to_string(),
-        created_at,
-        updated_at: now,
-    };
-
-    info!(
-        "Investment strategy updated: {} for user: {}",
-        name, user_id
-    );
-    Ok(strategy)
-}
-
-pub fn delete_investment_strategy(id: i64, user_id: i64) -> Result<(), AuthError> {
-    let mut conn = get_connection_from_pool()?;
-
-    // 检查策略是否存在且属于该用户
-    let strategy_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM investment_strategies WHERE id = ?1 AND user_id = ?2",
-            params![id, user_id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if !strategy_exists {
-        return Err(AuthError::InvalidCredentials(
-            "策略不存在或无权限".to_string(),
-        ));
+    
+    /// 获取用户的所有策略
+    pub fn get_user_strategies(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<Strategy>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, name, description, strategy_type, parameters,
+                    is_public, is_active, created_at, updated_at
+             FROM strategies WHERE user_id = ? ORDER BY updated_at DESC"
+        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+        
+        let strategy_iter = stmt.query_map(
+            rusqlite::params![user_id],
+            |row| {
+                Ok(Strategy {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    description: row.get(3)?,
+                    strategy_type: StrategyType::from_str(&row.get::<_, String>(4)?),
+                    parameters: row.get(5)?,
+                    is_public: row.get(6)?,
+                    is_active: row.get(7)?,
+                    created_at: Utc.timestamp(row.get::<_, i64>(8)?, 0),
+                    updated_at: Utc.timestamp(row.get::<_, i64>(9)?, 0),
+                })
+            },
+        ).map_err(|e| format!("Failed to execute query: {}", e))?;
+        
+        let mut strategies = Vec::new();
+        for strategy_result in strategy_iter {
+            match strategy_result {
+                Ok(strategy) => strategies.push(strategy),
+                Err(e) => return Err(format!("Failed to process strategy row: {}", e)),
+            }
+        }
+        
+        Ok(strategies)
     }
-
-    // 开始事务
-    let tx = conn.transaction()?;
-
-    // 删除策略应用
-    tx.execute(
-        "DELETE FROM strategy_applications WHERE strategy_id = ?1",
-        params![id],
-    )?;
-
-    // 删除相关的交易提醒
-    tx.execute(
-        "DELETE FROM trade_alerts WHERE strategy_id = ?1",
-        params![id],
-    )?;
-
-    // 删除策略
-    tx.execute(
-        "DELETE FROM investment_strategies WHERE id = ?1",
-        params![id],
-    )?;
-
-    // 提交事务
-    tx.commit()?;
-
-    info!("Investment strategy deleted: {} for user: {}", id, user_id);
-    Ok(())
-}
-
-pub fn get_user_investment_strategies(user_id: i64) -> Result<Vec<InvestmentStrategy>, AuthError> {
-    let conn = get_connection_from_pool()?;
-
-    let mut stmt = conn.prepare(
-        "SELECT id, user_id, name, description, strategy_type, parameters, created_at, updated_at
-         FROM investment_strategies
-         WHERE user_id = ?1
-         ORDER BY name",
-    )?;
-
-    let strategies = stmt
-        .query_map(params![user_id], |row| {
-            Ok(InvestmentStrategy {
-                id: row.get(0)?,
-                user_id: row.get(1)?,
-                name: row.get(2)?,
-                description: row.get(3)?,
-                strategy_type: row.get(4)?,
-                parameters: row.get(5)?,
-                created_at: row.get(6)?,
-                updated_at: row.get(7)?,
-            })
-        })?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| {
-            error!("Failed to fetch user investment strategies: {}", e);
-            AuthError::DatabaseError(format!("获取用户投资策略失败: {}", e))
-        })?;
-
-    Ok(strategies)
-}
-
-pub fn apply_strategy(
-    user_id: i64,
-    strategy_id: i64,
-    asset_id: i64,
-) -> Result<StrategyApplication, AuthError> {
-    let conn = get_connection_from_pool()?;
-    let now = Utc::now().timestamp();
-
-    // 检查策略是否存在且属于该用户
-    let strategy_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM investment_strategies WHERE id = ?1 AND user_id = ?2",
-            params![strategy_id, user_id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if !strategy_exists {
-        return Err(AuthError::InvalidCredentials(
-            "策略不存在或无权限".to_string(),
-        ));
+    
+    /// 获取公开策略
+    pub fn get_public_strategies(
+        &self,
+        page: usize,
+        page_size: usize,
+    ) -> Result<Vec<Strategy>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let offset = (page - 1) * page_size;
+        
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, name, description, strategy_type, parameters,
+                    is_public, is_active, created_at, updated_at
+             FROM strategies 
+             WHERE is_public = 1 AND is_active = 1
+             ORDER BY updated_at DESC
+             LIMIT ? OFFSET ?"
+        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+        
+        let strategy_iter = stmt.query_map(
+            rusqlite::params![page_size as i64, offset as i64],
+            |row| {
+                Ok(Strategy {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    description: row.get(3)?,
+                    strategy_type: StrategyType::from_str(&row.get::<_, String>(4)?),
+                    parameters: row.get(5)?,
+                    is_public: row.get(6)?,
+                    is_active: row.get(7)?,
+                    created_at: Utc.timestamp(row.get::<_, i64>(8)?, 0),
+                    updated_at: Utc.timestamp(row.get::<_, i64>(9)?, 0),
+                })
+            },
+        ).map_err(|e| format!("Failed to execute query: {}", e))?;
+        
+        let mut strategies = Vec::new();
+        for strategy_result in strategy_iter {
+            match strategy_result {
+                Ok(strategy) => strategies.push(strategy),
+                Err(e) => return Err(format!("Failed to process strategy row: {}", e)),
+            }
+        }
+        
+        Ok(strategies)
     }
-
-    // 检查资产是否存在且属于该用户
-    let asset_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM assets WHERE id = ?1 AND user_id = ?2",
-            params![asset_id, user_id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if !asset_exists {
-        return Err(AuthError::InvalidCredentials(
-            "资产不存在或无权限".to_string(),
-        ));
+    
+    /// 获取策略版本历史
+    pub fn get_strategy_versions(
+        &self,
+        strategy_id: i64,
+    ) -> Result<Vec<StrategyVersion>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT id, strategy_id, version, parameters, description, created_at
+             FROM strategy_versions
+             WHERE strategy_id = ?
+             ORDER BY version DESC"
+        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+        
+        let version_iter = stmt.query_map(
+            rusqlite::params![strategy_id],
+            |row| {
+                Ok(StrategyVersion {
+                    id: row.get(0)?,
+                    strategy_id: row.get(1)?,
+                    version: row.get(2)?,
+                    parameters: row.get(3)?,
+                    description: row.get(4)?,
+                    created_at: Utc.timestamp(row.get::<_, i64>(5)?, 0),
+                })
+            },
+        ).map_err(|e| format!("Failed to execute query: {}", e))?;
+        
+        let mut versions = Vec::new();
+        for version_result in version_iter {
+            match version_result {
+                Ok(version) => versions.push(version),
+                Err(e) => return Err(format!("Failed to process version row: {}", e)),
+            }
+        }
+        
+        Ok(versions)
     }
-
-    // 检查是否已应用该策略
-    let application_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM strategy_applications 
-         WHERE strategy_id = ?1 AND asset_id = ?2",
-            params![strategy_id, asset_id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if application_exists {
-        return Err(AuthError::InvalidCredentials("已应用该策略".to_string()));
+    
+    /// 添加策略标签
+    pub fn add_strategy_tag(
+        &self,
+        strategy_id: i64,
+        tag_name: &str,
+    ) -> Result<(), String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        // 开始事务
+        let tx = conn.transaction()
+            .map_err(|e| format!("Failed to start transaction: {}", e))?;
+        
+        // 获取或创建标签
+        let tag_id = match tx.query_row(
+            "SELECT id FROM strategy_tags WHERE name = ?",
+            rusqlite::params![tag_name],
+            |row| row.get::<_, i64>(0),
+        ) {
+            Ok(id) => id,
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                // 创建新标签
+                tx.execute(
+                    "INSERT INTO strategy_tags (name) VALUES (?)",
+                    rusqlite::params![tag_name],
+                ).map_err(|e| format!("Failed to create tag: {}", e))?;
+                
+                tx.last_insert_rowid()
+            },
+            Err(e) => return Err(format!("Failed to get tag: {}", e)),
+        };
+        
+        // 添加标签关联
+        tx.execute(
+            "INSERT OR IGNORE INTO strategy_tag_relations (strategy_id, tag_id) VALUES (?, ?)",
+            rusqlite::params![strategy_id, tag_id],
+        ).map_err(|e| format!("Failed to add tag relation: {}", e))?;
+        
+        // 提交事务
+        tx.commit().map_err(|e| format!("Failed to commit transaction: {}", e))?;
+        
+        Ok(())
     }
-
-    // 应用策略
-    conn.execute(
-        "INSERT INTO strategy_applications (user_id, strategy_id, asset_id, is_active, created_at, updated_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![
-            user_id,
-            strategy_id,
-            asset_id,
-            true,
-            now,
-            now
-        ],
-    )?;
-
-    let application_id = conn.last_insert_rowid();
-
-    // 获取策略和资产信息
-    let strategy_name: String = conn.query_row(
-        "SELECT name FROM investment_strategies WHERE id = ?1",
-        params![strategy_id],
-        |row| row.get(0),
-    )?;
-
-    let (asset_name, asset_code): (String, String) = conn.query_row(
-        "SELECT name, code FROM assets WHERE id = ?1",
-        params![asset_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    )?;
-
-    let application = StrategyApplication {
-        id: application_id,
-        user_id: user_id,
-        strategy_id,
-        strategy_name: strategy_name.clone(),
-        asset_id,
-        asset_name: asset_name.clone(),
-        asset_code,
-        is_active: true,
-        created_at: now,
-        updated_at: now,
-    };
-
-    info!(
-        "Strategy applied: {} to asset: {} for user: {}",
-        strategy_name, asset_name, user_id
-    );
-    Ok(application)
-}
-
-pub fn remove_strategy_application(id: i64, user_id: i64) -> Result<(), AuthError> {
-    let conn = get_connection_from_pool()?;
-
-    // 检查应用是否存在且属于该用户
-    let application_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM strategy_applications WHERE id = ?1 AND user_id = ?2",
-            params![id, user_id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if !application_exists {
-        return Err(AuthError::InvalidCredentials(
-            "策略应用不存在或无权限".to_string(),
-        ));
+    
+    /// 移除策略标签
+    pub fn remove_strategy_tag(
+        &self,
+        strategy_id: i64,
+        tag_name: &str,
+    ) -> Result<(), String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        // 获取标签ID
+        let tag_id: Result<i64, rusqlite::Error> = conn.query_row(
+            "SELECT id FROM strategy_tags WHERE name = ?",
+            rusqlite::params![tag_name],
+            |row| row.get(0),
+        );
+        
+        match tag_id {
+            Ok(id) => {
+                // 移除标签关联
+                conn.execute(
+                    "DELETE FROM strategy_tag_relations WHERE strategy_id = ? AND tag_id = ?",
+                    rusqlite::params![strategy_id, id],
+                ).map_err(|e| format!("Failed to remove tag relation: {}", e))?;
+                
+                Ok(())
+            },
+            Err(rusqlite::Error::QueryReturnedNoRows) => {
+                // 标签不存在，视为成功
+                Ok(())
+            },
+            Err(e) => Err(format!("Failed to get tag: {}", e)),
+        }
     }
-
-    // 删除应用
-    conn.execute(
-        "DELETE FROM strategy_applications WHERE id = ?1",
-        params![id],
-    )?;
-
-    info!("Strategy application removed: {} for user: {}", id, user_id);
-    Ok(())
-}
-
-pub fn get_user_strategy_applications(
-    user_id: i64,
-    asset_id: Option<i64>,
-) -> Result<Vec<StrategyApplication>, AuthError> {
-    let conn = get_connection_from_pool()?;
-
-    let mut query = if let Some(a_id) = asset_id {
-        conn.prepare(
-            "SELECT sa.id, sa.user_id, sa.strategy_id, s.name, sa.asset_id, a.name, a.code, 
-                    sa.is_active, sa.created_at, sa.updated_at
-             FROM strategy_applications sa
-             JOIN investment_strategies s ON sa.strategy_id = s.id
-             JOIN assets a ON sa.asset_id = a.id
-             WHERE sa.user_id = ?1 AND sa.asset_id = ?2
-             ORDER BY s.name",
-        )?
-    } else {
-        conn.prepare(
-            "SELECT sa.id, sa.user_id, sa.strategy_id, s.name, sa.asset_id, a.name, a.code, 
-                    sa.is_active, sa.created_at, sa.updated_at
-             FROM strategy_applications sa
-             JOIN investment_strategies s ON sa.strategy_id = s.id
-             JOIN assets a ON sa.asset_id = a.id
-             WHERE sa.user_id = ?1
-             ORDER BY s.name",
-        )?
-    };
-
-    let applications = if let Some(a_id) = asset_id {
-        query
-            .query_map(params![user_id, a_id], |row| {
+    
+    /// 获取策略标签
+    pub fn get_strategy_tags(
+        &self,
+        strategy_id: i64,
+    ) -> Result<Vec<StrategyTag>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT t.id, t.name
+             FROM strategy_tags t
+             JOIN strategy_tag_relations r ON t.id = r.tag_id
+             WHERE r.strategy_id = ?
+             ORDER BY t.name"
+        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+        
+        let tag_iter = stmt.query_map(
+            rusqlite::params![strategy_id],
+            |row| {
+                Ok(StrategyTag {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                })
+            },
+        ).map_err(|e| format!("Failed to execute query: {}", e))?;
+        
+        let mut tags = Vec::new();
+        for tag_result in tag_iter {
+            match tag_result {
+                Ok(tag) => tags.push(tag),
+                Err(e) => return Err(format!("Failed to process tag row: {}", e)),
+            }
+        }
+        
+        Ok(tags)
+    }
+    
+    /// 收藏策略
+    pub fn favorite_strategy(
+        &self,
+        user_id: i64,
+        strategy_id: i64,
+    ) -> Result<(), String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let now = Utc::now().timestamp();
+        
+        conn.execute(
+            "INSERT OR REPLACE INTO strategy_favorites (user_id, strategy_id, created_at)
+             VALUES (?, ?, ?)",
+            rusqlite::params![user_id, strategy_id, now],
+        ).map_err(|e| format!("Failed to favorite strategy: {}", e))?;
+        
+        Ok(())
+    }
+    
+    /// 取消收藏策略
+    pub fn unfavorite_strategy(
+        &self,
+        user_id: i64,
+        strategy_id: i64,
+    ) -> Result<(), String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        conn.execute(
+            "DELETE FROM strategy_favorites WHERE user_id = ? AND strategy_id = ?",
+            rusqlite::params![user_id, strategy_id],
+        ).map_err(|e| format!("Failed to unfavorite strategy: {}", e))?;
+        
+        Ok(())
+    }
+    
+    /// 获取用户收藏的策略
+    pub fn get_user_favorite_strategies(
+        &self,
+        user_id: i64,
+    ) -> Result<Vec<Strategy>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT s.id, s.user_id, s.name, s.description, s.strategy_type, s.parameters,
+                    s.is_public, s.is_active, s.created_at, s.updated_at
+             FROM strategies s
+             JOIN strategy_favorites f ON s.id = f.strategy_id
+             WHERE f.user_id = ? AND s.is_active = 1
+             ORDER BY f.created_at DESC"
+        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+        
+        let strategy_iter = stmt.query_map(
+            rusqlite::params![user_id],
+            |row| {
+                Ok(Strategy {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    name: row.get(2)?,
+                    description: row.get(3)?,
+                    strategy_type: StrategyType::from_str(&row.get::<_, String>(4)?),
+                    parameters: row.get(5)?,
+                    is_public: row.get(6)?,
+                    is_active: row.get(7)?,
+                    created_at: Utc.timestamp(row.get::<_, i64>(8)?, 0),
+                    updated_at: Utc.timestamp(row.get::<_, i64>(9)?, 0),
+                })
+            },
+        ).map_err(|e| format!("Failed to execute query: {}", e))?;
+        
+        let mut strategies = Vec::new();
+        for strategy_result in strategy_iter {
+            match strategy_result {
+                Ok(strategy) => strategies.push(strategy),
+                Err(e) => return Err(format!("Failed to process strategy row: {}", e)),
+            }
+        }
+        
+        Ok(strategies)
+    }
+    
+    /// 对策略进行评分
+    pub fn rate_strategy(
+        &self,
+        user_id: i64,
+        strategy_id: i64,
+        rating: i32,
+        comment: Option<String>,
+    ) -> Result<(), String> {
+        if rating < 1 || rating > 5 {
+            return Err("Rating must be between 1 and 5".to_string());
+        }
+        
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let now = Utc::now().timestamp();
+        
+        conn.execute(
+            "INSERT OR REPLACE INTO strategy_ratings (
+                user_id, strategy_id, rating, comment, created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?)",
+            rusqlite::params![user_id, strategy_id, rating, comment, now, now],
+        ).map_err(|e| format!("Failed to rate strategy: {}", e))?;
+        
+        Ok(())
+    }
+    
+    /// 获取策略评分
+    pub fn get_strategy_ratings(
+        &self,
+        strategy_id: i64,
+    ) -> Result<Vec<StrategyRating>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, strategy_id, rating, comment, created_at, updated_at
+             FROM strategy_ratings
+             WHERE strategy_id = ?
+             ORDER BY updated_at DESC"
+        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+        
+        let rating_iter = stmt.query_map(
+            rusqlite::params![strategy_id],
+            |row| {
+                Ok(StrategyRating {
+                    id: row.get(0)?,
+                    user_id: row.get(1)?,
+                    strategy_id: row.get(2)?,
+                    rating: row.get(3)?,
+                    comment: row.get(4)?,
+                    created_at: Utc.timestamp(row.get::<_, i64>(5)?, 0),
+                    updated_at: Utc.timestamp(row.get::<_, i64>(6)?, 0),
+                })
+            },
+        ).map_err(|e| format!("Failed to execute query: {}", e))?;
+        
+        let mut ratings = Vec::new();
+        for rating_result in rating_iter {
+            match rating_result {
+                Ok(rating) => ratings.push(rating),
+                Err(e) => return Err(format!("Failed to process rating row: {}", e)),
+            }
+        }
+        
+        Ok(ratings)
+    }
+    
+    /// 获取策略平均评分
+    pub fn get_strategy_average_rating(
+        &self,
+        strategy_id: i64,
+    ) -> Result<Option<f64>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let avg_rating: Result<f64, rusqlite::Error> = conn.query_row(
+            "SELECT AVG(rating) FROM strategy_ratings WHERE strategy_id = ?",
+            rusqlite::params![strategy_id],
+            |row| row.get(0),
+        );
+        
+        match avg_rating {
+            Ok(rating) => Ok(Some(rating)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(format!("Failed to get average rating: {}", e)),
+        }
+    }
+    
+    /// 应用策略到资产
+    pub fn apply_strategy_to_asset(
+        &self,
+        user_id: i64,
+        strategy_id: i64,
+        asset_id: i64,
+    ) -> Result<i64, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let now = Utc::now().timestamp();
+        
+        // 检查策略是否存在且属于该用户或是公开的
+        let strategy = self.get_strategy(strategy_id)?;
+        if strategy.user_id != user_id && !strategy.is_public {
+            return Err("You don't have permission to use this strategy".to_string());
+        }
+        
+        // 检查资产是否存在且属于该用户
+        let asset_exists: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM assets WHERE id = ? AND user_id = ?)",
+            rusqlite::params![asset_id, user_id],
+            |row| row.get(0),
+        ).map_err(|e| format!("Failed to check asset: {}", e))?;
+        
+        if !asset_exists {
+            return Err("Asset not found or you don't have permission".to_string());
+        }
+        
+        // 插入或更新应用记录
+        conn.execute(
+            "INSERT INTO strategy_applications (
+                user_id, strategy_id, asset_id, is_active, created_at, updated_at
+             ) VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT(strategy_id, asset_id) DO UPDATE SET
+                is_active = excluded.is_active,
+                updated_at = excluded.updated_at",
+            rusqlite::params![user_id, strategy_id, asset_id, true, now, now],
+        ).map_err(|e| format!("Failed to apply strategy: {}", e))?;
+        
+        let application_id = conn.last_insert_rowid();
+        
+        Ok(application_id)
+    }
+    
+    /// 停用应用到资产的策略
+    pub fn deactivate_strategy_application(
+        &self,
+        user_id: i64,
+        application_id: i64,
+    ) -> Result<(), String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let now = Utc::now().timestamp();
+        
+        // 更新应用状态
+        let rows_affected = conn.execute(
+            "UPDATE strategy_applications
+             SET is_active = 0, updated_at = ?
+             WHERE id = ? AND user_id = ?",
+            rusqlite::params![now, application_id, user_id],
+        ).map_err(|e| format!("Failed to deactivate strategy application: {}", e))?;
+        
+        if rows_affected == 0 {
+            return Err("Strategy application not found or you don't have permission".to_string());
+        }
+        
+        Ok(())
+    }
+    
+    /// 获取资产应用的策略
+    pub fn get_asset_strategies(
+        &self,
+        user_id: i64,
+        asset_id: i64,
+    ) -> Result<Vec<StrategyApplication>, String> {
+        let conn = get_connection_from_pool()
+            .map_err(|e| format!("Failed to get database connection: {}", e))?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT a.id, a.user_id, a.strategy_id, a.asset_id, a.is_active, a.created_at, a.updated_at
+             FROM strategy_applications a
+             WHERE a.user_id = ? AND a.asset_id = ?
+             ORDER BY a.updated_at DESC"
+        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
+        
+        let application_iter = stmt.query_map(
+            rusqlite::params![user_id, asset_id],
+            |row| {
                 Ok(StrategyApplication {
                     id: row.get(0)?,
                     user_id: row.get(1)?,
                     strategy_id: row.get(2)?,
-                    strategy_name: row.get(3)?,
-                    asset_id: row.get(4)?,
-                    asset_name: row.get(5)?,
-                    asset_code: row.get(6)?,
-                    is_active: row.get(7)?,
-                    created_at: row.get(8)?,
-                    updated_at: row.get(9)?,
+                    asset_id: row.get(3)?,
+                    is_active: row.get(4)?,
+                    created_at: Utc.timestamp(row.get::<_, i64>(5)?, 0),
+                    updated_at: Utc.timestamp(row.get::<_, i64>(6)?, 0),
                 })
-            })?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| {
-                error!("Failed to fetch user strategy applications: {}", e);
-                AuthError::DatabaseError(format!("获取用户策略应用失败: {}", e))
-            })?
-    } else {
-        query
-            .query_map(params![user_id], |row| {
-                Ok(StrategyApplication {
-                    id: row.get(0)?,
-                    user_id: row.get(1)?,
-                    strategy_id: row.get(2)?,
-                    strategy_name: row.get(3)?,
-                    asset_id: row.get(4)?,
-                    asset_name: row.get(5)?,
-                    asset_code: row.get(6)?,
-                    is_active: row.get(7)?,
-                    created_at: row.get(8)?,
-                    updated_at: row.get(9)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| {
-                error!("Failed to fetch user strategy applications: {}", e);
-                AuthError::DatabaseError(format!("获取用户策略应用失败: {}", e))
-            })?
-    };
-
-    Ok(applications)
-}
-
-pub fn backtest_strategy(
-    user_id: i64,
-    strategy_id: i64,
-    asset_id: i64,
-    start_date: i64,
-    end_date: i64,
-) -> Result<BacktestResult, AuthError> {
-    let conn = get_connection_from_pool()?;
-
-    // 检查策略是否存在且属于该用户
-    let (strategy_type, parameters): (String, String) = conn.query_row(
-        "SELECT strategy_type, parameters FROM investment_strategies WHERE id = ?1 AND user_id = ?2",
-        params![strategy_id, user_id],
-        |row| Ok((row.get(0)?, row.get(1)?)),
-    ).map_err(|_| AuthError::InvalidCredentials("策略不存在或无权限".to_string()))?;
-
-    // 检查资产是否存在且属于该用户
-    let asset_exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM assets WHERE id = ?1 AND user_id = ?2",
-            params![asset_id, user_id],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if !asset_exists {
-        return Err(AuthError::InvalidCredentials(
-            "资产不存在或无权限".to_string(),
-        ));
-    }
-
-    // 获取历史价格数据
-    let mut stmt = conn.prepare(
-        "SELECT date, close_price
-         FROM price_history
-         WHERE asset_id = ?1 AND date >= ?2 AND date <= ?3
-         ORDER BY date",
-    )?;
-
-    let price_data = stmt
-        .query_map(params![asset_id, start_date, end_date], |row| {
-            Ok((row.get::<_, i64>(0)?, row.get::<_, f64>(1)?))
-        })?
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|e| {
-            error!("Failed to fetch price history: {}", e);
-            AuthError::DatabaseError(format!("获取历史价格数据失败: {}", e))
-        })?;
-
-    if price_data.is_empty() {
-        return Err(AuthError::InvalidCredentials(
-            "所选时间范围内没有历史价格数据".to_string(),
-        ));
-    }
-
-    // 根据策略类型执行回测
-    let backtest_result = match strategy_type.as_str() {
-        "MACD" => backtest_macd_strategy(asset_id, &price_data, &parameters)?,
-        "RSI" => backtest_rsi_strategy(asset_id, &price_data, &parameters)?,
-        "MOVING_AVERAGE" => backtest_ma_strategy(asset_id, &price_data, &parameters)?,
-        "CUSTOM" => backtest_custom_strategy(asset_id, &price_data, &parameters)?,
-        _ => {
-            return Err(AuthError::InvalidCredentials(
-                "不支持的策略类型".to_string(),
-            ))
-        }
-    };
-
-    info!(
-        "Strategy backtest completed for strategy: {} on asset: {}",
-        strategy_id, asset_id
-    );
-    Ok(backtest_result)
-}
-
-fn backtest_macd_strategy(
-    asset_id: i64,
-    price_data: &[(i64, f64)],
-    parameters: &str,
-) -> Result<BacktestResult, AuthError> {
-    // 解析参数
-    let params: Value = serde_json::from_str(parameters)
-        .map_err(|e| AuthError::InvalidCredentials(format!("无效的策略参数: {}", e)))?;
-
-    let fast_period = params["fast_period"].as_u64().unwrap_or(12) as usize;
-    let slow_period = params["slow_period"].as_u64().unwrap_or(26) as usize;
-    let signal_period = params["signal_period"].as_u64().unwrap_or(9) as usize;
-    let initial_investment = params["initial_investment"].as_f64().unwrap_or(10000.0);
-
-    if price_data.len() < slow_period + signal_period {
-        return Err(AuthError::InvalidCredentials(
-            "历史数据不足，无法执行MACD策略回测".to_string(),
-        ));
-    }
-
-    // 提取价格序列
-    let prices: Vec<f64> = price_data.iter().map(|(_, price)| *price).collect();
-    let dates: Vec<i64> = price_data.iter().map(|(date, _)| *date).collect();
-
-    // 计算MACD
-    let (macd_line, signal_line, _) =
-        calculate_macd(&prices, fast_period, slow_period, signal_period);
-
-    // 模拟交易
-    let mut cash = initial_investment;
-    let mut shares = 0.0;
-    let mut transactions = Vec::new();
-    let mut performance_data = Vec::new();
-
-    // 记录初始状态
-    performance_data.push(PerformancePoint {
-        date: dates[0],
-        value: cash,
-        benchmark_value: Some(initial_investment),
-    });
-
-    for i in (slow_period + signal_period)..prices.len() {
-        let current_price = prices[i];
-        let current_date = dates[i];
-        let macd_value = macd_line[i - 1];
-        let signal_value = signal_line[i - 1];
-        let prev_macd_value = macd_line[i - 2];
-        let prev_signal_value = signal_line[i - 2];
-
-        // MACD穿越信号线向上（买入信号）
-        if prev_macd_value < prev_signal_value && macd_value > signal_value && cash > 0.0 {
-            let amount = cash / current_price;
-            shares += amount;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "BUY".to_string(),
-                amount,
-                price: current_price,
-                total_cost: cash,
-                transaction_date: current_date,
-                notes: Some("MACD策略回测买入".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            cash = 0.0;
-        }
-        // MACD穿越信号线向下（卖出信号）
-        else if prev_macd_value > prev_signal_value && macd_value < signal_value && shares > 0.0 {
-            let value = shares * current_price;
-            cash += value;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "SELL".to_string(),
-                amount: shares,
-                price: current_price,
-                total_cost: value,
-                transaction_date: current_date,
-                notes: Some("MACD策略回测卖出".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            shares = 0.0;
-        }
-
-        // 记录每日表现
-        let portfolio_value = cash + shares * current_price;
-        let benchmark_value =
-            initial_investment * (current_price / prices[slow_period + signal_period]);
-
-        performance_data.push(PerformancePoint {
-            date: current_date,
-            value: portfolio_value,
-            benchmark_value: Some(benchmark_value),
-        });
-    }
-
-    // 计算最终结果
-    let final_value = cash + shares * prices.last().unwrap();
-    let total_return = (final_value - initial_investment) / initial_investment * 100.0;
-
-    // 计算年化收益率
-    let days = (dates.last().unwrap() - dates[slow_period + signal_period]) / 86400; // 秒转天
-    let years = days as f64 / 365.0;
-    let annualized_return = (final_value / initial_investment).powf(1.0 / years) - 1.0;
-
-    // 计算最大回撤
-    let mut max_drawdown = 0.0;
-    let mut peak = performance_data[0].value;
-
-    for point in &performance_data {
-        if point.value > peak {
-            peak = point.value;
-        } else {
-            let drawdown = (peak - point.value) / peak;
-            if drawdown > max_drawdown {
-                max_drawdown = drawdown;
+            },
+        ).map_err(|e| format!("Failed to execute query: {}", e))?;
+        
+        let mut applications = Vec::new();
+        for application_result in application_iter {
+            match application_result {
+                Ok(application) => applications.push(application),
+                Err(e) => return Err(format!("Failed to process application row: {}", e)),
             }
         }
+        
+        Ok(applications)
     }
-
-    Ok(BacktestResult {
-        initial_investment,
-        final_value,
-        total_return,
-        annualized_return: annualized_return * 100.0,
-        max_drawdown: max_drawdown * 100.0,
-        transactions,
-        performance_data,
-    })
-}
-
-fn backtest_rsi_strategy(
-    asset_id: i64,
-    price_data: &[(i64, f64)],
-    parameters: &str,
-) -> Result<BacktestResult, AuthError> {
-    // 解析参数
-    let params: Value = serde_json::from_str(parameters)
-        .map_err(|e| AuthError::InvalidCredentials(format!("无效的策略参数: {}", e)))?;
-
-    let period = params["period"].as_u64().unwrap_or(14) as usize;
-    let oversold = params["oversold"].as_f64().unwrap_or(30.0);
-    let overbought = params["overbought"].as_f64().unwrap_or(70.0);
-    let initial_investment = params["initial_investment"].as_f64().unwrap_or(10000.0);
-
-    if price_data.len() < period + 1 {
-        return Err(AuthError::InvalidCredentials(
-            "历史数据不足，无法执行RSI策略回测".to_string(),
-        ));
-    }
-
-    // 提取价格序列
-    let prices: Vec<f64> = price_data.iter().map(|(_, price)| *price).collect();
-    let dates: Vec<i64> = price_data.iter().map(|(date, _)| *date).collect();
-
-    // 计算RSI
-    let rsi = calculate_rsi(&prices, period);
-
-    // 模拟交易
-    let mut cash = initial_investment;
-    let mut shares = 0.0;
-    let mut transactions = Vec::new();
-    let mut performance_data = Vec::new();
-
-    // 记录初始状态
-    performance_data.push(PerformancePoint {
-        date: dates[0],
-        value: cash,
-        benchmark_value: Some(initial_investment),
-    });
-
-    for i in (period + 1)..prices.len() {
-        let current_price = prices[i];
-        let current_date = dates[i];
-        let current_rsi = rsi[i - 1];
-        let prev_rsi = rsi[i - 2];
-
-        // RSI从超卖区域回升（买入信号）
-        if prev_rsi < oversold && current_rsi > oversold && cash > 0.0 {
-            let amount = cash / current_price;
-            shares += amount;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "BUY".to_string(),
-                amount,
-                price: current_price,
-                total_cost: cash,
-                transaction_date: current_date,
-                notes: Some("RSI策略回测买入".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            cash = 0.0;
+    
+    /// 创建策略实例
+    pub fn create_strategy_instance(
+        &self,
+        strategy_type: StrategyType,
+        parameters_json: &str,
+    ) -> Result<Box<dyn crate::models::strategy::Strategy>, String> {
+        // 解析参数
+        let parameters: Value = serde_json::from_str(parameters_json)
+            .map_err(|e| format!("Failed to parse strategy parameters: {}", e))?;
+        
+        // 根据策略类型创建实例
+        match strategy_type {
+            StrategyType::MovingAverageCrossover => {
+                // 创建移动平均线交叉策略
+                let fast_period = parameters["fastPeriod"].as_u64()
+                    .ok_or_else(|| "Missing fastPeriod parameter".to_string())? as usize;
+                let slow_period = parameters["slowPeriod"].as_u64()
+                    .ok_or_else(|| "Missing slowPeriod parameter".to_string())? as usize;
+                
+                // 这里应该返回具体的策略实现
+                // 为了示例，我们返回一个空实现
+                Ok(Box::new(DummyStrategy::new(
+                    "Moving Average Crossover",
+                    Some("A strategy based on moving average crossovers"),
+                    parameters,
+                )))
+            },
+            StrategyType::BollingerBands => {
+                // 创建布林带策略
+                let period = parameters["period"].as_u64()
+                    .ok_or_else(|| "Missing period parameter".to_string())? as usize;
+                let std_dev = parameters["stdDev"].as_f64()
+                    .ok_or_else(|| "Missing stdDev parameter".to_string())?;
+                
+                Ok(Box::new(DummyStrategy::new(
+                    "Bollinger Bands",
+                    Some("A strategy based on Bollinger Bands"),
+                    parameters,
+                )))
+            },
+            StrategyType::RSI => {
+                // 创建RSI策略
+                let period = parameters["period"].as_u64()
+                    .ok_or_else(|| "Missing period parameter".to_string())? as usize;
+                let overbought = parameters["overbought"].as_f64()
+                    .ok_or_else(|| "Missing overbought parameter".to_string())?;
+                let oversold = parameters["oversold"].as_f64()
+                    .ok_or_else(|| "Missing oversold parameter".to_string())?;
+                
+                Ok(Box::new(DummyStrategy::new(
+                    "RSI",
+                    Some("A strategy based on Relative Strength Index"),
+                    parameters,
+                )))
+            },
+            StrategyType::MACD => {
+                // 创建MACD策略
+                let fast_period = parameters["fastPeriod"].as_u64()
+                    .ok_or_else(|| "Missing fastPeriod parameter".to_string())? as usize;
+                let slow_period = parameters["slowPeriod"].as_u64()
+                    .ok_or_else(|| "Missing slowPeriod parameter".to_string())? as usize;
+                let signal_period = parameters["signalPeriod"].as_u64()
+                    .ok_or_else(|| "Missing signalPeriod parameter".to_string())? as usize;
+                
+                Ok(Box::new(DummyStrategy::new(
+                    "MACD",
+                    Some("A strategy based on Moving Average Convergence Divergence"),
+                    parameters,
+                )))
+            },
+            StrategyType::Custom => {
+                // 创建自定义策略
+                let script = parameters["script"].as_str()
+                    .ok_or_else(|| "Missing script parameter".to_string())?;
+                
+                Ok(Box::new(DummyStrategy::new(
+                    "Custom",
+                    Some("A custom strategy with user-defined logic"),
+                    parameters,
+                )))
+            },
         }
-        // RSI从超买区域回落（卖出信号）
-        else if prev_rsi > overbought && current_rsi < overbought && shares > 0.0 {
-            let value = shares * current_price;
-            cash += value;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "SELL".to_string(),
-                amount: shares,
-                price: current_price,
-                total_cost: value,
-                transaction_date: current_date,
-                notes: Some("RSI策略回测卖出".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            shares = 0.0;
-        }
-
-        // 记录每日表现
-        let portfolio_value = cash + shares * current_price;
-        let benchmark_value = initial_investment * (current_price / prices[period + 1]);
-
-        performance_data.push(PerformancePoint {
-            date: current_date,
-            value: portfolio_value,
-            benchmark_value: Some(benchmark_value),
-        });
     }
-
-    // 计算最终结果
-    let final_value = cash + shares * prices.last().unwrap();
-    let total_return = (final_value - initial_investment) / initial_investment * 100.0;
-
-    // 计算年化收益率
-    let days = (dates.last().unwrap() - dates[period + 1]) / 86400; // 秒转天
-    let years = days as f64 / 365.0;
-    let annualized_return = (final_value / initial_investment).powf(1.0 / years) - 1.0;
-
-    // 计算最大回撤
-    let mut max_drawdown = 0.0;
-    let mut peak = performance_data[0].value;
-
-    for point in &performance_data {
-        if point.value > peak {
-            peak = point.value;
-        } else {
-            let drawdown = (peak - point.value) / peak;
-            if drawdown > max_drawdown {
-                max_drawdown = drawdown;
+    
+    /// 验证策略参数
+    fn validate_strategy_parameters(
+        &self,
+        strategy_type: &str,
+        parameters_json: &str,
+    ) -> Result<(), String> {
+        // 解析参数
+        let parameters: Value = serde_json::from_str(parameters_json)
+            .map_err(|e| format!("Invalid JSON parameters: {}", e))?;
+        
+        // 根据策略类型验证参数
+        match strategy_type {
+            "MovingAverageCrossover" => {
+                // 验证移动平均线交叉策略参数
+                let fast_period = parameters["fastPeriod"].as_u64()
+                    .ok_or_else(|| "Missing fastPeriod parameter".to_string())?;
+                let slow_period = parameters["slowPeriod"].as_u64()
+                    .ok_or_else(|| "Missing slowPeriod parameter".to_string())?;
+                
+                if fast_period >= slow_period {
+                    return Err("fastPeriod must be less than slowPeriod".to_string());
+                }
+                
+                if fast_period < 1 {
+                    return Err("fastPeriod must be at least 1".to_string());
+                }
+                
+                if slow_period < 2 {
+                    return Err("slowPeriod must be at least 2".to_string());
+                }
+            },
+            "BollingerBands" => {
+                // 验证布林带策略参数
+                let period = parameters["period"].as_u64()
+                    .ok_or_else(|| "Missing period parameter".to_string())?;
+                let std_dev = parameters["stdDev"].as_f64()
+                    .ok_or_else(|| "Missing stdDev parameter".to_string())?;
+                
+                if period < 2 {
+                    return Err("period must be at least 2".to_string());
+                }
+                
+                if std_dev <= 0.0 {
+                    return Err("stdDev must be positive".to_string());
+                }
+            },
+            "RSI" => {
+                // 验证RSI策略参数
+                let period = parameters["period"].as_u64()
+                    .ok_or_else(|| "Missing period parameter".to_string())?;
+                let overbought = parameters["overbought"].as_f64()
+                    .ok_or_else(|| "Missing overbought parameter".to_string())?;
+                let oversold = parameters["oversold"].as_f64()
+                    .ok_or_else(|| "Missing oversold parameter".to_string())?;
+                
+                if period < 2 {
+                    return Err("period must be at least 2".to_string());
+                }
+                
+                if overbought <= oversold {
+                    return Err("overbought must be greater than oversold".to_string());
+                }
+                
+                if oversold < 0.0 || oversold > 100.0 {
+                    return Err("oversold must be between 0 and 100".to_string());
+                }
+                
+                if overbought < 0.0 || overbought > 100.0 {
+                    return Err("overbought must be between 0 and 100".to_string());
+                }
+            },
+            "MACD" => {
+                // 验证MACD策略参数
+                let fast_period = parameters["fastPeriod"].as_u64()
+                    .ok_or_else(|| "Missing fastPeriod parameter".to_string())?;
+                let slow_period = parameters["slowPeriod"].as_u64()
+                    .ok_or_else(|| "Missing slowPeriod parameter".to_string())?;
+                let signal_period = parameters["signalPeriod"].as_u64()
+                    .ok_or_else(|| "Missing signalPeriod parameter".to_string())?;
+                
+                if fast_period >= slow_period {
+                    return Err("fastPeriod must be less than slowPeriod".to_string());
+                }
+                
+                if fast_period < 1 {
+                    return Err("fastPeriod must be at least 1".to_string());
+                }
+                
+                if slow_period < 2 {
+                    return Err("slowPeriod must be at least 2".to_string());
+                }
+                
+                if signal_period < 1 {
+                    return Err("signalPeriod must be at least 1".to_string());
+                }
+            },
+            "Custom" => {
+                // 验证自定义策略参数
+                let script = parameters["script"].as_str()
+                    .ok_or_else(|| "Missing script parameter".to_string())?;
+                
+                if script.trim().is_empty() {
+                    return Err("script cannot be empty".to_string());
+                }
+            },
+            _ => {
+                return Err(format!("Unknown strategy type: {}", strategy_type));
             }
         }
+        
+        Ok(())
     }
-
-    Ok(BacktestResult {
-        initial_investment,
-        final_value,
-        total_return,
-        annualized_return: annualized_return * 100.0,
-        max_drawdown: max_drawdown * 100.0,
-        transactions,
-        performance_data,
-    })
 }
 
-fn backtest_ma_strategy(
-    asset_id: i64,
-    price_data: &[(i64, f64)],
-    parameters: &str,
-) -> Result<BacktestResult, AuthError> {
-    // 解析参数
-    let params: Value = serde_json::from_str(parameters)
-        .map_err(|e| AuthError::InvalidCredentials(format!("无效的策略参数: {}", e)))?;
+/// 示例策略实现（仅用于演示）
+struct DummyStrategy {
+    name: String,
+    description: Option<String>,
+    params: Value,
+}
 
-    let short_period = params["short_period"].as_u64().unwrap_or(5) as usize;
-    let long_period = params["long_period"].as_u64().unwrap_or(20) as usize;
-    let initial_investment = params["initial_investment"].as_f64().unwrap_or(10000.0);
-
-    if price_data.len() < long_period {
-        return Err(AuthError::InvalidCredentials(
-            "历史数据不足，无法执行均线策略回测".to_string(),
-        ));
-    }
-
-    // 提取价格序列
-    let prices: Vec<f64> = price_data.iter().map(|(_, price)| *price).collect();
-    let dates: Vec<i64> = price_data.iter().map(|(date, _)| *date).collect();
-
-    // 计算移动平均线
-    let short_ma = calculate_ma(&prices, short_period);
-    let long_ma = calculate_ma(&prices, long_period);
-
-    // 模拟交易
-    let mut cash = initial_investment;
-    let mut shares = 0.0;
-    let mut transactions = Vec::new();
-    let mut performance_data = Vec::new();
-
-    // 记录初始状态
-    performance_data.push(PerformancePoint {
-        date: dates[0],
-        value: cash,
-        benchmark_value: Some(initial_investment),
-    });
-
-    for i in long_period..prices.len() {
-        let current_price = prices[i];
-        let current_date = dates[i];
-        let short_ma_value = short_ma[i - 1];
-        let long_ma_value = long_ma[i - 1];
-        let prev_short_ma_value = short_ma[i - 2];
-        let prev_long_ma_value = long_ma[i - 2];
-
-        // 短期均线上穿长期均线（金叉，买入信号）
-        if prev_short_ma_value < prev_long_ma_value && short_ma_value > long_ma_value && cash > 0.0
-        {
-            let amount = cash / current_price;
-            shares += amount;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "BUY".to_string(),
-                amount,
-                price: current_price,
-                total_cost: cash,
-                transaction_date: current_date,
-                notes: Some("均线策略回测买入".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            cash = 0.0;
+impl DummyStrategy {
+    fn new(name: &str, description: Option<&str>, params: Value) -> Self {
+        Self {
+            name: name.to_string(),
+            description: description.map(|s| s.to_string()),
+            params,
         }
-        // 短期均线下穿长期均线（死叉，卖出信号）
-        else if prev_short_ma_value > prev_long_ma_value
-            && short_ma_value < long_ma_value
-            && shares > 0.0
-        {
-            let value = shares * current_price;
-            cash += value;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "SELL".to_string(),
-                amount: shares,
-                price: current_price,
-                total_cost: value,
-                transaction_date: current_date,
-                notes: Some("均线策略回测卖出".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            shares = 0.0;
-        }
-
-        // 记录每日表现
-        let portfolio_value = cash + shares * current_price;
-        let benchmark_value = initial_investment * (current_price / prices[long_period]);
-
-        performance_data.push(PerformancePoint {
-            date: current_date,
-            value: portfolio_value,
-            benchmark_value: Some(benchmark_value),
-        });
     }
+}
 
-    // 计算最终结果
-    let final_value = cash + shares * prices.last().unwrap();
-    let total_return = (final_value - initial_investment) / initial_investment * 100.0;
-
-    // 计算年化收益率
-    let days = (dates.last().unwrap() - dates[long_period]) / 86400; // 秒转天
-    let years = days as f64 / 365.0;
-    let annualized_return = (final_value / initial_investment).powf(1.0 / years) - 1.0;
-
-    // 计算最大回撤
-    let mut max_drawdown = 0.0;
-    let mut peak = performance_data[0].value;
-
-    for point in &performance_data {
-        if point.value > peak {
-            peak = point.value;
-        } else {
-            let drawdown = (peak - point.value) / peak;
-            if drawdown > max_drawdown {
-                max_drawdown = drawdown;
+impl crate::models::strategy::Strategy for DummyStrategy {
+    fn init(&self) -> Result<(), String> {
+        Ok(())
+    }
+    
+    fn update(&self, _candle: &Candle) -> Result<(), String> {
+        Ok(())
+    }
+    
+    fn check_signal(&self, _candle: &Candle) -> Result<Option<OrderSignal>, String> {
+        Ok(None)
+    }
+    
+    fn name(&self) -> &str {
+        &self.name
+    }
+    
+    fn description(&self) -> Option<&str> {
+        self.description.as_deref()
+    }
+    
+    fn parameters(&self) -> HashMap<String, Value> {
+        let mut map = HashMap::new();
+        if let Some(obj) = self.params.as_object() {
+            for (k, v) in obj {
+                map.insert(k.clone(), v.clone());
             }
         }
+        map
     }
-
-    Ok(BacktestResult {
-        initial_investment,
-        final_value,
-        total_return,
-        annualized_return: annualized_return * 100.0,
-        max_drawdown: max_drawdown * 100.0,
-        transactions,
-        performance_data,
-    })
-}
-
-fn backtest_custom_strategy(
-    asset_id: i64,
-    price_data: &[(i64, f64)],
-    parameters: &str,
-) -> Result<BacktestResult, AuthError> {
-    // 自定义策略的回测实现
-    // 这里只是一个简单的示例，实际应用中可以根据需求扩展
-
-    // 解析参数
-    let params: Value = serde_json::from_str(parameters)
-        .map_err(|e| AuthError::InvalidCredentials(format!("无效的策略参数: {}", e)))?;
-
-    let initial_investment = params["initial_investment"].as_f64().unwrap_or(10000.0);
-    let buy_threshold = params["buy_threshold"].as_f64().unwrap_or(-0.05); // 价格下跌5%买入
-    let sell_threshold = params["sell_threshold"].as_f64().unwrap_or(0.08); // 价格上涨8%卖出
-
-    if price_data.len() < 2 {
-        return Err(AuthError::InvalidCredentials(
-            "历史数据不足，无法执行自定义策略回测".to_string(),
-        ));
-    }
-
-    // 提取价格序列
-    let prices: Vec<f64> = price_data.iter().map(|(_, price)| *price).collect();
-    let dates: Vec<i64> = price_data.iter().map(|(date, _)| *date).collect();
-
-    // 模拟交易
-    let mut cash = initial_investment;
-    let mut shares = 0.0;
-    let mut transactions = Vec::new();
-    let mut performance_data = Vec::new();
-    let mut last_buy_price = 0.0;
-    let mut last_sell_price = 0.0;
-
-    // 记录初始状态
-    performance_data.push(PerformancePoint {
-        date: dates[0],
-        value: cash,
-        benchmark_value: Some(initial_investment),
-    });
-
-    for i in 1..prices.len() {
-        let current_price = prices[i];
-        let current_date = dates[i];
-        let prev_price = prices[i - 1];
-        let price_change = (current_price - prev_price) / prev_price;
-
-        // 价格下跌超过阈值（买入信号）
-        if price_change <= buy_threshold && cash > 0.0 {
-            let amount = cash / current_price;
-            shares += amount;
-            last_buy_price = current_price;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "BUY".to_string(),
-                amount,
-                price: current_price,
-                total_cost: cash,
-                transaction_date: current_date,
-                notes: Some("自定义策略回测买入".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            cash = 0.0;
-        }
-        // 价格上涨超过阈值（卖出信号）
-        else if last_buy_price > 0.0
-            && (current_price - last_buy_price) / last_buy_price >= sell_threshold
-            && shares > 0.0
-        {
-            let value = shares * current_price;
-            cash += value;
-            last_sell_price = current_price;
-
-            let transaction = Transaction {
-                id: 0, // 模拟ID
-                user_id: 0,
-                asset_id,
-                asset_name: "Backtest Asset".to_string(),
-                asset_code: "BACKTEST".to_string(),
-                transaction_type: "SELL".to_string(),
-                amount: shares,
-                price: current_price,
-                total_cost: value,
-                transaction_date: current_date,
-                notes: Some("自定义策略回测卖出".to_string()),
-                created_at: 0,
-            };
-
-            transactions.push(transaction);
-            shares = 0.0;
-        }
-
-        // 记录每日表现
-        let portfolio_value = cash + shares * current_price;
-        let benchmark_value = initial_investment * (current_price / prices[0]);
-
-        performance_data.push(PerformancePoint {
-            date: current_date,
-            value: portfolio_value,
-            benchmark_value: Some(benchmark_value),
-        });
-    }
-
-    // 计算最终结果
-    let final_value = cash + shares * prices.last().unwrap();
-    let total_return = (final_value - initial_investment) / initial_investment * 100.0;
-
-    // 计算年化收益率
-    let days = (dates.last().unwrap() - dates[0]) / 86400; // 秒转天
-    let years = days as f64 / 365.0;
-    let annualized_return = (final_value / initial_investment).powf(1.0 / years) - 1.0;
-
-    // 计算最大回撤
-    let mut max_drawdown = 0.0;
-    let mut peak = performance_data[0].value;
-
-    for point in &performance_data {
-        if point.value > peak {
-            peak = point.value;
-        } else {
-            let drawdown = (peak - point.value) / peak;
-            if drawdown > max_drawdown {
-                max_drawdown = drawdown;
-            }
-        }
-    }
-
-    Ok(BacktestResult {
-        initial_investment,
-        final_value,
-        total_return,
-        annualized_return: annualized_return * 100.0,
-        max_drawdown: max_drawdown * 100.0,
-        transactions,
-        performance_data,
-    })
-}
-
-// 计算MACD指标
-fn calculate_macd(
-    prices: &[f64],
-    fast_period: usize,
-    slow_period: usize,
-    signal_period: usize,
-) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
-    // 计算快速EMA
-    let fast_ema = calculate_ema(prices, fast_period);
-
-    // 计算慢速EMA
-    let slow_ema = calculate_ema(prices, slow_period);
-
-    // 计算MACD线
-    let mut macd_line = Vec::with_capacity(prices.len());
-    for i in 0..prices.len() {
-        if i < slow_period - 1 {
-            macd_line.push(0.0);
-        } else {
-            macd_line.push(fast_ema[i] - slow_ema[i]);
-        }
-    }
-
-    // 计算信号线（MACD的EMA）
-    let signal_line = calculate_ema(&macd_line, signal_period);
-
-    // 计算柱状图
-    let mut histogram = Vec::with_capacity(prices.len());
-    for i in 0..prices.len() {
-        if i < slow_period + signal_period - 2 {
-            histogram.push(0.0);
-        } else {
-            histogram.push(macd_line[i] - signal_line[i]);
-        }
-    }
-
-    (macd_line, signal_line, histogram)
-}
-
-// 计算RSI指标
-fn calculate_rsi(prices: &[f64], period: usize) -> Vec<f64> {
-    if prices.len() <= period {
-        return vec![50.0; prices.len()];
-    }
-
-    let mut rsi = Vec::with_capacity(prices.len());
-    let mut gains = Vec::with_capacity(prices.len());
-    let mut losses = Vec::with_capacity(prices.len());
-
-    // 计算价格变化
-    for i in 1..prices.len() {
-        let change = prices[i] - prices[i - 1];
-        gains.push(if change > 0.0 { change } else { 0.0 });
-        losses.push(if change < 0.0 { -change } else { 0.0 });
-    }
-
-    // 前period个RSI值设为50（中性）
-    for _ in 0..period {
-        rsi.push(50.0);
-    }
-
-    // 计算第一个RSI值
-    let avg_gain = gains[0..period].iter().sum::<f64>() / period as f64;
-    let avg_loss = losses[0..period].iter().sum::<f64>() / period as f64;
-
-    if avg_loss == 0.0 {
-        rsi.push(100.0);
-    } else {
-        let rs = avg_gain / avg_loss;
-        rsi.push(100.0 - (100.0 / (1.0 + rs)));
-    }
-
-    // 计算剩余的RSI值
-    let mut avg_gain = avg_gain;
-    let mut avg_loss = avg_loss;
-
-    for i in period..gains.len() {
-        avg_gain = (avg_gain * (period - 1) as f64 + gains[i]) / period as f64;
-        avg_loss = (avg_loss * (period - 1) as f64 + losses[i]) / period as f64;
-
-        if avg_loss == 0.0 {
-            rsi.push(100.0);
-        } else {
-            let rs = avg_gain / avg_loss;
-            rsi.push(100.0 - (100.0 / (1.0 + rs)));
-        }
-    }
-
-    rsi
-}
-
-// 计算移动平均线
-fn calculate_ma(prices: &[f64], period: usize) -> Vec<f64> {
-    let mut ma = Vec::with_capacity(prices.len());
-
-    // 前period-1个值设为0
-    for _ in 0..period - 1 {
-        ma.push(0.0);
-    }
-
-    // 计算移动平均
-    for i in period - 1..prices.len() {
-        let sum: f64 = prices[i - (period - 1)..=i].iter().sum();
-        ma.push(sum / period as f64);
-    }
-
-    ma
-}
-
-// 计算指数移动平均线
-fn calculate_ema(prices: &[f64], period: usize) -> Vec<f64> {
-    let mut ema = Vec::with_capacity(prices.len());
-    let multiplier = 2.0 / (period as f64 + 1.0);
-
-    // 第一个EMA值使用SMA
-    let mut sum = 0.0;
-    for i in 0..period {
-        sum += prices[i];
-    }
-    let first_ema = sum / period as f64;
-
-    // 前period-1个值设为0
-    for _ in 0..period - 1 {
-        ema.push(0.0);
-    }
-
-    ema.push(first_ema);
-
-    // 计算剩余的EMA值
-    for i in period..prices.len() {
-        let new_ema = (prices[i] - ema[i - 1]) * multiplier + ema[i - 1];
-        ema.push(new_ema);
-    }
-
-    ema
 }
