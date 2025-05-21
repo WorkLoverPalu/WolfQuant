@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use tauri::{command, State};
 
-use crate::market::{Candle, Product, Ticker};
+use crate::models::{Candle, Product, Ticker};
 use crate::models::engine::Engine;
 
 #[command]

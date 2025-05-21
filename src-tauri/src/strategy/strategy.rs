@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::market::Candle;
-use crate::trading::OrderSignal;
+use crate::models::Candle;
+use crate::models::OrderSignal;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StrategyConfig {

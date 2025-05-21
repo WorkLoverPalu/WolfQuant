@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use crate::db::models::{CandleModel, DatasetInfo, ImportStatus, ImportTask, ProductModel};
-use crate::market::{Candle, Product};
+use crate::models::{Candle, Product};
 
 impl Repository {
     // 初始化数据库时添加导入任务表

@@ -44,14 +44,13 @@ use tokio::time;
 
 use crate::adapters;
 use crate::config::Config;
-use crate::db::Repository;
-use crate::market::{Candle, MarketAdapter, Ticker};
+use crate::models::{Candle, MarketAdapter, Ticker};
 use crate::models::event::{Event, EventBus, EventData, EventType};
-use crate::strategy::Strategy;
-use crate::trading::{Order, OrderSignal, Portfolio};
+use crate::models::Strategy;
+use crate::models::{Order, OrderSignal, Portfolio};
 use serde::{Deserialize, Serialize};
 
-use crate::importer::{AvailableData, DataImporter, ImportTask};
+use crate::models::{AvailableData, DataImporter, ImportTask,Repository};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Engine {

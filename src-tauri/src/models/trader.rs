@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::trading::order::{Order, OrderStatus};
+use crate::models::order::{Order, OrderStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeConfig {

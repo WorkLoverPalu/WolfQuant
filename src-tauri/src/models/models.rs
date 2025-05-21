@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqlitePool, SqliteRow};
 use sqlx::{FromRow, Row};
 
-use crate::market::{Candle, Product};
+use crate::models::{Candle, Product};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CandleModel {

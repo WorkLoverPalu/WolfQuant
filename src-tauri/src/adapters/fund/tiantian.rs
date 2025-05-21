@@ -32,7 +32,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use async_trait::async_trait;
-use crate::market::{Candle, MarketAdapter, Product, Ticker};
+use crate::models::{Candle, MarketAdapter, Product, Ticker};
 
 pub struct TiantianFundAdapter {
     client: Client,

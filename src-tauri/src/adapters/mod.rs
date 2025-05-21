@@ -3,7 +3,7 @@ pub mod crypto;
 pub mod stock;
 pub mod gold;
 
-use crate::market::MarketAdapter;
+use crate::models::MarketAdapter;
 
 pub fn get_adapter(asset_type: &str, source: &str) -> Result<Box<dyn MarketAdapter>, String> {
     match (asset_type, source) {
