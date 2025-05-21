@@ -11,6 +11,7 @@ pub struct Product {
     pub symbol: String,
     pub name: String,
     pub asset_type: String,
+    pub source: String,
 }
 
 #[async_trait]

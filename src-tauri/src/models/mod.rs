@@ -21,6 +21,7 @@ pub mod engine;
 pub mod adapter;
 pub mod order;
 pub mod trader;
+pub mod repository;
 
 // 重新导出所有类型，以便可以直接从 models 模块访问
 pub use user::*;
@@ -44,3 +45,4 @@ pub use engine::*;
 pub use adapter::*;
 pub use order::*;
 pub use trader::*;
+pub use repository::*;
