@@ -15,6 +15,9 @@ pub mod candle;
 pub mod ticker;
 pub mod strategy;
 pub mod trading;
+pub mod import_task;
+pub mod event;
+pub mod engine;
 
 // 重新导出所有类型，以便可以直接从 models 模块访问
 pub use user::*;
@@ -32,4 +35,6 @@ pub use import::*;
 pub use candle::*;
 pub use ticker::*;
 pub use strategy::*;
-pub use trading::*;
+pub use import_task::*;
+pub use event::*;
+pub use engine::*;

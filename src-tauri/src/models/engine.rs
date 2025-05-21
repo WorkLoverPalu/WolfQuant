@@ -34,6 +34,8 @@
 /// engine.register_strategy("my_strategy", Box::new(MyStrategy::new()));
 /// engine.start_market_data("BTCUSDT", "crypto", "binance").await.unwrap();
 /// ```
+
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use crate::models::candle::Candle;
 use crate::models::order::{Order, OrderSignal};
 use crate::models::ticker::Ticker;
+use crate::models::import_task::ImportTask;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventType {

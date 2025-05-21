@@ -30,6 +30,8 @@ rusqlite = "0.35.0"
 r2d2 = "0.8.10"
 r2d2_sqlite = "0.28.0"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+reqwest = "0.12.15"
+async-trait = "0.1.88"
 
 
 [features]
