@@ -3,38 +3,62 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::models::order::{Order, OrderSide, OrderStatus};
-use crate::models::Candle;
+use crate::models::CandleModel;
 
+/// 资产汇总信息
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AssetSummary {
+    /// 资产类型（如股票、加密货币等）
     pub asset_type: String,
+    /// 当前总市值
     pub total_value: f64,
+    /// 总成本
     pub total_cost: f64,
+    /// 总收益
     pub total_profit: f64,
+    /// 总收益率（百分比）
     pub total_profit_percent: f64,
+    /// 当日收益
     pub daily_profit: f64,
+    /// 当日收益率（百分比）
     pub daily_profit_percent: f64,
 }
 
+/// 投资组合汇总信息
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PortfolioSummary {
+    /// 当前总市值
     pub total_value: f64,
+    /// 总成本
     pub total_cost: f64,
+    /// 总收益
     pub total_profit: f64,
+    /// 总收益率（百分比）
     pub total_profit_percent: f64,
+    /// 当日收益
     pub daily_profit: f64,
+    /// 当日收益率（百分比）
     pub daily_profit_percent: f64,
+    /// 各类资产汇总信息
     pub asset_summaries: Vec<AssetSummary>,
 }
 
+/// 持仓信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Position {
+    /// 交易品种代码
     pub symbol: String,
+    /// 持仓数量
     pub quantity: f64,
+    /// 持仓均价
     pub average_price: f64,
+    /// 当前价格
     pub current_price: f64,
+    /// 未实现盈亏
     pub unrealized_pnl: f64,
+    /// 已实现盈亏
     pub realized_pnl: f64,
+    /// 最后更新时间
     pub last_update: DateTime<Utc>,
 }
 
@@ -96,12 +120,18 @@ impl Position {
     }
 }
 
+/// 投资组合结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Portfolio {
+    /// 初始资金
     pub initial_balance: f64,
+    /// 当前可用资金
     pub balance: f64,
+    /// 当前持仓，键为交易品种代码
     pub positions: HashMap<String, Position>,
+    /// 历史成交订单
     pub trades: Vec<Order>,
+    /// 账户权益历史 (时间, 权益)
     pub equity_history: Vec<(DateTime<Utc>, f64)>,
 }
 
@@ -124,7 +154,6 @@ impl Portfolio {
         order.status = OrderStatus::Filled;
         order.filled_quantity = order.quantity;
         order.average_price = order.price;
-        order.updated_at = now;
 
         let symbol = order.symbol.clone();
         let price = order.price.unwrap_or(0.0);
@@ -169,7 +198,7 @@ impl Portfolio {
         Ok(order)
     }
 
-    pub fn update(&mut self, candle: &Candle) {
+    pub fn update(&mut self, candle: &CandleModel) {
         if let Some(position) = self.positions.get_mut(&candle.symbol) {
             position.update_price(candle.close);
         }

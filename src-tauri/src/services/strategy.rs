@@ -8,7 +8,7 @@ use crate::models::strategy::{
     StrategyApplication, CreateStrategyRequest, UpdateStrategyRequest
 };
 use crate::models::candle::Candle;
-use crate::models::trading::OrderSignal;
+use crate::models::order::OrderSignal;
 use std::collections::HashMap;
 
 /// 策略服务，负责管理交易策略

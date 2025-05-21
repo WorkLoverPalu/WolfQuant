@@ -167,7 +167,7 @@ pub trait IStrategy {
     fn check_signal(
         &self,
         candle: &crate::models::candle::Candle,
-    ) -> Result<Option<crate::models::trading::OrderSignal>, String>;
+    ) -> Result<Option<crate::models::order::OrderSignal>, String>;
 
     /// 获取策略名称
     fn name(&self) -> &str;

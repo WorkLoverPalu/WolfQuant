@@ -2,6 +2,15 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 
+/// Ticker 结构体表示一个市场行情快照。
+/// 
+/// 字段说明：
+/// - `symbol`：交易对符号，例如 "BTCUSDT"
+/// - `price`：当前价格
+/// - `timestamp`：行情时间戳（UTC）
+/// - `volume`：24小时成交量（可选）
+/// - `high_24h`：24小时最高价（可选）
+/// - `low_24h`：24小时最低价（可选）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ticker {
     pub symbol: String,

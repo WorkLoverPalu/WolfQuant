@@ -1,10 +1,10 @@
-use chrono::{DateTime, Duration, Utc};
-use rusqlite::{params, Result as SqliteResult};
-use log::error;
-use crate::error::auth::AuthError;
 use crate::database::get_connection_from_pool;
+use crate::error::auth::AuthError;
 use crate::models::candle::{Candle, CandleModel};
-use crate::models::import_task::{DatasetInfo, ImportStatus, ImportTask};
+use crate::models::import::{AvailableData, ImportStatus, ImportTask};
+use chrono::{DateTime, Duration, Utc};
+use log::error;
+use rusqlite::{params, Result as SqliteResult};
 
 pub struct ImportTaskService;
 
@@ -21,28 +21,30 @@ impl ImportTaskService {
     ) -> Result<i64, String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
+
         let now = Utc::now();
         let now_timestamp = now.timestamp();
 
-        let result = conn.execute(
-            "INSERT INTO import_tasks (
+        let result = conn
+            .execute(
+                "INSERT INTO import_tasks (
                 asset_type, source, symbol, start_time, end_time, interval,
                 status, progress, created_at, updated_at
             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            params![
-                asset_type,
-                source,
-                symbol,
-                start_time.timestamp(),
-                end_time.timestamp(),
-                interval,
-                "pending",
-                0.0,
-                now_timestamp,
-                now_timestamp
-            ],
-        ).map_err(|e| format!("Failed to create import task: {}", e))?;
+                params![
+                    asset_type,
+                    source,
+                    symbol,
+                    start_time.timestamp(),
+                    end_time.timestamp(),
+                    interval,
+                    "pending",
+                    0.0,
+                    now_timestamp,
+                    now_timestamp
+                ],
+            )
+            .map_err(|e| format!("Failed to create import task: {}", e))?;
 
         Ok(conn.last_insert_rowid())
     }
@@ -57,7 +59,7 @@ impl ImportTaskService {
     ) -> Result<(), String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
+
         let now = Utc::now();
         let now_timestamp = now.timestamp();
         let status_str = status.to_str();
@@ -80,7 +82,8 @@ impl ImportTaskService {
                 completed_at,
                 task_id
             ],
-        ).map_err(|e| format!("Failed to update import task: {}", e))?;
+        )
+        .map_err(|e| format!("Failed to update import task: {}", e))?;
 
         Ok(())
     }
@@ -89,34 +92,35 @@ impl ImportTaskService {
     pub fn get_import_task(&self, task_id: i64) -> Result<Option<ImportTask>, String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
-        let mut stmt = conn.prepare(
-            "SELECT id, asset_type, source, symbol, start_time, end_time, interval, 
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, asset_type, source, symbol, start_time, end_time, interval, 
                     status, progress, error, created_at, updated_at, completed_at 
-             FROM import_tasks WHERE id = ?1"
-        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
-        
-        let task_result = stmt.query_row(
-            params![task_id],
-            |row| {
-                Ok(ImportTask {
-                    id: row.get(0)?,
-                    asset_type: row.get(1)?,
-                    source: row.get(2)?,
-                    symbol: row.get(3)?,
-                    start_time: Utc.timestamp(row.get::<_, i64>(4)?, 0),
-                    end_time: Utc.timestamp(row.get::<_, i64>(5)?, 0),
-                    interval: row.get(6)?,
-                    status: row.get(7)?,
-                    progress: row.get(8)?,
-                    error: row.get(9)?,
-                    created_at: Utc.timestamp(row.get::<_, i64>(10)?, 0),
-                    updated_at: Utc.timestamp(row.get::<_, i64>(11)?, 0),
-                    completed_at: row.get::<_, Option<i64>>(12)?.map(|ts| Utc.timestamp(ts, 0)),
-                })
-            }
-        );
-        
+             FROM import_tasks WHERE id = ?1",
+            )
+            .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+        let task_result = stmt.query_row(params![task_id], |row| {
+            Ok(ImportTask {
+                id: row.get(0)?,
+                asset_type: row.get(1)?,
+                source: row.get(2)?,
+                symbol: row.get(3)?,
+                start_time: Utc.timestamp(row.get::<_, i64>(4)?, 0),
+                end_time: Utc.timestamp(row.get::<_, i64>(5)?, 0),
+                interval: row.get(6)?,
+                status: row.get(7)?,
+                progress: row.get(8)?,
+                error: row.get(9)?,
+                created_at: Utc.timestamp(row.get::<_, i64>(10)?, 0),
+                updated_at: Utc.timestamp(row.get::<_, i64>(11)?, 0),
+                completed_at: row
+                    .get::<_, Option<i64>>(12)?
+                    .map(|ts| Utc.timestamp(ts, 0)),
+            })
+        });
+
         match task_result {
             Ok(task) => Ok(Some(task)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
@@ -128,16 +132,17 @@ impl ImportTaskService {
     pub fn get_import_tasks(&self) -> Result<Vec<ImportTask>, String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
-        let mut stmt = conn.prepare(
-            "SELECT id, asset_type, source, symbol, start_time, end_time, interval, 
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT id, asset_type, source, symbol, start_time, end_time, interval, 
                     status, progress, error, created_at, updated_at, completed_at 
-             FROM import_tasks ORDER BY created_at DESC"
-        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
-        
-        let task_iter = stmt.query_map(
-            params![],
-            |row| {
+             FROM import_tasks ORDER BY created_at DESC",
+            )
+            .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+        let task_iter = stmt
+            .query_map(params![], |row| {
                 Ok(ImportTask {
                     id: row.get(0)?,
                     asset_type: row.get(1)?,
@@ -151,11 +156,13 @@ impl ImportTaskService {
                     error: row.get(9)?,
                     created_at: Utc.timestamp(row.get::<_, i64>(10)?, 0),
                     updated_at: Utc.timestamp(row.get::<_, i64>(11)?, 0),
-                    completed_at: row.get::<_, Option<i64>>(12)?.map(|ts| Utc.timestamp(ts, 0)),
+                    completed_at: row
+                        .get::<_, Option<i64>>(12)?
+                        .map(|ts| Utc.timestamp(ts, 0)),
                 })
-            }
-        ).map_err(|e| format!("Failed to execute query: {}", e))?;
-        
+            })
+            .map_err(|e| format!("Failed to execute query: {}", e))?;
+
         let mut tasks = Vec::new();
         for task_result in task_iter {
             match task_result {
@@ -163,17 +170,18 @@ impl ImportTaskService {
                 Err(e) => return Err(format!("Failed to process task row: {}", e)),
             }
         }
-        
+
         Ok(tasks)
     }
 
     // 获取可用数据集信息
-    pub fn get_available_datasets(&self) -> Result<Vec<DatasetInfo>, String> {
+    pub fn get_available_datasets(&self) -> Result<Vec<AvailableData>, String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
-        let mut stmt = conn.prepare(
-            "SELECT 
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT 
                 c.asset_type, 
                 c.source, 
                 c.symbol, 
@@ -185,25 +193,25 @@ impl ImportTaskService {
              FROM candles c
              LEFT JOIN products p ON c.symbol = p.symbol AND c.source = p.source
              GROUP BY c.asset_type, c.source, c.symbol
-             ORDER BY c.asset_type, c.source, c.symbol"
-        ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
-        
-        let dataset_iter = stmt.query_map(
-            params![],
-            |row| {
-                Ok(DatasetInfo {
+             ORDER BY c.asset_type, c.source, c.symbol",
+            )
+            .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+        let dataset_iter = stmt
+            .query_map(params![], |row| {
+                Ok(AvailableData {
                     asset_type: row.get(0)?,
-                    source: row.get(1)?,
                     symbol: row.get(2)?,
                     name: row.get(3)?,
+                    source: row.get(1)?,
                     min_timestamp: row.get(4)?,
                     max_timestamp: row.get(5)?,
                     candle_count: row.get(6)?,
                     intervals: row.get(7)?,
                 })
-            }
-        ).map_err(|e| format!("Failed to execute query: {}", e))?;
-        
+            })
+            .map_err(|e| format!("Failed to execute query: {}", e))?;
+
         let mut datasets = Vec::new();
         for dataset_result in dataset_iter {
             match dataset_result {
@@ -211,7 +219,7 @@ impl ImportTaskService {
                 Err(e) => return Err(format!("Failed to process dataset row: {}", e)),
             }
         }
-        
+
         Ok(datasets)
     }
 
@@ -225,18 +233,20 @@ impl ImportTaskService {
     ) -> Result<bool, String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
+
         let start_timestamp = start_time.timestamp();
         let end_timestamp = end_time.timestamp();
-        
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM candles 
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM candles 
              WHERE symbol = ?1 AND source = ?2 
              AND timestamp BETWEEN ?3 AND ?4",
-            params![symbol, source, start_timestamp, end_timestamp],
-            |row| row.get(0)
-        ).map_err(|e| format!("Failed to check dataset: {}", e))?;
-        
+                params![symbol, source, start_timestamp, end_timestamp],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Failed to check dataset: {}", e))?;
+
         Ok(count > 0)
     }
 
@@ -248,7 +258,7 @@ impl ImportTaskService {
     ) -> Result<i64, String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
+
         conn.execute(
             "INSERT INTO candles (symbol, source, asset_type, timestamp, open, high, low, close, volume, interval)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
@@ -271,7 +281,7 @@ impl ImportTaskService {
                 interval
             ],
         ).map_err(|e| format!("Failed to save candle: {}", e))?;
-        
+
         Ok(conn.last_insert_rowid())
     }
 
@@ -283,11 +293,12 @@ impl ImportTaskService {
     ) -> Result<(), String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
+
         // 使用事务批量插入以提高性能
-        let tx = conn.transaction()
+        let tx = conn
+            .transaction()
             .map_err(|e| format!("Failed to start transaction: {}", e))?;
-        
+
         for candle in candles {
             tx.execute(
                 "INSERT INTO candles (symbol, source, asset_type, timestamp, open, high, low, close, volume, interval)
@@ -312,9 +323,10 @@ impl ImportTaskService {
                 ],
             ).map_err(|e| format!("Failed to save candle in batch: {}", e))?;
         }
-        
-        tx.commit().map_err(|e| format!("Failed to commit transaction: {}", e))?;
-        
+
+        tx.commit()
+            .map_err(|e| format!("Failed to commit transaction: {}", e))?;
+
         Ok(())
     }
 
@@ -329,34 +341,36 @@ impl ImportTaskService {
     ) -> Result<Vec<Candle>, String> {
         let conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
-        
+
         let start_timestamp = start_time.timestamp();
         let end_timestamp = end_time.timestamp();
-        
+
         let mut stmt = conn.prepare(
             "SELECT id, symbol, source, asset_type, timestamp, open, high, low, close, volume, interval 
              FROM candles
              WHERE symbol = ?1 AND source = ?2 AND interval = ?3 AND timestamp BETWEEN ?4 AND ?5
              ORDER BY timestamp ASC"
         ).map_err(|e| format!("Failed to prepare statement: {}", e))?;
-        
-        let candle_iter = stmt.query_map(
-            params![symbol, source, interval, start_timestamp, end_timestamp],
-            |row| {
-                Ok(Candle {
-                    symbol: row.get(1)?,
-                    source: row.get(2)?,
-                    asset_type: row.get(3)?,
-                    timestamp: row.get(4)?,
-                    open: row.get(5)?,
-                    high: row.get(6)?,
-                    low: row.get(7)?,
-                    close: row.get(8)?,
-                    volume: row.get(9)?,
-                })
-            }
-        ).map_err(|e| format!("Failed to execute query: {}", e))?;
-        
+
+        let candle_iter = stmt
+            .query_map(
+                params![symbol, source, interval, start_timestamp, end_timestamp],
+                |row| {
+                    Ok(Candle {
+                        symbol: row.get(1)?,
+                        source: row.get(2)?,
+                        asset_type: row.get(3)?,
+                        timestamp: row.get(4)?,
+                        open: row.get(5)?,
+                        high: row.get(6)?,
+                        low: row.get(7)?,
+                        close: row.get(8)?,
+                        volume: row.get(9)?,
+                    })
+                },
+            )
+            .map_err(|e| format!("Failed to execute query: {}", e))?;
+
         let mut candles = Vec::new();
         for candle_result in candle_iter {
             match candle_result {
@@ -364,7 +378,7 @@ impl ImportTaskService {
                 Err(e) => return Err(format!("Failed to process candle row: {}", e)),
             }
         }
-        
+
         Ok(candles)
     }
 }

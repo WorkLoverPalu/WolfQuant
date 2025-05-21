@@ -1,3 +1,5 @@
+/// 蜡烛图
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
