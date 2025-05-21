@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::database::{execute_query, get_connection_from_pool};
 use crate::error::auth::AuthError;
+use crate::middleware::auth::{generate_jwt_token, store_jwt_token, verify_jwt_token};
 use crate::models::{PasswordResetToken, User};
 use crate::services::verification::verify_code;
 use crate::utils::crypto::{generate_token, hash_password, verify_password};
@@ -75,7 +76,7 @@ pub fn register_user(
 
     // 获取新创建的用户
     let user = conn.query_row(
-        "SELECT id, username, email,email_verified, created_at, updated_at FROM users WHERE username = ?1",
+        "SELECT id, username, email, email_verified, created_at, updated_at FROM users WHERE username = ?1",
         params![username],
         |row| {
             Ok(User {
@@ -95,10 +96,11 @@ pub fn register_user(
 
 pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, String), AuthError> {
     let conn = get_connection_from_pool()?;
+     let config = Config::get();
     println!("login_user: {}", username_or_email);
     // 查找用户
     let result = conn.query_row(
-        "SELECT id, username, email, password_hash,email_verified, created_at, updated_at FROM users 
+        "SELECT id, username, email, password_hash, email_verified, created_at, updated_at FROM users 
          WHERE username = ?1 OR email = ?1",
         params![username_or_email],
         |row| {
@@ -108,8 +110,8 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
                     username: row.get(1)?,
                     email: row.get(2)?,
                     email_verified: row.get(4)?,
-                    created_at: row.get(4)?,
-                    updated_at: row.get(5)?,
+                    created_at: row.get(5)?,
+                    updated_at: row.get(6)?,
                 },
                 row.get::<_, String>(3)?,
             ))
@@ -120,24 +122,16 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
         Ok((user, hash)) => {
             // 验证密码
             if verify_password(password, &hash)? {
-                // 生成会话令牌
-                let token = generate_token();
-                let config = Config::get();
-                let expiry = Utc::now() + Duration::hours(config.auth.token_expiry_hours as i64);
+                // 生成 JWT 令牌
+                let jwt_token = generate_jwt_token(&user, &config.jwt_secret)?;
 
-                // 存储会话
-                conn.execute(
-                    "INSERT INTO sessions (user_id, token, expires_at, created_at) VALUES (?1, ?2, ?3, ?4)",
-                    params![
-                        user.id,
-                        &token,
-                        expiry.timestamp(),
-                        Utc::now().timestamp()
-                    ],
-                )?;
+                // 存储 JWT 令牌（可选，用于撤销）
+                store_jwt_token(user.id, &jwt_token)?;
 
                 info!("User logged in: {}", user.username);
-                Ok((user, token))
+
+                // 返回 JWT 令牌而不是会话令牌
+                Ok((user, jwt_token))
             } else {
                 Err(AuthError::InvalidCredentials("密码不正确".to_string()))
             }
@@ -150,17 +144,24 @@ pub fn login_user(username_or_email: &str, password: &str) -> Result<(User, Stri
 
 pub fn logout_user(user_id: i64, token: &str) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
+    let config = Config::get();
 
-    // 删除会话
-    let rows_affected = conn.execute(
-        "DELETE FROM sessions WHERE user_id = ?1 AND token = ?2",
-        params![user_id, token],
-    )?;
+    // 尝试验证 JWT 令牌
+    match verify_jwt_token(token, &config.jwt_secret) {
+        Ok(_claims) => {
+            // 将 JWT 令牌添加到撤销列表
+            conn.execute(
+                "INSERT INTO revoked_tokens (token, revoked_at) VALUES (?1, ?2)",
+                params![token, Utc::now().timestamp()],
+            )?;
 
-    // 会话不存在，默认过期，自动退出登录
-    // if rows_affected == 0 {
-    //     return Err(AuthError::InvalidSession("会话不存在或已过期".to_string()));
-    // }
+            // 删除 JWT 令牌记录
+            conn.execute("DELETE FROM jwt_tokens WHERE token = ?1", params![token])?;
+        }
+        Err(_) => {
+            return Err(AuthError::UserExists("退出登陆失败".to_string()));
+        }
+    }
 
     info!("User logged out: {}", user_id);
     Ok(())
@@ -168,34 +169,45 @@ pub fn logout_user(user_id: i64, token: &str) -> Result<(), AuthError> {
 
 pub fn verify_session(token: &str) -> Result<User, AuthError> {
     let conn = get_connection_from_pool()?;
+    let config = Config::get();
 
-    // 查找会话
-    let result = conn.query_row(
-        "SELECT u.id, u.username, u.email,u.email_verified, u.created_at, u.updated_at 
-         FROM sessions s
-         JOIN users u ON s.user_id = u.id
-         WHERE s.token = ?1 AND s.expires_at > ?2",
-        params![token, Utc::now().timestamp()],
-        |row| {
-            Ok(User {
-                id: row.get(0)?,
-                username: row.get(1)?,
-                email: row.get(2)?,
-                email_verified: row.get(3)?,
-                created_at: row.get(4)?,
-                updated_at: row.get(5)?,
-            })
-        },
-    );
+    // 首先尝试验证 JWT 令牌
+    match verify_jwt_token(token, &config.jwt_secret) {
+        Ok(claims) => {
+            // 检查令牌是否被撤销
+            let is_revoked: bool = conn
+                .query_row(
+                    "SELECT 1 FROM revoked_tokens WHERE token = ?1",
+                    params![token],
+                    |_| Ok(true),
+                )
+                .unwrap_or(false);
 
-    match result {
-        Ok(user) => {
-            debug!("Session verified for user: {}", user.username);
-            Ok(user)
+            if is_revoked {
+                return Err(AuthError::InvalidToken("令牌已被撤销".to_string()));
+            }
+
+            // 获取用户信息
+            conn.query_row(
+                "SELECT id, username, email, email_verified, created_at, updated_at FROM users WHERE id = ?1",
+                params![claims.sub],
+                |row| {
+                    Ok(User {
+                        id: row.get(0)?,
+                        username: row.get(1)?,
+                        email: row.get(2)?,
+                        email_verified: row.get(3)?,
+                        created_at: row.get(4)?,
+                        updated_at: row.get(5)?,
+                    })
+                },
+            )
+            .map_err(|_| AuthError::UserNotFound("用户不存在".to_string()))
         }
         Err(_) => Err(AuthError::InvalidSession("会话不存在或已过期".to_string())),
     }
 }
+
 // 忘记密码
 pub fn reset_password_with_code(
     email: &str,
@@ -235,8 +247,20 @@ pub fn reset_password_with_code(
         params![hashed_password, Utc::now().timestamp(), user_id],
     )?;
 
-    // 删除所有会话，强制用户重新登录
-    conn.execute("DELETE FROM sessions WHERE user_id = ?1", params![user_id])?;
+    // 撤销所有 JWT 令牌
+    let tokens: Vec<String> = conn
+        .prepare("SELECT token FROM jwt_tokens WHERE user_id = ?1")?
+        .query_map(params![user_id], |row| row.get(0))?
+        .collect::<Result<Vec<String>, _>>()?;
+
+    for token in tokens {
+        conn.execute(
+            "INSERT INTO revoked_tokens (token, revoked_at) VALUES (?1, ?2)",
+            params![token, Utc::now().timestamp()],
+        )?;
+
+        conn.execute("DELETE FROM jwt_tokens WHERE token = ?1", params![token])?;
+    }
 
     info!(
         "Password reset successful with verification code for user ID: {}",
@@ -244,6 +268,7 @@ pub fn reset_password_with_code(
     );
     Ok(())
 }
+
 // 登陆时间重置密码
 pub fn reset_password(token: &str, new_password: &str) -> Result<(), AuthError> {
     let config = Config::get();
@@ -282,8 +307,20 @@ pub fn reset_password(token: &str, new_password: &str) -> Result<(), AuthError> 
         params![token],
     )?;
 
-    // 删除所有会话，强制用户重新登录
-    conn.execute("DELETE FROM sessions WHERE user_id = ?1", params![user_id])?;
+    // 撤销所有 JWT 令牌
+    let tokens: Vec<String> = conn
+        .prepare("SELECT token FROM jwt_tokens WHERE user_id = ?1")?
+        .query_map(params![user_id], |row| row.get(0))?
+        .collect::<Result<Vec<String>, _>>()?;
+
+    for token in tokens {
+        conn.execute(
+            "INSERT INTO revoked_tokens (token, revoked_at) VALUES (?1, ?2)",
+            params![token, Utc::now().timestamp()],
+        )?;
+
+        conn.execute("DELETE FROM jwt_tokens WHERE token = ?1", params![token])?;
+    }
 
     info!("Password reset successful for user ID: {}", user_id);
     Ok(())

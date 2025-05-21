@@ -10,6 +10,7 @@
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 
+mod middleware;
 mod adapters;
 mod commands;
 mod config;

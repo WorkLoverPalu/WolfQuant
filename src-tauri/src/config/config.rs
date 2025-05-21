@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use std::sync::RwLock;
+use std::env;
+
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -24,6 +26,9 @@ pub struct Config {
 
     // 新增交易相关配置
     pub trading: TradingConfig, // 交易系统配置
+
+    // jwt
+    pub jwt_secret:String,
 }
 
 // ==================== 交易系统配置 ====================
@@ -227,6 +232,7 @@ impl Default for Config {
                     batch_size: 50,
                 },
             },
+            jwt_secret:env::var("JWT_SECRET").unwrap_or_else(|_| "your_default_secret_key".to_string()),
         }
     }
 }

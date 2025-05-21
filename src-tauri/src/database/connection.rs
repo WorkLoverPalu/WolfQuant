@@ -120,6 +120,32 @@ pub fn init_database() -> Result<(), AuthError> {
         info!("Default user created");
     }
 
+    // 检查角色表是否存在且为空，如果为空则初始化角色
+    let role_table_exists: bool = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name='roles')",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap_or(false);
+
+    if role_table_exists {
+        let role_count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM roles", [], |row| row.get(0))
+            .unwrap_or(0);
+        if role_count == 0 {
+            conn.execute(
+                "INSERT OR IGNORE INTO roles (name, description, created_at, updated_at)
+                 VALUES 
+                    ('user', '普通用户', strftime('%s', 'now'), strftime('%s', 'now')),
+                    ('admin', '管理员', strftime('%s', 'now'), strftime('%s', 'now')),
+                    ('observer', '观察者', strftime('%s', 'now'), strftime('%s', 'now'))",
+                [],
+            )?;
+            info!("Default roles initialized");
+        }
+    }
+
     Ok(())
 }
 

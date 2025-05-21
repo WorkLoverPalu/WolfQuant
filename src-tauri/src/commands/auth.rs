@@ -4,8 +4,8 @@
 use crate::config::Config;
 use crate::error::auth::ErrorResponse;
 use crate::models::{
-    AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest,SendVerificationCodeRequest, MessageResponse,
-    RegisterRequest, ResetPasswordRequest, SessionRequest, User,
+    AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest, MessageResponse,
+    RegisterRequest, ResetPasswordRequest, SendVerificationCodeRequest, SessionRequest, User,
 };
 use crate::services::auth::{
     login_user, logout_user, register_user, reset_password, reset_password_with_code,
