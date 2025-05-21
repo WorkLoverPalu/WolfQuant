@@ -1,69 +1,50 @@
-use tauri::{command, State, AppHandle};
-use serde::{Deserialize, Serialize};
+
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
+use tauri::{command, State};
 
-use crate::services::importer_service::ImporterService;
-use crate::models::import_task::ImportTask;
-use crate::models::dataset::DatasetInfo;
-use crate::event::EventBus;
-
-#[derive(Debug, Deserialize)]
-pub struct StartImportParams {
-    pub asset_type: String,
-    pub symbol: String,
-    pub source: String,
-    pub start_time: DateTime<Utc>,
-    pub end_time: DateTime<Utc>,
-    pub interval: String,
-}
+use crate::models::engine::Engine;
+use crate::models::event::EventBus;
+use crate::models::import::{ImportTask, AvailableData};
 
 #[command]
-pub fn start_import(
-    params: StartImportParams,
-    app_handle: AppHandle,
+pub async fn import_start(
+    asset_type: String,
+    symbol: String,
+    source: String,
+    start_time: String,
+    end_time: String,
+    interval: String,
+    engine: State<'_, Engine>,
 ) -> Result<ImportTask, String> {
-    // 获取事件总线
-    let event_bus = app_handle.state::<Arc<EventBus>>();
+    let start = DateTime::parse_from_rfc3339(&start_time)
+        .map_err(|e| format!("Invalid start time: {}", e))?
+        .with_timezone(&Utc);
     
-    // 创建导入服务
-    let importer_service = ImporterService::new(event_bus.inner().clone());
+    let end = DateTime::parse_from_rfc3339(&end_time)
+        .map_err(|e| format!("Invalid end time: {}", e))?
+        .with_timezone(&Utc);
     
-    // 启动导入任务
-    importer_service.start_import(
-        params.asset_type,
-        params.symbol,
-        params.source,
-        params.start_time,
-        params.end_time,
-        params.interval,
-    )
+    engine.start_import(&asset_type, &symbol, &source, start, end, &interval).await
 }
 
 #[command]
-pub fn get_import_task(
-    task_id: String,
-    app_handle: AppHandle,
+pub async fn import_get_task(
+    id: String,
+    engine: State<'_, Engine>,
 ) -> Result<Option<ImportTask>, String> {
-    let event_bus = app_handle.state::<Arc<EventBus>>();
-    let importer_service = ImporterService::new(event_bus.inner().clone());
-    importer_service.get_task(&task_id)
+    engine.get_import_task(&id).await
 }
 
 #[command]
-pub fn get_import_tasks(
-    app_handle: AppHandle,
+pub async fn import_get_tasks(
+    engine: State<'_, Engine>,
 ) -> Result<Vec<ImportTask>, String> {
-    let event_bus = app_handle.state::<Arc<EventBus>>();
-    let importer_service = ImporterService::new(event_bus.inner().clone());
-    importer_service.get_tasks()
+    engine.get_import_tasks().await
 }
 
 #[command]
-pub fn get_available_datasets(
-    app_handle: AppHandle,
-) -> Result<Vec<DatasetInfo>, String> {
-    let event_bus = app_handle.state::<Arc<EventBus>>();
-    let importer_service = ImporterService::new(event_bus.inner().clone());
-    importer_service.get_available_datasets()
+pub async fn import_get_available_data(
+    engine: State<'_, Engine>,
+) -> Result<Vec<AvailableData>, String> {
+    engine.get_available_data().await
 }

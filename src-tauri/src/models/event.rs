@@ -2,8 +2,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
-use crate::market::{Candle, Ticker};
-use crate::trading::{Order, OrderSignal};
+use crate::models::candle::Candle;
+use crate::models::order::{Order, OrderSignal};
+use crate::models::ticker::Ticker;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventType {
@@ -36,9 +37,6 @@ pub enum EventData {
     ImportCompleted(ImportTask),
 }
 
-
-
-
 pub type EventCallback = Box<dyn Fn(&Event) + Send + Sync>;
 
 pub struct EventBus {
@@ -51,17 +49,18 @@ impl EventBus {
             subscribers: Arc::new(Mutex::new(Vec::new())),
         }
     }
-    
+
     pub fn subscribe(&self, event_type: EventType, callback: EventCallback) {
         let mut subscribers = self.subscribers.lock().unwrap();
         subscribers.push((event_type, callback));
     }
-    
+
     pub fn publish(&self, event: Event) {
         let subscribers = self.subscribers.lock().unwrap();
-        
+
         for (subscribed_type, callback) in subscribers.iter() {
-            if std::mem::discriminant(subscribed_type) == std::mem::discriminant(&event.event_type) {
+            if std::mem::discriminant(subscribed_type) == std::mem::discriminant(&event.event_type)
+            {
                 callback(&event);
             }
         }

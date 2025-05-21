@@ -7,7 +7,7 @@ use crate::models::{
 };
 use crate::services::investment_plan::{
     delete_investment_plan, execute_due_investment_plans, get_user_investment_plans,
-    save_investment_plan,
+    save_investment_plan,get_today_investment_plans
 };
 use log::{error, info};
 use tauri::command;

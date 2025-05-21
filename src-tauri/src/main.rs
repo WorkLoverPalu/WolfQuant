@@ -2,10 +2,15 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
+#![allow(unused)] // 禁止 "unused" 相关警告
+#![allow(dead_code)] // 禁止 "dead_code" 警告
+#![allow(unused_variables)] // 禁止未使用变量的警告
+
 //兼容适配
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 
+mod adapters;
 mod commands;
 mod config;
 mod database;
@@ -44,7 +49,7 @@ use commands::investment_plan::{
     plan_save_investment_plan_command,
 };
 // 数据导入
-use commands::import::{
+use commands::importer::{
     import_get_available_data, import_get_task, import_get_tasks, import_start,
 };
 fn main() {

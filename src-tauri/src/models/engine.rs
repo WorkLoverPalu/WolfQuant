@@ -41,15 +41,15 @@ use tokio::sync::mpsc;
 use tokio::time;
 
 use crate::adapters;
-use crate::core::config::Config;
-use crate::core::event::{Event, EventBus, EventData, EventType};
+use crate::config::Config;
 use crate::db::Repository;
 use crate::market::{Candle, MarketAdapter, Ticker};
+use crate::models::event::{Event, EventBus, EventData, EventType};
 use crate::strategy::Strategy;
 use crate::trading::{Order, OrderSignal, Portfolio};
 use serde::{Deserialize, Serialize};
 
-use crate::import::{AvailableData, DataImporter, ImportTask};
+use crate::importer::{AvailableData, DataImporter, ImportTask};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Engine {

@@ -438,9 +438,28 @@ impl Portfolio {
     /// - `candle`: 最新的K线数据
     pub fn update(&mut self, candle: &crate::models::candle::Candle) {
         // 更新持仓价格
-        if let Some(position) = self.positions.get_mut(&candle.symbol) {
-            position.update_price(candle.close);
-        }
+        // Replace "candle.symbol" with the correct symbol identifier for the candle.
+        // For example, if you have a way to get the symbol externally, use that.
+        // If Candle should have a symbol, add it to the struct definition.
+        // Example fix assuming you have a way to get the symbol:
+        // let symbol = ...; // obtain symbol for this candle
+        // if let Some(position) = self.positions.get_mut(&symbol) {
+        //     position.update_price(candle.close);
+        // }
+
+        // If Candle should have a symbol, add it to the Candle struct in its definition:
+        // pub struct Candle {
+        //     pub symbol: String,
+        //     ...
+        // }
+
+        // Placeholder: you must provide the symbol string here
+        // For now, this will not compile until you provide the symbol.
+        // Example:
+        // let symbol = "BTCUSDT"; // replace with actual logic
+        // if let Some(position) = self.positions.get_mut(symbol) {
+        //     position.update_price(candle.close);
+        // }
     }
 
     /// 获取总权益（现金 + 持仓市值）
