@@ -3,7 +3,7 @@ use tauri::{command, State};
 use serde_json::Value;
 
 use crate::backtest::{BacktestConfig, BacktestResult, Backtester};
-use crate::core::Engine;
+use crate::models::Engine;
 use crate::strategy::StrategyConfig;
 
 #[command]
