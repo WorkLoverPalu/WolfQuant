@@ -3,6 +3,7 @@
  */
 use crate::config::Config;
 use crate::error::auth::ErrorResponse;
+use crate::middleware::auth::{generate_jwt_token, revoke_jwt_token, store_jwt_token, AuthState};
 use crate::models::{
     AuthResponse, ForgotPasswordRequest, LoginRequest, LogoutRequest, MessageResponse,
     RegisterRequest, ResetPasswordRequest, SendVerificationCodeRequest, SessionRequest, User,
@@ -13,7 +14,8 @@ use crate::services::auth::{
 };
 use crate::services::verification::generate_and_send_verification_code;
 use log::{error, info};
-use tauri::command;
+use std::sync::Arc;
+use tauri::{command, State};
 
 #[tauri::command]
 pub async fn auth_register_command(
@@ -44,16 +46,35 @@ pub async fn auth_register_command(
 }
 
 #[tauri::command]
-pub async fn auth_login_command(request: LoginRequest) -> Result<AuthResponse, ErrorResponse> {
+pub async fn auth_login_command(
+    request: LoginRequest,
+    auth_state: State<'_, Arc<AuthState>>,
+) -> Result<AuthResponse, ErrorResponse> {
     info!("Login request received for: {}", request.username_or_email);
 
     match login_user(&request.username_or_email, &request.password) {
-        Ok((user, token)) => {
+        Ok((user, session_token)) => {
             info!("User logged in successfully: {}", user.username);
+
+            // 生成 JWT 令牌
+            let jwt_token = match generate_jwt_token(&user, &auth_state.jwt_secret) {
+                Ok(token) => {
+                    // 存储 JWT 令牌（可选，用于撤销）
+                    if let Err(e) = store_jwt_token(user.id, &token) {
+                        error!("Failed to store JWT token: {}", e);
+                    }
+                    token
+                }
+                Err(e) => {
+                    error!("Failed to generate JWT token: {}", e);
+                    session_token // 如果 JWT 生成失败，回退到会话令牌
+                }
+            };
+
             Ok(AuthResponse {
                 user,
                 message: "登录成功".to_string(),
-                token: Some(token),
+                token: Some(jwt_token), // 返回 JWT 令牌
             })
         }
         Err(err) => {
@@ -67,6 +88,12 @@ pub async fn auth_login_command(request: LoginRequest) -> Result<AuthResponse, E
 pub async fn auth_logout_command(request: LogoutRequest) -> Result<MessageResponse, ErrorResponse> {
     info!("Logout request received for user ID: {}", request.user_id);
 
+    // 尝试撤销 JWT 令牌
+    if let Err(e) = revoke_jwt_token(&request.token) {
+        error!("Failed to revoke JWT token: {}", e);
+    }
+
+    // 调用原有的登出函数
     match logout_user(request.user_id, &request.token) {
         Ok(_) => {
             info!("User logged out successfully: {}", request.user_id);
@@ -80,6 +107,7 @@ pub async fn auth_logout_command(request: LogoutRequest) -> Result<MessageRespon
         }
     }
 }
+
 #[command]
 //// purpose:reset_password||register
 pub async fn auth_send_verification_code_command(
@@ -152,7 +180,10 @@ pub async fn auth_reset_password_command(
 }
 
 #[tauri::command]
-pub async fn auth_verify_session_command(request: SessionRequest) -> Result<User, ErrorResponse> {
+pub async fn auth_verify_session_command(
+    request: SessionRequest,
+    auth_state: State<'_, Arc<AuthState>>,
+) -> Result<User, ErrorResponse> {
     match verify_session(&request.token) {
         Ok(user) => {
             info!("Session verified for user: {}", user.username);

@@ -10,12 +10,17 @@
 #[cfg(target_os = "macos")]
 use tauri::ActivationPolicy;
 
-mod middleware;
+use tauri::Manager;
+
+use crate::middleware::auth::{AuthState, JwtMiddleware};
+use std::sync::Arc;
+
 mod adapters;
 mod commands;
 mod config;
 mod database;
 mod error;
+mod middleware;
 mod models;
 mod services;
 mod utils;
@@ -65,8 +70,16 @@ fn main() {
     if let Err(e) = database::init_database() {
         eprintln!("Failed to initialize database: {}", e);
     }
+    let config = Config::get();
+    let auth_state = Arc::new(AuthState::new(&config.jwt_secret));
 
     tauri::Builder::default()
+        .manage(auth_state)
+        .setup(|app| {
+            // 注册 JWT 中间件
+            app.manage(JwtMiddleware::new());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             //登陆
             auth_forgot_password_command,
@@ -100,7 +113,6 @@ fn main() {
             plan_delete_investment_plan_command,
             plan_get_user_investment_plans_command,
             plan_execute_due_investment_plans_command,
-           
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

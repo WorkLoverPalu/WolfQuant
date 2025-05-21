@@ -8,7 +8,8 @@ use log::{debug, error, info};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tauri::{command, State};
+use tauri::ipc::Invoke;
+use tauri::{command, AppHandle, Manager, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -78,111 +79,170 @@ pub fn verify_jwt_token(token: &str, secret: &str) -> Result<Claims, AuthError> 
     })
 }
 
-// 从请求上下文中获取当前用户
-#[command]
-pub fn get_current_user(
-    token: Option<String>,
-    auth_state: State<Arc<AuthState>>,
-) -> Result<AuthUser, AuthError> {
-    match token {
-        Some(token) => {
-            // 首先尝试验证 JWT 令牌
-            match verify_jwt_token(&token, &auth_state.jwt_secret) {
-                Ok(claims) => {
-                    // JWT 验证成功，从数据库获取最新的用户信息
-                    let conn = get_connection_from_pool()?;
-                    let user = conn
-                        .query_row(
-                            "SELECT id, username, email FROM users WHERE id = ?1",
-                            params![claims.sub],
-                            |row| {
-                                Ok(AuthUser {
-                                    user_id: row.get(0)?,
-                                    username: row.get(1)?,
-                                    email: row.get(2)?,
-                                })
-                            },
-                        )
-                        .map_err(|_| AuthError::UserNotFound("用户不存在".to_string()))?;
+// 检查 JWT 令牌是否被撤销
+pub fn is_jwt_token_revoked(token: &str) -> Result<bool, AuthError> {
+    let conn = get_connection_from_pool()?;
 
-                    Ok(user)
-                }
-                Err(_) => Err(AuthError::InvalidSession("会话不存在或已过期".to_string())),
+    let is_revoked: bool = conn
+        .query_row(
+            "SELECT 1 FROM revoked_tokens WHERE token = ?1",
+            params![token],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+
+    Ok(is_revoked)
+}
+
+// 从请求上下文中获取当前用户
+pub fn get_current_user(token: &str, auth_state: &AuthState) -> Result<AuthUser, AuthError> {
+    // 首先尝试验证 JWT 令牌
+    match verify_jwt_token(token, &auth_state.jwt_secret) {
+        Ok(claims) => {
+            // 检查令牌是否被撤销
+            if is_jwt_token_revoked(token)? {
+                return Err(AuthError::InvalidToken("令牌已被撤销".to_string()));
             }
+
+            // JWT 验证成功，从数据库获取最新的用户信息
+            let conn = get_connection_from_pool()?;
+            let user = conn
+                .query_row(
+                    "SELECT id, username, email FROM users WHERE id = ?1",
+                    params![claims.sub],
+                    |row| {
+                        Ok(AuthUser {
+                            user_id: row.get(0)?,
+                            username: row.get(1)?,
+                            email: row.get(2)?,
+                        })
+                    },
+                )
+                .map_err(|_| AuthError::UserNotFound("用户不存在".to_string()))?;
+
+            Ok(user)
         }
-        None => Err(AuthError::InvalidToken("未提供认证令牌".to_string())),
+        Err(_) => {
+            // JWT 验证失败，尝试使用会话令牌
+            let conn = get_connection_from_pool()?;
+            let user = conn
+                .query_row(
+                    "SELECT u.id, u.username, u.email 
+                 FROM sessions s
+                 JOIN users u ON s.user_id = u.id
+                 WHERE s.token = ?1 AND s.expires_at > ?2",
+                    params![token, Utc::now().timestamp()],
+                    |row| {
+                        Ok(AuthUser {
+                            user_id: row.get(0)?,
+                            username: row.get(1)?,
+                            email: row.get(2)?,
+                        })
+                    },
+                )
+                .map_err(|_| AuthError::InvalidSession("会话不存在或已过期".to_string()))?;
+
+            Ok(user)
+        }
     }
 }
 
-// 中间件：验证用户是否已认证
-pub fn require_auth<F, R>(
-    token: Option<String>,
-    auth_state: State<Arc<AuthState>>,
-    callback: F,
-) -> Result<R, AuthError>
-where
-    F: FnOnce(AuthUser) -> Result<R, AuthError>,
-{
-    let user = get_current_user(token, auth_state)?;
-    callback(user)
-}
-
-// 中间件：验证用户是否具有特定角色
-pub fn require_role<F, R>(
-    token: Option<String>,
-    role: &str,
-    auth_state: State<Arc<AuthState>>,
-    callback: F,
-) -> Result<R, AuthError>
-where
-    F: FnOnce(AuthUser) -> Result<R, AuthError>,
-{
-    let user = get_current_user(token.clone(), auth_state.clone())?;
+// 检查用户是否具有特定角色
+pub fn check_user_role(user_id: i64, role: &str) -> Result<bool, AuthError> {
+    let conn = get_connection_from_pool()?;
 
     // 检查用户角色
-    let conn = get_connection_from_pool()?;
     let has_role: bool = conn
         .query_row(
             "SELECT 1 FROM user_roles ur 
              JOIN roles r ON ur.role_id = r.id 
              WHERE ur.user_id = ?1 AND r.name = ?2",
-            params![user.user_id, role],
+            params![user_id, role],
             |_| Ok(true),
         )
         .unwrap_or(false);
 
-    if !has_role {
-        // 检查是否是管理员
-        let is_admin: bool = conn
-            .query_row(
-                "SELECT 1 FROM user_roles ur 
-                 JOIN roles r ON ur.role_id = r.id 
-                 WHERE ur.user_id = ?1 AND r.name = 'admin'",
-                params![user.user_id],
-                |_| Ok(true),
-            )
-            .unwrap_or(false);
-
-        if !is_admin {
-            return Err(AuthError::InvalidCredentials(
-                "用户没有所需的权限".to_string(),
-            ));
-        }
+    if has_role {
+        return Ok(true);
     }
 
-    callback(user)
+    // 检查是否是管理员
+    let is_admin: bool = conn
+        .query_row(
+            "SELECT 1 FROM user_roles ur 
+             JOIN roles r ON ur.role_id = r.id 
+             WHERE ur.user_id = ?1 AND r.name = 'admin'",
+            params![user_id],
+            |_| Ok(true),
+        )
+        .unwrap_or(false);
+
+    Ok(is_admin)
 }
 
-// 中间件：验证用户是否是管理员
-pub fn require_admin<F, R>(
-    token: Option<String>,
-    auth_state: State<Arc<AuthState>>,
-    callback: F,
-) -> Result<R, AuthError>
-where
-    F: FnOnce(AuthUser) -> Result<R, AuthError>,
-{
-    require_role(token, "admin", auth_state, callback)
+// JWT 中间件
+pub struct JwtMiddleware;
+
+impl JwtMiddleware {
+    // 创建中间件
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    // 中间件处理函数
+    pub fn middleware<F>(self, app: &AppHandle, invoke: Invoke, next: F)
+    where
+        F: FnOnce(Invoke) + Send + 'static,
+    {
+        let cmd = invoke.message.command().to_string();
+
+        // 不需要认证的命令列表
+        let public_commands = vec![
+            "auth_login_command",
+            "auth_register_command",
+            "auth_send_verification_code_command",
+            "auth_forgot_password_command",
+            "auth_reset_password_command",
+            "auth_verify_session_command", // 这个命令自己会验证令牌
+        ];
+
+        // 如果是公开命令，直接放行
+        if public_commands.contains(&cmd.as_str()) {
+            next(invoke);
+            return;
+        }
+
+        // 获取 auth_state
+        let auth_state = app.state::<Arc<AuthState>>();
+
+        // 获取令牌
+        let payload = invoke.message.payload();
+        let token = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(payload) {
+            json.get("token").and_then(|t| t.as_str()).map(|s| s.to_string())
+        } else {
+            None
+        };
+
+        let token = if let Some(token) = token {
+            token
+        } else {
+            // 没有提供令牌，拒绝请求
+            invoke.resolver.reject("未提供认证令牌");
+            return;
+        };
+
+        // 验证令牌
+        match get_current_user(&token, &auth_state) {
+            Ok(_) => {
+                // 认证成功，继续处理请求
+                next(invoke);
+            }
+            Err(err) => {
+                // 认证失败，拒绝请求
+                invoke.resolver.reject(&format!("{}", err));
+            }
+        }
+    }
 }
 
 // 将 JWT 令牌存储到数据库中
@@ -208,22 +268,12 @@ pub fn store_jwt_token(user_id: i64, jwt_token: &str) -> Result<(), AuthError> {
 pub fn revoke_jwt_token(token: &str) -> Result<(), AuthError> {
     let conn = get_connection_from_pool()?;
 
+    conn.execute(
+        "INSERT INTO revoked_tokens (token, revoked_at) VALUES (?1, ?2)",
+        params![token, Utc::now().timestamp()],
+    )?;
+
     conn.execute("DELETE FROM jwt_tokens WHERE token = ?1", params![token])?;
 
     Ok(())
-}
-
-// 检查 JWT 令牌是否被撤销
-pub fn is_jwt_token_revoked(token: &str) -> Result<bool, AuthError> {
-    let conn = get_connection_from_pool()?;
-
-    let is_revoked: bool = conn
-        .query_row(
-            "SELECT 1 FROM revoked_tokens WHERE token = ?1",
-            params![token],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    Ok(is_revoked)
 }
