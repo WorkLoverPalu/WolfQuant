@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use tauri::{command, State};
 
 use crate::core::engine::Engine;
+use crate::core::event::EventBus;
 use crate::models::import::{ImportTask, AvailableData};
 
 #[command]

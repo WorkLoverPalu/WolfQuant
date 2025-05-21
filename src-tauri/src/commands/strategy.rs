@@ -2,7 +2,7 @@ use tauri::{command, State, AppHandle};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::services::strategy_service::StrategyService;
+use crate::services::strategy::StrategyService;
 use crate::models::strategy::{
     Strategy, StrategyVersion, StrategyTag, StrategyRating,
     StrategyApplication, CreateStrategyRequest, UpdateStrategyRequest

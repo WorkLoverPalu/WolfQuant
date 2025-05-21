@@ -47,9 +47,11 @@ use crate::db::Repository;
 use crate::market::{Candle, MarketAdapter, Ticker};
 use crate::strategy::Strategy;
 use crate::trading::{Order, OrderSignal, Portfolio};
+use serde::{Deserialize, Serialize};
 
 use crate::import::{AvailableData, DataImporter, ImportTask};
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Engine {
     config: Config,
     event_bus: Arc<EventBus>,

@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{Utc, TimeZone};
 use log::{info, error};
 use serde_json::{json, Value};
 use crate::error::auth::AuthError;
@@ -80,7 +80,7 @@ impl StrategyService {
         user_id: i64,
         request: UpdateStrategyRequest,
     ) -> Result<(), String> {
-        let conn = get_connection_from_pool()
+        let mut conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
         
         // 检查策略是否存在且属于该用户
@@ -340,7 +340,7 @@ impl StrategyService {
         strategy_id: i64,
         tag_name: &str,
     ) -> Result<(), String> {
-        let conn = get_connection_from_pool()
+        let mut conn = get_connection_from_pool()
             .map_err(|e| format!("Failed to get database connection: {}", e))?;
         
         // 开始事务
@@ -739,7 +739,7 @@ impl StrategyService {
         &self,
         strategy_type: StrategyType,
         parameters_json: &str,
-    ) -> Result<Box<dyn crate::models::strategy::Strategy>, String> {
+    ) -> Result<Box<dyn crate::models::strategy::IStrategy>, String> {
         // 解析参数
         let parameters: Value = serde_json::from_str(parameters_json)
             .map_err(|e| format!("Failed to parse strategy parameters: {}", e))?;
@@ -949,7 +949,7 @@ impl DummyStrategy {
     }
 }
 
-impl crate::models::strategy::Strategy for DummyStrategy {
+impl crate::models::strategy::IStrategy for DummyStrategy {
     fn init(&self) -> Result<(), String> {
         Ok(())
     }
