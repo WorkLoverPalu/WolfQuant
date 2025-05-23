@@ -12,7 +12,7 @@ pub enum AuthError {
     DatabaseError(String),
     CryptoError(String),
     InternalError(String),
-    TokenCreationError(),
+    TokenCreationError(String),
 }
 
 // 实现 Display trait 可以像字符串一样输出
@@ -28,7 +28,7 @@ impl fmt::Display for AuthError {
             AuthError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
             AuthError::CryptoError(msg) => write!(f, "Crypto error: {}", msg),
             AuthError::InternalError(msg) => write!(f, "Internal error: {}", msg),
-            AuthError::TokenCreationError() => write!(f, "Failed to create token"),
+            AuthError::TokenCreationError(msg) => write!(f, "Failed to create token {}", msg),
         }
     }
 }
@@ -63,7 +63,7 @@ impl From<AuthError> for ErrorResponse {
             AuthError::DatabaseError(msg) => (msg, 500), //服务器错误
             AuthError::CryptoError(msg) => (msg, 500),
             AuthError::InternalError(msg) => (msg, 500),
-            AuthError::TokenCreationError() => ("创建令牌失败".to_string(), 500),
+            AuthError::TokenCreationError(msg) => ("创建令牌失败".to_string(), 500),
         };
 
         ErrorResponse {

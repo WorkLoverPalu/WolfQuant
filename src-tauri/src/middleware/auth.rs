@@ -7,8 +7,9 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use log::{debug, error, info};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::sync::Arc;
-use tauri::ipc::Invoke;
+use tauri::ipc::{InvokeBody,Invoke};
 use tauri::{command, AppHandle, Manager, State};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +39,10 @@ impl AuthState {
         }
     }
 }
+#[derive(Deserialize)]
+struct TokenPayload {
+    token: String,
+}
 
 // 从用户模型生成 JWT token
 pub fn generate_jwt_token(user: &User, secret: &str) -> Result<String, AuthError> {
@@ -60,7 +65,7 @@ pub fn generate_jwt_token(user: &User, secret: &str) -> Result<String, AuthError
         &claims,
         &EncodingKey::from_secret(secret.as_bytes()),
     )
-    .map_err(|_| AuthError::TokenCreationError())
+    .map_err(|_| AuthError::TokenCreationError("无效的令牌".to_string()))
 }
 
 // 验证 JWT token
@@ -194,7 +199,7 @@ impl JwtMiddleware {
     where
         F: FnOnce(Invoke) + Send + 'static,
     {
-        let cmd = invoke.message.command().to_string();
+        let cmd = invoke.message.command();
 
         // 不需要认证的命令列表
         let public_commands = vec![
@@ -207,7 +212,7 @@ impl JwtMiddleware {
         ];
 
         // 如果是公开命令，直接放行
-        if public_commands.contains(&cmd.as_str()) {
+        if public_commands.iter().any(|&c| c == cmd) {
             next(invoke);
             return;
         }
@@ -217,18 +222,21 @@ impl JwtMiddleware {
 
         // 获取令牌
         let payload = invoke.message.payload();
-        let token = if let Ok(json) = serde_json::from_slice::<serde_json::Value>(payload) {
-            json.get("token").and_then(|t| t.as_str()).map(|s| s.to_string())
-        } else {
-            None
-        };
-
-        let token = if let Some(token) = token {
-            token
-        } else {
-            // 没有提供令牌，拒绝请求
-            invoke.resolver.reject("未提供认证令牌");
-            return;
+        let token = match payload {
+            InvokeBody::Json(value) => {
+                if let Some(token) = value.get("token").and_then(|t| t.as_str()) {
+                    token.to_string()
+                } else {
+                    // 没有提供令牌，拒绝请求
+                    invoke.resolver.reject("未提供认证令牌");
+                    return;
+                }
+            }
+            _ => {
+                // 没有提供 payload 或格式不正确，拒绝请求
+                invoke.resolver.reject("未提供认证令牌");
+                return;
+            }
         };
 
         // 验证令牌
