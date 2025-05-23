@@ -169,8 +169,8 @@ impl SchemaLoader {
                 user_tables::get_schemas()
                     .into_iter()
                     .map(|(k, v)| {
-                        let name = k.clone();
-                        (name, TableSchema::new(&name, &v, "1.0.0"))
+                        let key = k.clone();
+                        (key, TableSchema::new(&k, &v, "1.0.0"))
                     })
                     .collect()
             }),
@@ -181,7 +181,10 @@ impl SchemaLoader {
             Box::new(|| {
                 asset_tables::get_schemas()
                     .into_iter()
-                    .map(|(k, v)| (k, TableSchema::new(&k, &v, "1.0.0")))
+                    .map(|(k, v)| {
+                        let key = k.clone();
+                        (key, TableSchema::new(&k, &v, "1.0.0"))
+                    })
                     .collect()
             }),
         );
@@ -191,7 +194,10 @@ impl SchemaLoader {
             Box::new(|| {
                 transaction_tables::get_schemas()
                     .into_iter()
-                    .map(|(k, v)| (k, TableSchema::new(&k, &v, "1.0.0")))
+                    .map(|(k, v)| {
+                        let key = k.clone();
+                        (k, TableSchema::new(&key, &v, "1.0.0"))
+                    })
                     .collect()
             }),
         );
@@ -201,7 +207,10 @@ impl SchemaLoader {
             Box::new(|| {
                 backtester_tables::get_schemas()
                     .into_iter()
-                    .map(|(k, v)| (k, TableSchema::new(&k, &v, "1.0.0")))
+                    .map(|(k, v)| {
+                        let key = k.clone();
+                        (k, TableSchema::new(&key, &v, "1.0.0"))
+                    })
                     .collect()
             }),
         );
@@ -211,7 +220,10 @@ impl SchemaLoader {
             Box::new(|| {
                 candles_tables::get_schemas()
                     .into_iter()
-                    .map(|(k, v)| (k, TableSchema::new(&k, &v, "1.0.0")))
+                    .map(|(k, v)| {
+                        let key = k.clone();
+                        (k, TableSchema::new(&key, &v, "1.0.0"))
+                    })
                     .collect()
             }),
         );
@@ -221,7 +233,10 @@ impl SchemaLoader {
             Box::new(|| {
                 importer_tables::get_schemas()
                     .into_iter()
-                    .map(|(k, v)| (k, TableSchema::new(&k, &v, "1.0.0")))
+                    .map(|(k, v)| {
+                        let key = k.clone();
+                        (k, TableSchema::new(&key, &v, "1.0.0"))
+                    })
                     .collect()
             }),
         );
@@ -231,7 +246,10 @@ impl SchemaLoader {
             Box::new(|| {
                 strategy_tables::get_schemas()
                     .into_iter()
-                    .map(|(k, v)| (k, TableSchema::new(&k, &v, "1.0.0")))
+                    .map(|(k, v)| {
+                        let key = k.clone();
+                        (k, TableSchema::new(&key, &v, "1.0.0"))
+                    })
                     .collect()
             }),
         );

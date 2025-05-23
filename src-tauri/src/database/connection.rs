@@ -52,7 +52,9 @@ impl DatabaseManager {
 
         match current_version {
             0 => self.initialize_new_database(&mut conn)?,
-            v if v < config.database.version as u32 => self.migrate_database(&mut conn, v as u32)?,
+            v if v < config.database.version as u32 => {
+                self.migrate_database(&mut conn, v as u32)?
+            }
             _ => debug!("Database is up to date (version {})", current_version),
         }
 
@@ -126,7 +128,7 @@ impl DatabaseManager {
         let schemas = load_all_schemas()?;
 
         for (table_name, schema) in schemas.iter() {
-            match tx.execute_batch(schema) {
+            match tx.execute_batch(table_name) {
                 Ok(_) => {
                     debug!("Successfully created table: {}", table_name);
                 }
