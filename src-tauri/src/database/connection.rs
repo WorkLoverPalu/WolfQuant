@@ -213,16 +213,16 @@ impl DatabaseManager {
         for (table_name, expected_schema) in schemas.iter() {
             match self.get_table_schema(&tx, table_name)? {
                 Some(current_schema) => {
-                    if !self.schemas_match(&current_schema, expected_schema) {
+                    if !self.schemas_match(&current_schema, expected_schema.sql.as_str()) {
                         warn!("Table {} schema mismatch, updating...", table_name);
-                        self.update_table_schema(&tx, table_name, expected_schema)?;
+                        self.update_table_schema(&tx, table_name, expected_schema.sql.as_str())?;
                     } else {
                         debug!("Table {} schema is up to date", table_name);
                     }
                 }
                 None => {
                     info!("Table {} does not exist, creating...", table_name);
-                    tx.execute_batch(expected_schema)?;
+                    tx.execute_batch(expected_schema.sql.as_str())?;
                 }
             }
         }
